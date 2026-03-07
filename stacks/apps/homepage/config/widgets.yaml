@@ -1,0 +1,24 @@
+---
+## https://github.com/gethomepage/homepage/blob/dev/docs/configs/info-widgets.md
+
+- logo:
+    icon: docker.png
+
+- resources:
+    expanded: true
+    memory: true
+    disk:
+      - /
+
+- search:
+    provider: [google]
+    showSearchSuggestions: false
+
+- datetime:
+    text_size: md
+    format:
+      weekday: short
+      month: short
+      day: numeric
+      hour: numeric
+      minute: numeric

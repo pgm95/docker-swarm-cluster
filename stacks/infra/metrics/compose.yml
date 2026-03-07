@@ -1,0 +1,210 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+include:
+  - secrets.yml
+  - configs.yml
+
+# Prerequisites:
+#   - infra/socket deployed (provides infra_socket)
+#   - infra/gateway-internal deployed (provides infra_gw-internal)
+#   - infra/accounts deployed (Grafana needs Authelia for OIDC)
+#   - VM node has labels: location=onprem
+# Primary network: infra_metrics
+
+services:
+  prometheus:
+    image: prom/prometheus:v3.9.1 # Consider hardened dhi.io/prometheus:3.9
+    logging: *logging
+    stop_grace_period: 30s
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    configs:
+      - source: prometheus_config
+        target: /etc/prometheus/prometheus.yml
+      - source: prometheus_rules
+        target: /etc/prometheus/node_rules.yml
+    networks:
+      - infra_metrics
+      - infra_gw-internal
+    volumes:
+      - prometheus-data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      <<: [*place-vm, *deploy]
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-large
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.internal=true"
+        - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.prometheus.entrypoints=websecure"
+        - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+        - "homepage.group=Infrastructure"
+        - "homepage.name=Prometheus"
+        - "homepage.icon=prometheus"
+        - "homepage.href=https://prometheus.${DOMAIN_PRIVATE}"
+        - "homepage.description=Metrics Collection"
+        - "homepage.widget.type=prometheus"
+        - "homepage.widget.url=https://prometheus.${DOMAIN_PRIVATE}"
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.135.0
+    user: ${GLOBAL_NONROOT_DOCKER}
+    logging: *logging
+    stop_grace_period: 30s
+    command:
+      - "--storageDataPath=/storage"
+      - "--httpListenAddr=:8428"
+    networks:
+      - infra_metrics
+      - infra_gw-internal
+    volumes:
+      - victoriametrics-data:/storage
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      <<: [*place-vm, *deploy]
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-large
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.internal=true"
+        - "traefik.http.routers.victoria.rule=Host(`victoria.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.victoria.entrypoints=websecure"
+        - "traefik.http.services.victoria.loadbalancer.server.port=8428"
+
+  # influxdb:
+  #   image: influxdb:3.8-core # Consider hardened dhi.io/influxdb:3-core
+  #   user: ${GLOBAL_NONROOT_DOCKER}
+  #   logging: *logging
+  #   stop_grace_period: 60s
+  #   command:
+  #     - "serve"
+  #     - "--node-id=swarm-metrics"
+  #     - "--object-store=file"
+  #     - "--data-dir=/var/lib/influxdb3"
+  #     - "--package-manager=disabled"
+  #   networks:
+  #     - infra_metrics
+  #     - infra_gw-internal
+  #   volumes:
+  #     - influxdb-data:/var/lib/influxdb3
+  #   healthcheck:
+  #     test: ["CMD", "wget", "-q", "--spider", "http://localhost:8086/health"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 3
+  #     start_period: 10s
+  #   deploy:
+  #     <<: [*place-vm, *deploy]
+  #     mode: replicated
+  #     replicas: 1
+  #     resources:
+  #       <<: *resources-large
+  #     labels:
+  #       - "traefik.enable=true"
+  #       - "traefik.scope.internal=true"
+  #       - "traefik.http.routers.influxdb.rule=Host(`influxdb.${DOMAIN_PRIVATE}`)"
+  #       - "traefik.http.routers.influxdb.entrypoints=websecure"
+  #       - "traefik.http.services.influxdb.loadbalancer.server.port=8086"
+
+  # grafana:
+  #   image: grafana/grafana:12.3 # Consider hardened dhi.io/grafana:12
+  #   user: ${GLOBAL_NONROOT_DOCKER}
+  #   logging: *logging
+  #   stop_grace_period: 30s
+  #   environment:
+  #     - DOMAIN_PRIVATE=${DOMAIN_PRIVATE}
+  #     - OIDC_URL=${GLOBAL_OIDC_URL}
+  #   secrets:
+  #     - grafana_oidc_client
+  #     - grafana_oidc_secret
+  #   configs:
+  #     - source: grafana_ini
+  #       target: /etc/grafana/grafana.ini
+  #     - source: grafana_datasource
+  #       target: /etc/grafana/provisioning/datasources/datasource.yml
+  #   networks:
+  #     - infra_metrics
+  #     - infra_gw-internal
+  #   volumes:
+  #     - grafana-data:/var/lib/grafana
+  #   healthcheck:
+  #     test:
+  #       ["CMD", "wget", "-q", "--spider", "http://localhost:3009/api/health"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 3
+  #     start_period: 15s
+  #   deploy:
+  #     <<: [*place-vm, *deploy]
+  #     mode: replicated
+  #     replicas: 1
+  #     resources:
+  #       <<: *resources-medium
+  #     labels:
+  #       - "traefik.enable=true"
+  #       - "traefik.scope.internal=true"
+  #       - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN_PRIVATE}`)"
+  #       - "traefik.http.routers.grafana.entrypoints=websecure"
+  #       - "traefik.http.services.grafana.loadbalancer.server.port=3009"
+
+  # uptime-kuma:
+  #   image: louislam/uptime-kuma:beta-rootless # Consider hardened dhi.io/uptime-kuma:2
+  #   user: ${GLOBAL_NONROOT_DOCKER}
+  #   logging: *logging
+  #   stop_grace_period: 30s
+  #   environment:
+  #     - UPTIME_KUMA_PORT=3001
+  #     - UPTIME_KUMA_ENABLE_EMBEDDED_MARIADB=1
+  #     - DOCKER_HOST=tcp://socket-proxy:2375
+  #   networks:
+  #     - infra_metrics
+  #     - infra_gw-internal
+  #     - infra_socket # For Docker monitoring via socket-proxy
+  #   volumes:
+  #     - uptimekuma-data:/app/data
+  #   healthcheck:
+  #     test: ["CMD", "wget", "-q", "--spider", "http://localhost:3001/"]
+  #     interval: 15s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 30s
+  #   deploy:
+  #     <<: [*place-vm, *deploy]
+  #     mode: replicated
+  #     replicas: 1
+  #     resources:
+  #       <<: *resources-medium
+  #     labels:
+  #       - "traefik.enable=true"
+  #       - "traefik.scope.internal=true"
+  #       - "traefik.http.routers.uptime.rule=Host(`status.${DOMAIN_PRIVATE}`)"
+  #       - "traefik.http.routers.uptime.entrypoints=websecure"
+  #       - "traefik.http.services.uptime.loadbalancer.server.port=3001"
+
+volumes:
+  prometheus-data:
+  victoriametrics-data:
+  # influxdb-data:
+  # grafana-data:
+  # uptimekuma-data:
+
+networks:
+  infra_metrics:
+    external: true
+  infra_gw-internal:
+    external: true
+  infra_socket:
+    external: true

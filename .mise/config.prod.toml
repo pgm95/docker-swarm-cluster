@@ -1,0 +1,14 @@
+#:schema https://mise.jdx.dev/schema/mise.json
+#:tombi schema.strict = false
+
+[env]
+_.file = { path = "{{ env.PROJECT_SECRETS_DIR }}/prod.yaml", redact = true }
+
+SWARM_NODE_DEFAULT = "CHANGEME"
+DOCKER_HOST = "ssh://root@{{ env.SWARM_NODE_DEFAULT }}"
+SWARM_NODE_STORAGE = "CHANGEME"
+SWARM_NODE_GPU     = "CHANGEME"
+SWARM_NODE_CLOUD   = "CHANGEME"
+
+GLOBAL_SWARM_OCI_REGISTRY = "registry.{{ env.DOMAIN_PRIVATE }}"
+GLOBAL_ACME_CA_SERVER = "https://acme-v02.api.letsencrypt.org/directory"

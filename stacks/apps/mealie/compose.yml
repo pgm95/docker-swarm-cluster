@@ -1,0 +1,89 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+include:
+  - secrets.yml
+
+services:
+  mealie:
+    image: ghcr.io/mealie-recipes/mealie:latest
+    logging: *logging
+    stop_grace_period: 30s
+    environment:
+      # Core settings
+      - PUID=${GLOBAL_NONROOT_PUID}
+      - PGID=${GLOBAL_NONROOT_PGID}
+      - TZ=${GLOBAL_TZ_LOCAL}
+      - API_PORT=9025
+      - API_DOCS=false
+      - LOG_LEVEL=warning
+      - ALLOW_SIGNUP=false
+      - SQLITE_MIGRATE_JOURNAL_WAL=true
+      - BASE_URL=https://recipes.${DOMAIN_PUBLIC}
+      # OIDC Configuration
+      - OIDC_AUTH_ENABLED=true
+      - OIDC_SIGNUP_ENABLED=true
+      - OIDC_REMEMBER_ME=true
+      - OIDC_AUTO_REDIRECT=true
+      - OIDC_PROVIDER_NAME=Authelia
+      - OIDC_SCOPES=openid profile email groups
+      - OIDC_ADMIN_GROUP=system_admin
+      - OIDC_USER_GROUP=users
+      - OIDC_CONFIGURATION_URL=https://auth.${DOMAIN_PUBLIC}/.well-known/openid-configuration
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID_MEALIE}
+      - OIDC_CLIENT_SECRET_FILE=/run/secrets/oidc_client_secret_mealie
+      # - ALLOW_PASSWORD_LOGIN=false
+      # SMTP Configuration
+      - SMTP_PORT=587
+      - SMTP_AUTH_STRATEGY=TLS
+      - SMTP_FROM_NAME=Mealie
+      - SMTP_HOST=${GLOBAL_SMTP_HOST}
+      - SMTP_USER=${GLOBAL_SMTP_USER}
+      - SMTP_PASSWORD_FILE=/run/secrets/smtp_pass
+      - SMTP_FROM_EMAIL=${GLOBAL_SMTP_NOREPLY}
+      # OpenAI Integration
+      - OPENAI_API_KEY_FILE=/run/secrets/mealie_openai_api_key
+    secrets:
+      - oidc_client_secret_mealie
+      - mealie_openai_api_key
+      - smtp_pass
+    networks:
+      - infra_gw-external
+    volumes:
+      - mealie-data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-m", "mealie.scripts.healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    deploy:
+      <<: [*place-vm, *deploy]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.external=true"
+        - "traefik.http.routers.mealie.rule=Host(`recipes.${DOMAIN_PUBLIC}`)"
+        - "traefik.http.routers.mealie.entrypoints=websecure"
+        - "traefik.http.services.mealie.loadbalancer.server.port=9025"
+        - "homepage.group=Applications"
+        - "homepage.name=Mealie"
+        - "homepage.icon=mealie"
+        - "homepage.href=https://recipes.${DOMAIN_PUBLIC}"
+        - "homepage.description=Recipe Manager"
+        - "homepage.widget.type=mealie"
+        - "homepage.widget.url=https://recipes.${DOMAIN_PUBLIC}"
+        - "homepage.widget.key={{HOMEPAGE_VAR_MEALIE_KEY}}"
+        - "homepage.widget.version=2"
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 1024M
+        reservations:
+          memory: 512M
+
+volumes:
+  mealie-data:
+
+networks:
+  infra_gw-external:
+    external: true

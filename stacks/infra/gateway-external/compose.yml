@@ -1,0 +1,239 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+include:
+  - secrets.yml
+  - configs.yml
+
+# Prerequisites:
+#   - infra/socket deployed (provides infra_socket)
+#   - infra/postgres deployed (provides infra_postgres)
+#   - infra/metrics deployed (provides infra_metrics)
+#   - VPS node has labels: location=cloud, ip=public
+#   - Host-level Tailscale running on VPS
+# Primary network: infra_gw-external
+
+services:
+  traefik-external:
+    image: traefik:v3.6 # Consider hardened dhi.io/traefik:3
+    logging: *logging
+    stop_grace_period: 30s
+    entrypoint: ["/bin/sh", "/geoblock-entrypoint.sh"]
+    command:
+      # Global
+      - "--global.checkNewVersion=false"
+      - "--global.sendAnonymousUsage=false"
+      # Logging
+      - "--log.level=INFO"
+      - "--log.format=common"
+      # - "--log.filePath=/var/log/traefik/container.log"
+      # - "--log.maxSize=1"
+      # - "--log.maxAge=1"
+      # - "--log.maxBackups=1"
+      - "--accessLog.format=common"
+      # API
+      - "--api.insecure=false"
+      - "--api.dashboard=false"
+      - "--ping=true"
+      # Plugins
+      - "--experimental.plugins.bouncer.moduleName=github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
+      - "--experimental.plugins.bouncer.version=v1.4.6"
+      - "--experimental.plugins.geoblock.moduleName=github.com/david-garcia-garcia/traefik-geoblock"
+      - "--experimental.plugins.geoblock.version=v1.1.3"
+      - "--experimental.plugins.geoblock.settings.useunsafe=true"
+      # Metrics
+      - "--metrics.prometheus.entryPoint=metrics"
+      - "--metrics.prometheus.addRoutersLabels=true"
+      - "--metrics.prometheus.addServicesLabels=true"
+      - "--metrics.prometheus.addEntryPointsLabels=true"
+      - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
+      # Providers
+      - "--providers.file.watch=true"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.swarm.watch=true"
+      - "--providers.swarm.endpoint=http://socket-proxy:2375"
+      - "--providers.swarm.exposedByDefault=false"
+      - "--providers.swarm.network=infra_gw-external"
+      - "--providers.swarm.constraints=Label(`traefik.scope.external`, `true`)"
+      # TLS / ACME
+      - "--certificatesResolvers.letsencrypt.acme.email=pgm95@github.com"
+      - "--certificatesResolvers.letsencrypt.acme.storage=/certs/acme.json"
+      - "--certificatesResolvers.letsencrypt.acme.caServer=${GLOBAL_ACME_CA_SERVER}"
+      - "--certificatesResolvers.letsencrypt.acme.dnsChallenge.provider=cloudflare"
+      - "--certificatesResolvers.letsencrypt.acme.dnsChallenge.propagation.delayBeforeChecks=30s"
+      - "--certificatesResolvers.letsencrypt.acme.dnsChallenge.resolvers=1.1.1.1:53,8.8.8.8:53,9.9.9.9:53"
+      # Entrypoints
+      - "--entryPoints.metrics.address=:9091"
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entryPoints.websecure.address=:443"
+      - "--entryPoints.websecure.asDefault=true"
+      - "--entryPoints.websecure.http.middlewares=security-headers@file,geoblock@file,crowdsec@file"
+      - "--entryPoints.websecure.http.tls.certResolver=letsencrypt"
+      - "--entryPoints.websecure.http.tls.domains[0].main=${DOMAIN_PUBLIC}"
+      - "--entryPoints.websecure.http.tls.domains[0].sans=*.${DOMAIN_PUBLIC}"
+      - "--entryPoints.websecure.transport.respondingTimeouts.readTimeout=12h"
+      - "--entryPoints.websecure.transport.respondingTimeouts.writeTimeout=12h"
+      - "--entryPoints.websecure.transport.respondingTimeouts.idleTimeout=90s"
+      - "--entryPoints.websecure.proxyProtocol.trustedIPs=10.0.0.0/8,127.0.0.0/16,172.16.0.0/12,100.64.0.0/10"
+      - "--entryPoints.websecure.forwardedHeaders.trustedIPs=10.0.0.0/8,127.0.0.0/16,172.16.0.0/12,100.64.0.0/10"
+    environment:
+      - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
+      - AUTHELIA_URL=${AUTHELIA_URL}
+      - TRUSTED_IPS=10.0.0.0/8,127.0.0.0/16,172.16.0.0/12,100.64.0.0/10
+      - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/cloudflare_dns_api_token_external
+      # Keep as env vars - geoblock plugin reads token from dynamic config Go template, CrowdSec has buggy _FILE support (GitHub issue 221)
+      - GEOBLOCK_IP2LOCATION_TOKEN=${GEOBLOCK_IP2LOCATION_TOKEN}
+      - CROWDSEC_LAPI_KEY=${BOUNCER_KEY_TRAEFIK}
+    secrets:
+      - cloudflare_dns_api_token_external
+    configs:
+      - source: traefik_entrypoint
+        target: /geoblock-entrypoint.sh
+      - source: traefik_dynamic_base
+        target: /etc/traefik/dynamic/base.yml
+      - source: traefik_dynamic_authelia
+        target: /etc/traefik/dynamic/authelia.yml
+      - source: traefik_dynamic_crowdsec
+        target: /etc/traefik/dynamic/crowdsec.yml
+      - source: traefik_dynamic_geoblock
+        target: /etc/traefik/dynamic/geoblock.yml
+      - source: traefik_dynamic_hass-public
+        target: /etc/traefik/dynamic/hass-public.yml
+    networks:
+      - default
+      - infra_socket
+      - infra_gw-external
+      - infra_metrics
+    ports:
+      - target: 443
+        published: 443
+        protocol: tcp
+        mode: host
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host
+    volumes:
+      - traefik-logs:/var/log/traefik
+      - traefik-certs:/certs
+      - traefik-geoblock:/data/geoblock
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      <<: [*place-cloud, *deploy-stop-first]
+      labels:
+        - "crowdsec.enable=true"
+        - "homepage.group=Infrastructure"
+        - "homepage.name=Traefik External"
+        - "homepage.icon=traefik"
+        - "homepage.description=Public Reverse Proxy"
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  crowdsec:
+    image: crowdsecurity/crowdsec:v1.7.6
+    logging: *logging
+    stop_grace_period: 30s
+    environment:
+      - USE_TLS=false
+      - METRICS_PORT=6060
+      - TZ=${GLOBAL_TZ_LOCAL}
+      - LOCAL_API_URL=http://0.0.0.0:8085
+      - PARSERS=crowdsecurity/geoip-enrich crowdsecurity/whitelists
+      - COLLECTIONS=crowdsecurity/traefik crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules crowdsecurity/base-http-scenarios
+      # Keep as env vars - CrowdSec has buggy _FILE support (GitHub # 221)
+      - BOUNCER_KEY_TRAEFIK=${BOUNCER_KEY_TRAEFIK}
+      - CTI_KEY=${CROWDSEC_CTI_KEY}
+      - CROWDSEC_POSTGRES_PASSWORD=${CROWDSEC_POSTGRES_PASSWORD}
+      - CROWDSEC_BYPASS_DB_VOLUME_CHECK=true # No db volume needed with remote Postgres
+      # If rate limited by CrowdSec, set OFFLINE_MODE to true
+      # See: https://github.com/crowdsecurity/crowdsec/issues/4165
+      - OFFLINE_MODE=true
+      - DISABLE_HUB_UPGRADE=${OFFLINE_MODE:-false}
+      - DISABLE_ONLINE_API=${OFFLINE_MODE:-false}
+      # Enrollment only needed on first run, comment out after that
+      # - ENROLL_KEY=${CROWDSEC_ENROLL_KEY}
+      # - ENROLL_TAGS=VPS Swarm Docker Traefik
+      # - ENROLL_INSTANCE_NAME=${CROWDSEC_ENROLL_INSTANCE_NAME}
+    configs:
+      - source: crowdsec_acquis
+        target: /etc/crowdsec/acquis.yaml
+      - source: crowdsec_profiles
+        target: /etc/crowdsec/profiles.yaml
+      - source: crowdsec_config
+        target: /etc/crowdsec/config.yaml.local
+      - source: crowdsec_notifications
+        target: /etc/crowdsec/notifications/http.yaml
+      - source: crowdsec_console
+        target: /etc/crowdsec/console.yaml
+    networks:
+      - default
+      - infra_socket
+      - infra_metrics
+      - infra_postgres
+    volumes:
+      - crowdsec-app:/etc/crowdsec
+    healthcheck:
+      test: ["CMD", "cscli", "lapi", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      <<: [*place-cloud, *deploy]
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  init-db:
+    image: postgres:17-alpine
+    entrypoint: ["/bin/sh", "/init-db-entrypoint.sh"]
+    logging: *logging
+    stop_grace_period: 30s
+    environment:
+      - PROVISIONER_USER=${GLOBAL_POSTGRES_PROVISIONER_USER}
+      - PROVISIONER_PASSWORD=${GLOBAL_POSTGRES_PROVISIONER_PASSWORD}
+      - CROWDSEC_POSTGRES_PASSWORD=${CROWDSEC_POSTGRES_PASSWORD}
+    configs:
+      - source: init_db_entrypoint
+        target: /init-db-entrypoint.sh
+    networks:
+      - infra_postgres
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      <<: [*place-cloud, *deploy]
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-tiny
+
+volumes:
+  traefik-logs:
+  traefik-certs:
+  traefik-geoblock:
+  crowdsec-app:
+
+networks:
+  infra_gw-external:
+    external: true
+  infra_socket:
+    external: true
+  infra_metrics:
+    external: true
+  infra_postgres:
+    external: true

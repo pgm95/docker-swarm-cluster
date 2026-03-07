@@ -1,0 +1,13 @@
+driver: ldap
+ldap:
+  url: ldap://lldap
+  bind_user: cn=${LDAP_BIND_USER},ou=people,${LDAP_BASE_DN}
+  bind_pass: ${LDAP_BIND_PASS}
+  basedn: ${LDAP_BASE_DN}
+  filter: (memberof=cn=public,ou=groups,${LDAP_BASE_DN})
+  user_attr: uid
+  attributes:
+    - uid
+    - mail
+    - cn
+  template: /etc/carpal/ldap.gotmpl

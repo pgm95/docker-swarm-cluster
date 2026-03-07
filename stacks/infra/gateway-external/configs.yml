@@ -1,0 +1,40 @@
+# Docker configs for gateway-external stack
+# Included via docker compose include directive
+
+configs:
+  traefik_entrypoint:
+    name: traefik_external_entrypoint_${DEPLOY_VERSION}
+    file: ./config/traefik/entrypoint.sh
+  traefik_dynamic_base:
+    name: traefik_external_dynamic_base_${DEPLOY_VERSION}
+    file: ./config/traefik/dynamic/base.yml
+  traefik_dynamic_authelia:
+    name: traefik_external_dynamic_authelia_${DEPLOY_VERSION}
+    file: ./config/traefik/dynamic/authelia.yml
+  traefik_dynamic_crowdsec:
+    name: traefik_external_dynamic_crowdsec_${DEPLOY_VERSION}
+    file: ./config/traefik/dynamic/crowdsec.yml
+  traefik_dynamic_geoblock:
+    name: traefik_external_dynamic_geoblock_${DEPLOY_VERSION}
+    file: ./config/traefik/dynamic/geoblock.yml
+  traefik_dynamic_hass-public:
+    name: traefik_external_dynamic_hass-public_${DEPLOY_VERSION}
+    file: ./config/traefik/dynamic/hass-public.yml
+  crowdsec_acquis:
+    name: crowdsec_acquis_${DEPLOY_VERSION}
+    file: ./config/crowdsec/acquis.yaml
+  crowdsec_profiles:
+    name: crowdsec_profiles_${DEPLOY_VERSION}
+    file: ./config/crowdsec/profiles.yaml
+  crowdsec_config:
+    name: crowdsec_config_${DEPLOY_VERSION}
+    file: ./config/crowdsec/config.yaml
+  crowdsec_console:
+    name: crowdsec_console_${DEPLOY_VERSION}
+    file: ./config/crowdsec/console.yaml
+  crowdsec_notifications:
+    name: crowdsec_notifications_${DEPLOY_VERSION}
+    file: ./config/crowdsec/notifications-http.yaml
+  init_db_entrypoint:
+    name: crowdsec_init_db_entrypoint_${DEPLOY_VERSION}
+    file: ./config/bootstrap/init-db.sh

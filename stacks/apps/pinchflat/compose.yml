@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+# Runs as non-root via user:. Dockerfile mkdir's /config as root, so:
+# - swarm:init-volumes must pre-create the named volume with a marker file to prevent Docker's volume-init from overwriting ownership.
+# - /downloads bind mount: Pinchflat's startup overwrites .keep files in each checked directory (File.write, not create).
+# - Pre-existing root-owned .keep files cause EACCES — delete them before first non-root launch.
+
+services:
+  pinchflat:
+    image: keglin/pinchflat:latest
+    user: ${GLOBAL_NONROOT_DOCKER}
+    logging: *logging
+    stop_grace_period: 30s
+    environment:
+      - LOG_LEVEL=info
+    networks:
+      - infra_gw-internal
+    volumes:
+      - pinchflat-data:/config
+      - /mnt/media:/downloads
+    deploy:
+      <<: [*place-storage, *deploy]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.internal=true"
+        - "traefik.http.routers.pinchflat.rule=Host(`youtube.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.pinchflat.entrypoints=websecure"
+        - "traefik.http.services.pinchflat.loadbalancer.server.port=8945"
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+volumes:
+  pinchflat-data:
+
+networks:
+  infra_gw-internal:
+    external: true

@@ -1,0 +1,131 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+# Internal Proxy Stack: Traefik for LAN/Tailscale
+# Prerequisites:
+#   - infra/socket deployed (provides infra_socket)
+#   - infra/metrics deployed (provides infra_metrics)
+#   - VM node has labels: location=onprem
+#   - DNS: *.DOMAIN_PRIVATE resolves to VM LAN IP (internal only)
+# Primary network: infra_gw-internal
+
+include:
+  - secrets.yml
+  - configs.yml
+
+services:
+  traefik-internal:
+    image: traefik:v3.6 # Consider hardened dhi.io/traefik:3
+    logging: *logging
+    stop_grace_period: 30s
+    command:
+      # Global
+      - "--global.checkNewVersion=false"
+      - "--global.sendAnonymousUsage=false"
+      # Logging
+      - "--log.level=INFO"
+      - "--log.format=common"
+      # - "--log.filePath=/var/log/traefik/container.log"
+      # - "--log.maxSize=1"
+      # - "--log.maxAge=1"
+      # - "--log.maxBackups=1"
+      - "--accessLog.format=common"
+      # API
+      - "--api.insecure=false"
+      - "--api.dashboard=true"
+      - "--ping=true"
+      # Metrics
+      - "--metrics.prometheus.entryPoint=metrics"
+      - "--metrics.prometheus.addRoutersLabels=true"
+      - "--metrics.prometheus.addServicesLabels=true"
+      - "--metrics.prometheus.addEntryPointsLabels=true"
+      - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
+      # Providers
+      - "--providers.file.watch=true"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.swarm.watch=true"
+      - "--providers.swarm.endpoint=http://socket-proxy:2375"
+      - "--providers.swarm.exposedByDefault=false"
+      - "--providers.swarm.network=infra_gw-internal"
+      - "--providers.swarm.constraints=Label(`traefik.scope.internal`, `true`)"
+      # TLS / ACME
+      - "--certificatesResolvers.letsencrypt-internal.acme.email=pgm95@github.com"
+      - "--certificatesResolvers.letsencrypt-internal.acme.storage=/certs/acme-internal.json"
+      - "--certificatesResolvers.letsencrypt-internal.acme.caServer=${GLOBAL_ACME_CA_SERVER}"
+      - "--certificatesResolvers.letsencrypt-internal.acme.dnsChallenge.provider=cloudflare"
+      - "--certificatesResolvers.letsencrypt-internal.acme.dnsChallenge.propagation.delayBeforeChecks=30s"
+      - "--certificatesResolvers.letsencrypt-internal.acme.dnsChallenge.resolvers=1.1.1.1:53,8.8.8.8:53,9.9.9.9:53"
+      # Entrypoints
+      - "--entryPoints.metrics.address=:9091"
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entryPoints.websecure.address=:443"
+      - "--entryPoints.websecure.asDefault=true"
+      - "--entryPoints.websecure.http.middlewares=security-headers@file"
+      - "--entryPoints.websecure.http.tls.certResolver=letsencrypt-internal"
+      - "--entryPoints.websecure.http.tls.domains[0].main=${DOMAIN_PRIVATE}"
+      - "--entryPoints.websecure.http.tls.domains[0].sans=*.${DOMAIN_PRIVATE}"
+      - "--entryPoints.websecure.transport.respondingTimeouts.readTimeout=12h"
+      - "--entryPoints.websecure.transport.respondingTimeouts.writeTimeout=12h"
+      - "--entryPoints.websecure.transport.respondingTimeouts.idleTimeout=90s"
+    environment:
+      - DOMAIN_PRIVATE=${DOMAIN_PRIVATE}
+      - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/cloudflare_dns_api_token_internal
+    secrets:
+      - cloudflare_dns_api_token_internal
+    configs:
+      - source: traefik_dynamic_base
+        target: /etc/traefik/dynamic/base.yml
+      - source: traefik_dynamic_hass-private
+        target: /etc/traefik/dynamic/hass-private.yml
+    networks:
+      - infra_socket
+      - infra_gw-internal
+      - infra_metrics
+    ports:
+      - target: 443
+        published: 443
+        protocol: tcp
+        mode: host
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host
+    volumes:
+      - traefik-logs:/var/log/traefik
+      - traefik-certs:/certs
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      <<: [*place-vm, *deploy-stop-first]
+      labels:
+        - "homepage.group=Infrastructure"
+        - "homepage.name=Traefik Internal"
+        - "homepage.icon=traefik"
+        - "homepage.href=https://traefik.${DOMAIN_PRIVATE}"
+        - "homepage.description=LAN / Tailscale Reverse Proxy"
+        - "homepage.widget.type=traefik"
+        - "homepage.widget.url=https://traefik.${DOMAIN_PRIVATE}"
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+volumes:
+  traefik-logs:
+  traefik-certs:
+
+networks:
+  infra_gw-internal:
+    external: true
+  infra_socket:
+    external: true
+  infra_metrics:
+    external: true

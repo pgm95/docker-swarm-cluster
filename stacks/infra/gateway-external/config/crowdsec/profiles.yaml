@@ -1,0 +1,30 @@
+# CrowdSec Profiles Configuration
+name: appsec_ip_remediation
+filters:
+  - Alert.GetScenario() startsWith "crowdsecurity/vpatch-" && Alert.GetScope() == "Ip"
+decisions:
+  - type: ban
+    duration: 4h
+on_success: break
+notifications:
+  - http_victoria
+---
+name: default_ip_remediation
+filters:
+  - Alert.Remediation == true && Alert.GetScope() == "Ip"
+decisions:
+  - type: ban
+    duration: 4h
+on_success: break
+notifications:
+  - http_victoria
+---
+name: default_range_remediation
+filters:
+  - Alert.Remediation == true && Alert.GetScope() == "Range"
+decisions:
+  - type: ban
+    duration: 4h
+on_success: break
+notifications:
+  - http_victoria

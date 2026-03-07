@@ -1,0 +1,119 @@
+#:schema https://mise.jdx.dev/schema/mise-task.json
+#:tombi schema.strict = false
+
+["site:deploy"]
+description = "Deploy all stacks"
+depends = ["site:deploy-infra"]
+run = [{ task = "site:deploy-apps" }]
+depends_post = ["swarm:status"]
+
+["site:deploy-infra"]
+description = "Deploy infrastructure stacks in order"
+depends = ["swarm:init-networks", "swarm:init-volumes"]
+run = '''{% raw %}
+#!/usr/bin/env bash
+STACKS=(
+    stacks/infra/socket
+    stacks/infra/postgres
+    stacks/infra/gateway-internal
+    stacks/infra/gateway-external
+    stacks/infra/metrics
+    stacks/infra/registry
+    stacks/infra/accounts
+)
+echo "=== Infra Deploy ==="
+echo "Stacks: ${#STACKS[@]}"
+echo ""
+for stack in "${STACKS[@]}"; do
+    echo "━━━ $(basename "${stack}") ━━━"
+    mise run swarm:deploy "${stack}" || { echo "ABORT: $(basename "${stack}") failed"; exit 1; }
+    sleep 5
+    echo ""
+done
+{% endraw %}'''
+
+["site:deploy-apps"]
+description = "Deploy application stacks in order"
+run = '''{% raw %}
+#!/usr/bin/env bash
+mapfile -t STACKS < <(find stacks/apps -mindepth 1 -maxdepth 1 -type d | sort)
+failed=()
+skipped=0
+echo "=== Apps Deploy ==="
+echo "Stacks: ${#STACKS[@]}"
+echo ""
+for stack in "${STACKS[@]}"; do
+    if [[ -f "${stack}/.nodeploy" ]]; then
+        echo "━━━ $(basename "${stack}") ━━━"
+        echo "SKIP (.nodeploy)"
+        ((skipped++))
+        echo ""
+        continue
+    fi
+    echo "━━━ $(basename "${stack}") ━━━"
+    if ! mise run swarm:deploy "${stack}"; then
+        echo "FAILED: $(basename "${stack}")"
+        failed+=("$(basename "${stack}")")
+    fi
+    sleep 5
+    echo ""
+done
+summary="deployed $(( ${#STACKS[@]} - skipped - ${#failed[@]} ))"
+[[ ${skipped} -gt 0 ]] && summary+=", skipped ${skipped}"
+[[ ${#failed[@]} -gt 0 ]] && summary+=", failed ${#failed[@]}: ${failed[*]}"
+echo "=== Apps deploy complete (${summary}) ==="
+[[ ${#failed[@]} -eq 0 ]]
+{% endraw %}'''
+
+["site:reset"]
+description = "Remove all stacks in reverse order"
+usage = 'flag "--volumes" help="Also remove all named volumes from nodes"'
+depends_post = ["swarm:cleanup"]
+run = '''{% raw %}
+#!/usr/bin/env bash
+INFRA_STACKS=(
+    stacks/infra/accounts
+    stacks/infra/registry
+    stacks/infra/metrics
+    stacks/infra/gateway-external
+    stacks/infra/gateway-internal
+    stacks/infra/postgres
+    stacks/infra/socket
+)
+NETWORKS=(infra_socket infra_gw-internal infra_gw-external infra_metrics infra_postgres)
+echo "--- Removing app stacks ---"
+for stack in $(find stacks/apps -mindepth 1 -maxdepth 1 -type d | sort); do
+    mise run swarm:remove "${stack}"
+done
+echo ""
+echo "--- Removing infra stacks ---"
+for stack in "${INFRA_STACKS[@]}"; do
+    mise run swarm:remove "${stack}"
+done
+if [[ "${usage_volumes}" == "true" ]]; then
+    echo ""
+    echo "--- Removing volumes ---"
+    nodes=()
+    for n in "${SWARM_NODE_DEFAULT}" "${SWARM_NODE_STORAGE}" "${SWARM_NODE_GPU}" "${SWARM_NODE_CLOUD}"; do
+        [[ -z "${n}" ]] && continue
+        for existing in "${nodes[@]}"; do
+            [[ "${existing}" == "${n}" ]] && continue 2
+        done
+        nodes+=("${n}")
+    done
+    for node in "${nodes[@]}"; do
+        pruned=$(ssh "root@${node}" "docker volume prune -af" 2>/dev/null)
+        count=$(echo "${pruned}" | grep -c '^[a-f0-9]' || true)
+        echo "  ${node}: ${count} removed"
+    done
+fi
+echo ""
+echo "--- Removing overlay networks ---"
+for net in "${NETWORKS[@]}"; do
+    if docker network rm "${net}" >/dev/null 2>&1; then
+        echo "  removed: ${net}"
+    else
+        echo "  skipped: ${net} (not found or in use)"
+    fi
+done
+{% endraw %}'''

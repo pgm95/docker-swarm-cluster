@@ -1,0 +1,4 @@
+#:schema https://raw.githubusercontent.com/jdx/mise/refs/heads/main/schema/miserc.json
+#:tombi schema.strict = false
+
+env = ["dev"]

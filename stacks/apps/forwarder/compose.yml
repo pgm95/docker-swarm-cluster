@@ -1,0 +1,61 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+include:
+  - secrets.yml
+  - configs.yml
+
+services:
+  forwarder:
+    image: ${GLOBAL_SWARM_OCI_REGISTRY}/forwarder/forwarder:${OCI_TAG_FORWARDER}
+    read_only: true
+    logging: *logging
+    stop_grace_period: 30s
+    environment:
+      # Secret file references
+      - IMAP_SERVER_FILE=/run/secrets/imap_server
+      - SMTP_SERVER_FILE=/run/secrets/smtp_server
+      - EMAIL_ADDRESS_FILE=/run/secrets/email_address
+      - EMAIL_PASSWORD_FILE=/run/secrets/email_password
+      - FWD_RECIPIENT_1_FILE=/run/secrets/fwd_recipient_1
+      - FWD_RECIPIENT_2_FILE=/run/secrets/fwd_recipient_2
+      - FWD_RECIPIENT_3_FILE=/run/secrets/fwd_recipient_3
+      # Non-secret configuration
+      - CONFIG_FILE=/config/config.json
+      - IMAP_PORT=993
+      - SMTP_PORT=465
+      - POLL_INTERVAL=15
+      - IMAP_FOLDER=INBOX
+      - MARK_AS_READ=true
+      - CONNECTION_TIMEOUT=30
+      - OPERATION_TIMEOUT=60
+      - CONNECTION_MAX_AGE=300
+      - HEARTBEAT_INTERVAL=300
+      - MAX_EMAILS_PER_CYCLE=50
+    secrets:
+      - imap_server
+      - smtp_server
+      - email_address
+      - email_password
+      - fwd_recipient_1
+      - fwd_recipient_2
+      - fwd_recipient_3
+    configs:
+      - source: forwarder_config
+        target: /config/config.json
+    tmpfs:
+      - /tmp:size=10M,mode=1777
+    healthcheck:
+      test: ["CMD", "sh", "-c", "[ -f /tmp/forwarder_healthy ] && [ $$(( $$(date +%s) - $$(stat -c %Y /tmp/forwarder_healthy) )) -lt 180 ]"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      <<: [*place-onprem, *deploy]
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M

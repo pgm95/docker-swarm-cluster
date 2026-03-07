@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+# Prerequisites:
+#   - infra/socket deployed (provides infra_socket)
+#   - infra/gateway-internal deployed (provides infra_gw-internal)
+#   - VM node has labels: location=onprem
+# Read-only monitoring — connects to socket-proxy, no agent needed
+
+services:
+  portainer:
+    image: portainer/portainer-ce:sts
+    logging: *logging
+    stop_grace_period: 30s
+    command: -H tcp://socket-proxy:2375
+    networks:
+      - infra_socket
+      - infra_gw-internal
+    volumes:
+      - portainer-data:/data
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      <<: [*place-vm, *deploy]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.internal=true"
+        - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.portainer.entrypoints=websecure"
+        - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+        - "homepage.group=Infrastructure"
+        - "homepage.name=Portainer"
+        - "homepage.icon=portainer"
+        - "homepage.href=https://portainer.${DOMAIN_PRIVATE}"
+        - "homepage.description=Container Management"
+        - "homepage.widget.type=portainer"
+        - "homepage.widget.url=https://portainer.${DOMAIN_PRIVATE}"
+        - "homepage.widget.env=1"
+        - "homepage.widget.key={{HOMEPAGE_VAR_PORTAINER_KEY}}"
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+volumes:
+  portainer-data:
+
+networks:
+  infra_socket:
+    external: true
+  infra_gw-internal:
+    external: true

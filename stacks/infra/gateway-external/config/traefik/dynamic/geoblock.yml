@@ -1,0 +1,38 @@
+# Traefik Dynamic Configuration - Geoblock Plugin
+# https://github.com/david-garcia-garcia/traefik-geoblock
+---
+# yaml-language-server: $schema=https://json.schemastore.org/traefik-v3-file-provider.json
+
+http:
+  middlewares:
+    geoblock:
+      plugin:
+        geoblock:
+          enabled: true
+          databaseFilePath: "/data/geoblock"
+          databaseAutoUpdate: true
+          databaseAutoUpdateDir: "/data/geoblock"
+          databaseAutoUpdateToken: '{{ env "GEOBLOCK_IP2LOCATION_TOKEN" }}'
+          databaseAutoUpdateCode: "DB1"
+          defaultAllow: false
+          allowedCountries: [DK,LB,FR,MX,CA,AE,US,GB]
+          blockedCountries: [RU,CN,IN]
+          blockedIPBlocks: []
+          allowPrivate: true
+          allowedIPBlocks:
+            - 10.0.0.0/8
+            - 127.0.0.0/16
+            - 172.16.0.0/12
+            - 100.64.0.0/10
+          ipHeaders:
+            - "remoteAddress"
+          banHtmlFilePath: ""
+          ipHeaderStrategy: CheckFirstNonePrivate
+          banIfError: true
+          disallowedStatusCode: 403
+          logLevel: "info"
+          logFormat: "json"
+          logPath: "/var/log/traefik/geoblock.log"
+          logBannedRequests: true
+          fileLogBufferSizeBytes: 1024
+          fileLogBufferTimeoutSeconds: 2

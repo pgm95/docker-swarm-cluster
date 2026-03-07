@@ -1,0 +1,143 @@
+server:
+  minSearchLength: 3
+  disableUpdateCheck: false
+  disablePreviews: false
+  disablePreviewResize: false
+  disableTypeDetectionByHeader: false
+  port: 15031
+  baseURL: "/"
+  externalUrl: ""
+  internalUrl: "http://localhost:15031"
+  logging:
+    - output: "stdout"
+      noColors: false
+  cacheDir: "tmp"
+  maxArchiveSize: 50
+  filesystem:
+    createFilePermission: "660"
+    createDirectoryPermission: "770"
+
+  sources:
+    - path: "/mnt/personal"
+      name: "Personal"
+      config:
+        denyByDefault: false
+        private: false
+        disabled: false
+        disableIndexing: false
+        conditionals:
+          hidden: false
+          ignoreZeroSizeFolders: false
+          rules:
+            - folderPath: "archive"
+        defaultUserScope: "/"
+        defaultEnabled: true
+        createUserDir: false
+    - path: "/mnt/photos"
+      name: "Photos"
+      config:
+        denyByDefault: false
+        private: false
+        disabled: false
+        disableIndexing: false
+        conditionals:
+          hidden: false
+          ignoreZeroSizeFolders: false
+        defaultUserScope: "/"
+        defaultEnabled: true
+        createUserDir: false
+    - path: "/mnt/media"
+      name: "Media"
+      config:
+        denyByDefault: false
+        private: false
+        disabled: false
+        disableIndexing: false
+        conditionals:
+          hidden: false
+          ignoreZeroSizeFolders: false
+        defaultUserScope: "/"
+        defaultEnabled: true
+        createUserDir: false
+    - path: "/mnt/archive"
+      name: "Archive"
+      config:
+        denyByDefault: false
+        private: false
+        disabled: false
+        disableIndexing: false
+        indexingIntervalMinutes: 0
+        conditionals:
+          hidden: false
+          ignoreZeroSizeFolders: false
+        defaultUserScope: "/"
+        defaultEnabled: true
+        createUserDir: false
+    - path: "/mnt/apple"
+      name: "Apple"
+      config:
+        denyByDefault: false
+        private: false
+        disabled: false
+        disableIndexing: true
+        conditionals:
+          hidden: false
+          ignoreZeroSizeFolders: false
+        defaultUserScope: "/"
+        defaultEnabled: true
+        createUserDir: false
+
+auth:
+  tokenExpirationHours: 120
+  adminUsername: "root"
+  adminPassword: "admin"
+  methods:
+    password:
+      enabled: true
+      minLength: 5
+      signup: false
+    oidc:
+      enabled: true
+      clientId: ''
+      clientSecret: ''
+      issuerUrl: 'https://auth.maliha.vip'
+      scopes: 'email openid profile groups'
+      userIdentifier: 'preferred_username'
+      disableVerifyTLS: false
+      logoutRedirectUrl: ''
+      createUser: true
+      adminGroup: 'system_admin'
+      groupsClaim: 'groups'
+
+frontend:
+  name: "NAS - SATA ZFS Pool"
+  disableNavButtons: false
+  disableDefaultLinks: true
+  disableUsedPercentage: false
+  description: ""
+  styling:
+    customCSS: ""
+    lightBackground: "#858585"
+    darkBackground: "#000000"
+    customThemes:
+      default:
+        description: "The default theme"
+        css: ""
+      alternative:
+        description: "Reduce rounded corners"
+        css: "reduce-rounded-corners.css"
+
+userDefaults:
+  darkMode: true
+  disableSettings: false
+  showSelectMultiple: true
+  singleClick: true
+  showHidden: true
+  themeColor: "#363636"
+  quickDownload: true
+  preview:
+    image: true
+    popup: true
+    video: false
+    office: false
+    highQuality: false

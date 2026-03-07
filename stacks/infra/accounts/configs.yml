@@ -1,0 +1,22 @@
+# Docker configs for accounts stack
+# Included via docker compose include directive
+
+configs:
+  authelia_config:
+    name: authelia_config_${DEPLOY_VERSION}
+    file: ./config/authelia/configuration.yml
+  lldap_config:
+    name: lldap_config_${DEPLOY_VERSION}
+    file: ./config/lldap/lldap_config.toml
+  webfinger_config:
+    name: webfinger_config_${DEPLOY_VERSION}
+    file: ./config/webfinger/config.yml
+  webfinger_ldap_template:
+    name: webfinger_ldap_template_${DEPLOY_VERSION}
+    file: ./config/webfinger/ldap.gotmpl
+  init_db_entrypoint:
+    name: init_db_entrypoint_${DEPLOY_VERSION}
+    file: ./config/bootstrap/init-db.sh
+  init_ldap_entrypoint:
+    name: init_ldap_entrypoint_${DEPLOY_VERSION}
+    file: ./config/bootstrap/init-ldap.sh

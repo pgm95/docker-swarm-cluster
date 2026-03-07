@@ -1,0 +1,536 @@
+#:schema https://mise.jdx.dev/schema/mise-task.json
+#:tombi schema.strict = false
+
+["swarm:deploy"]
+description = "Deploy a stack with automatic secret management"
+usage = 'arg "<path>" help="Path to stack directory"'
+run = '''{% raw %}
+#!/usr/bin/env bash
+source .mise/tasks/scripts/content-hash.sh
+source .mise/tasks/scripts/sops-export.sh
+source .mise/tasks/scripts/compose-config.sh
+STACK_PATH="${usage_path}"
+STACK_FILE="${STACK_PATH}/compose.yml"
+[[ -f "${STACK_FILE}" ]] || { echo "Error: ${STACK_FILE} not found"; exit 1; }
+[[ -f "${SOPS_AGE_KEY_FILE:-}" ]] || { echo "Error: SOPS_AGE_KEY_FILE not found: ${SOPS_AGE_KEY_FILE:-unset}"; exit 1; }
+STACK_NAME=$(basename "${STACK_PATH}")
+
+# --- Versioned secrets & configs ---
+if grep -qE 'DEPLOY_VERSION' "${STACK_PATH}"/*.yml 2>/dev/null; then
+    DEPLOY_VERSION="$(git rev-parse --short HEAD 2>/dev/null || echo 'local')_$(date +%s)"
+    export DEPLOY_VERSION STACK_PATH
+    echo "Deploy version: ${DEPLOY_VERSION}"
+    # Load secrets into environment for pre-flight and compose interpolation and verify required secrets are available
+    sops_export "${STACK_PATH}/secrets.env" || exit 1
+    if [[ -f "${STACK_PATH}/secrets.yml" ]] && grep -q 'DEPLOY_VERSION' "${STACK_PATH}/secrets.yml" 2>/dev/null; then
+        missing=()
+        while IFS= read -r required_var; do
+            [[ -z "${required_var}" ]] && continue
+            if [[ -z "${!required_var:-}" ]]; then
+                missing+=("${required_var}")
+            fi
+        done < <(grep 'name:.*DEPLOY_VERSION' "${STACK_PATH}/secrets.yml" 2>/dev/null \
+            | sed 's/.*name: *\([a-z_]*\)_.*/\1/' | sort -u \
+            | while read -r secret; do echo "${secret^^}"; done)
+        if [[ ${#missing[@]} -gt 0 ]]; then
+            echo "ERROR: Missing required secrets:"
+            printf "  %s\n" "${missing[@]}"
+            echo "Add them to ${STACK_PATH}/secrets.env or GLOBAL_SECRETS"
+            exit 1
+        fi
+        # Create versioned Docker secrets
+        echo "Creating versioned secrets..."
+        for secret_file in "${STACK_PATH}/secrets.env" "${GLOBAL_SECRETS}"; do
+            [[ -f "${secret_file}" ]] || continue
+            echo "  From: ${secret_file}"
+            created=0; skipped=0
+            while IFS= read -r line; do
+                key="${line%%=*}"
+                value="${line#*=}"
+                if [[ "${key}" == *_B64 ]]; then
+                    key="${key%_B64}"
+                    value=$(echo -n "${value}" | base64 -d) || { echo "ERROR: base64-decode failed for ${key}_B64"; exit 1; }
+                fi
+                secret_name="${key,,}_${DEPLOY_VERSION}"
+                if docker secret inspect "${secret_name}" >/dev/null 2>&1; then
+                    ((skipped++))
+                elif echo -n "${value}" | docker secret create "${secret_name}" -; then
+                    echo "    + ${secret_name}"
+                    ((created++))
+                else
+                    echo "ERROR: Failed to create secret '${secret_name}'"
+                    exit 1
+                fi
+            done < <(sops_decrypt "${secret_file}")
+            echo "    Created: ${created}, Skipped: ${skipped}"
+        done
+    fi
+    # Pre-flight: verify config files exist
+    if [[ -f "${STACK_PATH}/configs.yml" ]]; then
+        while IFS= read -r config_file; do
+            [[ -z "${config_file}" ]] && continue
+            [[ -f "${STACK_PATH}/${config_file}" ]] || { echo "Error: Missing config file: ${STACK_PATH}/${config_file}"; exit 1; }
+        done < <(grep 'file:' "${STACK_PATH}/configs.yml" 2>/dev/null | sed 's/.*file:[[:space:]]*//')
+    fi
+    echo ""
+else
+    echo "Stack uses env vars only"
+    sops_export "${STACK_PATH}/secrets.env" || exit 1
+fi
+
+# --- Auto-build custom images ---
+for build_dir in "${STACK_PATH}"/build/*/; do
+    [[ -d "${build_dir}" ]] || continue
+    local_service=$(basename "${build_dir}")
+    local_tag=$(compute_content_hash "${build_dir}")
+    local_image="${GLOBAL_SWARM_OCI_REGISTRY}/${STACK_NAME}/${local_service}:${local_tag}"
+    var_name="OCI_TAG_$(echo "${local_service}" | tr '[:lower:]' '[:upper:]')"
+    export "${var_name}=${local_tag}"
+    echo "Image: ${var_name}=${local_tag}"
+    if docker manifest inspect "${local_image}" >/dev/null 2>&1; then
+        echo "  Exists: ${local_image}"
+    else
+        echo "  Building: ${local_image}"
+        docker build -t "${local_image}" "${build_dir}" || { echo "ERROR: Build failed for ${local_image}"; exit 1; }
+        echo "  Pushing: ${local_image}"
+        docker push "${local_image}" || { echo "ERROR: Push failed for ${local_image}"; exit 1; }
+    fi
+    echo ""
+done
+
+# --- Deploy ---
+echo "Deploying: ${STACK_NAME}"
+if ! compose_config "${STACK_FILE}" | sed '/^name:/d; s/published: "\([0-9]*\)"/published: \1/' | docker stack deploy --detach --with-registry-auth -c - "${STACK_NAME}"; then
+    echo "ERROR: Deploy command failed"
+    [[ -n "${DEPLOY_VERSION:-}" ]] && echo "Tip: Run 'mise run swarm:cleanup' to remove orphaned secrets"
+    exit 1
+fi
+
+# --- Wait for convergence ---
+echo ""
+echo "Waiting for services to converge..."
+timeout=180; elapsed=0
+while [[ ${elapsed} -lt ${timeout} ]]; do
+    # Wait if any tasks are still transitioning
+    if docker stack ps "${STACK_NAME}" 2>/dev/null | grep -qE "Pending|Preparing|Starting|Ready"; then
+        sleep 2; ((elapsed+=2))
+        continue
+    fi
+    # Check if all replicas are up (accounts for API lag between task state and replica count)
+    all_healthy=true
+    while IFS=$'\t' read -r name replicas; do
+        current="${replicas%%/*}"
+        desired="${replicas##*/}"
+        if [[ "${current}" -lt "${desired}" ]]; then
+            all_healthy=false
+            break
+        fi
+    done < <(docker stack services "${STACK_NAME}" --format '{{.Name}}\t{{.Replicas}}' 2>/dev/null)
+    ${all_healthy} && break
+    sleep 2; ((elapsed+=2))
+done
+if [[ ${elapsed} -ge ${timeout} ]]; then
+    echo "WARNING: Timeout waiting for convergence after ${timeout}s"
+fi
+
+# Final replica health check
+unhealthy=0
+while IFS=$'\t' read -r name replicas; do
+    current="${replicas%%/*}"
+    desired="${replicas##*/}"
+    if [[ "${current}" -lt "${desired}" ]]; then
+        echo "UNHEALTHY: ${name} ${replicas}"
+        ((unhealthy++))
+    fi
+done < <(docker stack services "${STACK_NAME}" --format '{{.Name}}\t{{.Replicas}}' 2>/dev/null)
+if [[ ${unhealthy} -gt 0 ]]; then
+    echo ""
+    echo "ERROR: ${unhealthy} service(s) not converged"
+    docker stack ps "${STACK_NAME}" --no-trunc --filter "desired-state=running" 2>/dev/null | grep -vE "Running|\\\\\_" | head -5
+    exit 1
+fi
+echo ""
+docker stack services "${STACK_NAME}"
+if [[ -n "${DEPLOY_VERSION:-}" ]]; then
+    echo ""
+    echo "Deployed with DEPLOY_VERSION=${DEPLOY_VERSION}"
+fi
+{% endraw %}'''
+
+["swarm:validate"]
+description = "Internal: validate all compose files for Swarm compatibility"
+hide = true
+run = '''{% raw %}
+#!/usr/bin/env bash
+source .mise/tasks/scripts/content-hash.sh
+source .mise/tasks/scripts/compose-config.sh
+# Export OCI_TAG_* env vars for stacks with build contexts
+for build_dir in stacks/*/build/*/  stacks/*/*/build/*/; do
+    [[ -d "${build_dir}" ]] || continue
+    service=$(basename "${build_dir}")
+    tag=$(compute_content_hash "${build_dir}")
+    var_name="OCI_TAG_$(echo "${service}" | tr '[:lower:]' '[:upper:]')"
+    export "${var_name}=${tag}"
+done
+validate_stack() {
+    compose_config "$1" 2>/dev/null \
+        | sed '/^name:/d; s/published: "\([0-9]*\)"/published: \1/' \
+        | docker stack config -c - > /dev/null 2>&1
+}
+FAILED=0
+while IFS= read -r f; do
+    if validate_stack "$f"; then
+        echo "✓ ${f}"
+    else
+        echo "✗ ${f}"
+        compose_config "$f" 2>&1 | head -5
+        FAILED=1
+    fi
+done < <(find stacks -name "compose.yml" | sort)
+[[ ${FAILED} -eq 0 ]] || exit 1
+# --- Bind mount path checks ---
+get_target_node() {
+    local stack_file="$1"
+    local constraints
+    constraints=$(grep -A5 'placement:' "${stack_file}" 2>/dev/null | grep 'node.labels' || true)
+    if echo "${constraints}" | grep -q 'storage == true'; then
+        echo "${SWARM_NODE_STORAGE}"
+    elif echo "${constraints}" | grep -q 'gpu == true'; then
+        echo "${SWARM_NODE_GPU}"
+    elif echo "${constraints}" | grep -q 'location == cloud'; then
+        echo "${SWARM_NODE_CLOUD}"
+    else
+        echo "${SWARM_NODE_DEFAULT}"
+    fi
+}
+echo ""
+echo "=== Bind mount paths ==="
+warnings=0
+for stack_file in $(find stacks -name "compose.yml" | sort); do
+    bind_paths=$(compose_config "${stack_file}" --format json 2>/dev/null | python3 -c '
+import json, sys
+config = json.load(sys.stdin)
+for svc in config.get("services", {}).values():
+    for v in svc.get("volumes", []):
+        if v.get("type") == "bind":
+            print(v["source"])
+' 2>/dev/null | sort -u) || continue
+    [[ -z "${bind_paths}" ]] && continue
+    target=$(get_target_node "${stack_file}")
+    stack_name="$(dirname "${stack_file}")"
+    # Build a single SSH command to stat all paths
+    stat_cmd=""
+    declare -a paths=()
+    while IFS= read -r p; do
+        [[ -z "${p}" ]] && continue
+        paths+=("${p}")
+        stat_cmd+="if [ -e '${p}' ]; then stat -c '%A %U:%G ${p}' '${p}'; else echo 'MISSING ${p}'; fi;"
+    done <<< "${bind_paths}"
+    [[ ${#paths[@]} -eq 0 ]] && continue
+    results=$(ssh "root@${target}" "${stat_cmd}" 2>/dev/null) || {
+        echo "⚠ ${stack_name} → ${target}: unreachable"
+        ((warnings++))
+        continue
+    }
+    echo "${stack_name} (${target}):"
+    while IFS= read -r line; do
+        if [[ "${line}" == MISSING* ]]; then
+            echo "  ⚠ ${line}"
+            ((warnings++))
+        else
+            echo "  ${line}"
+        fi
+    done <<< "${results}"
+done
+if [[ ${warnings} -gt 0 ]]; then
+    echo ""
+    echo "${warnings} warning(s) — missing bind mount paths."
+fi
+{% endraw %}'''
+
+["swarm:remove"]
+description = "Remove a deployed stack and wait for services to drain"
+usage = 'arg "<path>" help="Path to stack directory"'
+run = '''{% raw %}
+#!/usr/bin/env bash
+STACK_NAME=$(basename "${usage_path}")
+if ! docker stack ls --format '{{.Name}}' | grep -qx "${STACK_NAME}"; then
+    echo "Not deployed: ${STACK_NAME}"
+    exit 0
+fi
+echo "Removing: ${STACK_NAME}"
+docker stack rm "${STACK_NAME}"
+echo "Waiting for services to drain..."
+timeout=60; elapsed=0
+while [[ ${elapsed} -lt ${timeout} ]] && docker stack ps "${STACK_NAME}" >/dev/null 2>&1; do
+    sleep 3; ((elapsed+=3))
+done
+if docker stack ps "${STACK_NAME}" >/dev/null 2>&1; then
+    echo "WARNING: Stack still draining after ${timeout}s"
+else
+    echo "Removed: ${STACK_NAME}"
+fi
+{% endraw %}'''
+
+["swarm:status"]
+description = "Show cluster nodes and health status of all deployed stacks"
+run = '''{% raw %}
+#!/usr/bin/env bash
+
+# --- Nodes ---
+printf "%-18s %-12s %-14s %-10s %s\n" "NODE" "ROLE" "STATUS" "ENGINE" "LABELS"
+printf "%-18s %-12s %-14s %-10s %s\n" "----" "----" "------" "------" "------"
+while IFS=$'\t' read -r hostname status availability role engine; do
+    labels=$(docker node inspect "${hostname}" --format '{{range $k,$v := .Spec.Labels}}{{$k}}={{$v}} {{end}}' 2>/dev/null | sed 's/ $//')
+    [[ -z "${labels}" ]] && labels="-"
+    printf "%-18s %-12s %-14s %-10s %s\n" "${hostname}" "${role}" "${status}/${availability}" "${engine}" "${labels}"
+done < <(docker node ls --format '{{.Hostname}}\t{{.Status}}\t{{.Availability}}\t{{if .ManagerStatus}}{{.ManagerStatus}}{{else}}Worker{{end}}\t{{.EngineVersion}}' 2>/dev/null)
+echo ""
+
+# --- Stacks ---
+deployed=$(docker stack ls --format '{{.Name}}' 2>/dev/null)
+mapfile -t STACKS < <(
+    for dir in $(find stacks/infra -mindepth 1 -maxdepth 1 -type d | sort) \
+               $(find stacks/apps -mindepth 1 -maxdepth 1 -type d | sort); do
+        basename "${dir}"
+    done
+)
+total=0; healthy=0; unhealthy=0
+printf "%-20s %-11s %-14s %s\n" "STACK" "STATUS" "NODE" "SERVICES"
+printf "%-20s %-11s %-14s %s\n" "-----" "------" "----" "--------"
+for stack in "${STACKS[@]}"; do
+    if ! echo "${deployed}" | grep -qx "${stack}"; then
+        printf "%-20s %-11s\n" "${stack}" "not deployed"
+        continue
+    fi
+    ((total++))
+    # Collect service replicas
+    services=""
+    stack_healthy=true
+    declare -A svc_nodes=()
+    while IFS=$'\t' read -r name replicas; do
+        short_name="${name#${stack}_}"
+        current="${replicas%%/*}"
+        desired="${replicas##*/}"
+        if [[ "${current}" -lt "${desired}" ]]; then
+            stack_healthy=false
+        fi
+        services+="${short_name}(${replicas}) "
+    done < <(docker stack services "${stack}" --format '{{.Name}}\t{{.Replicas}}' 2>/dev/null)
+    # Collect node placement per service
+    while IFS=$'\t' read -r task_name node; do
+        svc="${task_name%%.*}"
+        short_svc="${svc#${stack}_}"
+        svc_nodes["${short_svc}"]="${node}"
+    done < <(docker stack ps "${stack}" --format '{{.Name}}\t{{.Node}}' --filter "desired-state=running" 2>/dev/null)
+    # Determine display node: single node if all services on same node, else per-service
+    unique_nodes=($(printf '%s\n' "${svc_nodes[@]}" | sort -u))
+    if [[ ${#unique_nodes[@]} -eq 1 ]]; then
+        node_col="${unique_nodes[0]}"
+    elif [[ ${#unique_nodes[@]} -eq 0 ]]; then
+        node_col="-"
+    else
+        node_col="${unique_nodes[*]}"
+    fi
+    unset svc_nodes
+    status_label="healthy"
+    if ! ${stack_healthy}; then
+        status_label="UNHEALTHY"
+    fi
+    printf "%-20s %-11s %-14s %s\n" "${stack}" "${status_label}" "${node_col}" "${services}"
+    if ! ${stack_healthy}; then
+        ((unhealthy++))
+        # Show error details for failing tasks
+        while IFS=$'\t' read -r task_name task_err; do
+            [[ -z "${task_err}" ]] && continue
+            short="${task_name%%.*}"
+            printf "  %-18s %s\n" "${short#${stack}_}" "${task_err}"
+        done < <(docker stack ps "${stack}" --format '{{.Name}}\t{{.Error}}' --filter "desired-state=running" --no-trunc 2>/dev/null)
+    else
+        ((healthy++))
+    fi
+done
+echo ""
+echo "Deployed: ${total} | Healthy: ${healthy} | Unhealthy: ${unhealthy}"
+{% endraw %}'''
+
+["swarm:cleanup"]
+description = "Remove unused versioned secrets, configs, dead containers, and dangling images"
+usage = 'flag "--prune-images" help="Also prune all unused images on every node (destructive)"'
+run = '''{% raw %}
+#!/usr/bin/env bash
+removed=0
+cleanup_versioned_items() {
+    local item_type="$1"
+    local count=0
+    while read -r item_name; do
+        [[ -z "${item_name}" ]] && continue
+        if docker "${item_type}" rm "${item_name}" 2>/dev/null; then
+            echo "  - ${item_name}"
+            ((count++))
+        fi
+    done < <(docker "${item_type}" ls --format '{{.Name}}' | grep -E '_[a-f0-9]+_[0-9]+$' || true)
+    echo "  Removed: ${count}"
+    ((removed += count))
+}
+echo "=== Secrets ==="
+cleanup_versioned_items "secret"
+echo ""
+echo "=== Configs ==="
+cleanup_versioned_items "config"
+echo ""
+nodes=()
+for n in "${SWARM_NODE_DEFAULT}" "${SWARM_NODE_STORAGE}" "${SWARM_NODE_GPU}" "${SWARM_NODE_CLOUD}"; do
+    [[ -z "${n}" ]] && continue
+    # Deduplicate (some nodes share hostnames)
+    for existing in "${nodes[@]}"; do
+        [[ "${existing}" == "${n}" ]] && continue 2
+    done
+    nodes+=("${n}")
+done
+echo "=== Containers ==="
+for node in "${nodes[@]}"; do
+    pruned=$(ssh "root@${node}" "docker container prune -f" 2>/dev/null)
+    count=$(echo "${pruned}" | grep -c '^[a-f0-9]' || true)
+    echo "  ${node}: ${count}"
+    ((removed += count))
+done
+echo ""
+if [[ "${usage_prune_images}" == "true" ]]; then
+    echo "=== Images ==="
+    for node in "${nodes[@]}"; do
+        pruned=$(ssh "root@${node}" "docker image prune -af" 2>/dev/null)
+        reclaimed=$(echo "${pruned}" | sed -n 's/.*reclaimed space: //p')
+        [[ -z "${reclaimed}" ]] && reclaimed="0B"
+        count=$(echo "${pruned}" | grep -c '^deleted:' || true)
+        echo "  ${node}: ${count} (${reclaimed})"
+        ((removed += count))
+    done
+    echo ""
+fi
+echo "=== Volumes ==="
+for node in "${nodes[@]}"; do
+    pruned=$(ssh "root@${node}" "docker volume prune -f" 2>/dev/null)
+    count=$(echo "${pruned}" | grep -c '^[a-f0-9]' || true)
+    reclaimed=$(echo "${pruned}" | sed -n 's/.*reclaimed space: //p')
+    [[ -z "${reclaimed}" ]] && reclaimed="0B"
+    echo "  ${node}: ${count} (${reclaimed})"
+    ((removed += count))
+done
+echo ""
+if [[ ${removed} -eq 0 ]]; then
+    echo "Nothing to clean up."
+else
+    echo "Cleanup complete."
+fi
+{% endraw %}'''
+
+["swarm:init-networks"]
+description = "Internal: create overlay networks (idempotent)"
+hide = true
+run = '''
+#!/usr/bin/env bash
+declare -A NETWORKS=(
+    [infra_socket]="--internal"
+    [infra_gw-internal]=""
+    [infra_gw-external]=""
+    [infra_metrics]=""
+    [infra_postgres]=""
+)
+for net in "${!NETWORKS[@]}"; do
+    if docker network inspect "${net}" >/dev/null 2>&1; then
+        echo "  exists: ${net}"
+    elif docker network create -d overlay --attachable ${NETWORKS[${net}]} "${net}" >/dev/null 2>&1; then
+        echo "  created: ${net}"
+    else
+        echo "  FAILED: ${net}"
+        exit 1
+    fi
+done
+'''
+
+["swarm:init-volumes"]
+description = "Internal: pre-create named volumes with correct ownership for services using user: directive"
+hide = true
+run = '''{% raw %}
+#!/usr/bin/env bash
+source .mise/tasks/scripts/content-hash.sh
+source .mise/tasks/scripts/compose-config.sh
+# Export OCI_TAG_* env vars for stacks with build contexts (needed for docker compose config)
+for build_dir in stacks/*/build/*/  stacks/*/*/build/*/; do
+    [[ -d "${build_dir}" ]] || continue
+    service=$(basename "${build_dir}")
+    tag=$(compute_content_hash "${build_dir}")
+    var_name="OCI_TAG_$(echo "${service}" | tr '[:lower:]' '[:upper:]')"
+    export "${var_name}=${tag}"
+done
+# Map placement constraints to SSH targets
+get_target_node() {
+    local stack_file="$1"
+    local constraints
+    constraints=$(grep -A5 'placement:' "${stack_file}" 2>/dev/null | grep 'node.labels' || true)
+    if echo "${constraints}" | grep -q 'storage == true'; then
+        echo "${SWARM_NODE_STORAGE}"
+    elif echo "${constraints}" | grep -q 'gpu == true'; then
+        echo "${SWARM_NODE_GPU}"
+    elif echo "${constraints}" | grep -q 'location == cloud'; then
+        echo "${SWARM_NODE_CLOUD}"
+    else
+        echo "${SWARM_NODE_DEFAULT}"
+    fi
+}
+created=0; skipped=0; failed=0
+for stack_dir in stacks/infra/* stacks/apps/*; do
+    stack_file="${stack_dir}/compose.yml"
+    [[ -f "${stack_file}" ]] || continue
+    stack_name=$(basename "${stack_dir}")
+    # Parse resolved compose config for services with user: directive and named volumes
+    vol_info=$(compose_config "${stack_file}" --format json 2>/dev/null | python3 -c '
+import json, sys
+config = json.load(sys.stdin)
+services = config.get("services", {})
+for svc_name, svc in services.items():
+    user = svc.get("user")
+    if not user:
+        continue
+    for v in svc.get("volumes", []):
+        src = v.get("source")
+        if v.get("type") == "volume" and src:
+            print(f"{src} {user}")
+' 2>/dev/null) || continue
+    [[ -z "${vol_info}" ]] && continue
+    target=$(get_target_node "${stack_file}")
+    echo "--- ${stack_name} (${target}) ---"
+    while IFS=' ' read -r vol_name user_spec; do
+        [[ -z "${vol_name}" ]] && continue
+        prefixed="${stack_name}_${vol_name}"
+        # Check if volume already initialized (exists + has marker file), otherwise create + chown
+        # Marker file prevents Docker's volume-init from overwriting ownership
+        # (empty volumes get image-layer permissions copied in on first mount)
+        status=$(ssh -n "root@${target}" "
+if docker volume inspect '${prefixed}' >/dev/null 2>&1 \
+   && docker run --rm -v '${prefixed}:/data' alpine test -f /data/.volume-init 2>/dev/null; then
+    echo SKIP
+else
+    docker volume create '${prefixed}' >/dev/null 2>&1
+    if docker run --rm -v '${prefixed}:/data' alpine sh -c 'chown -R ${user_spec} /data && touch /data/.volume-init'; then
+        echo CREATED
+    else
+        echo FAILED
+    fi
+fi" 2>/dev/null)
+        case "${status}" in
+            SKIP)    echo "  exists:  ${prefixed}" ; ((skipped++)) ;;
+            CREATED) echo "  created: ${prefixed} (${user_spec})" ; ((created++)) ;;
+            *)       echo "  FAILED:  ${prefixed}" ; ((failed++)) ;;
+        esac
+    done <<< "${vol_info}"
+    echo ""
+done
+total=$((created + skipped + failed))
+if [[ ${total} -eq 0 ]]; then
+    echo "No volumes need pre-creation (no services with user: directive)."
+else
+    echo "Volumes: ${created} created, ${skipped} existed, ${failed} failed"
+fi
+{% endraw %}'''

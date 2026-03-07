@@ -1,0 +1,29 @@
+---
+## https://github.com/gethomepage/homepage/blob/dev/docs/configs/bookmarks.md
+
+- Bookmarks:
+    - Dawarich:
+        - icon: dawarich
+          abbr: DW
+          description: " "
+          href: https://maps.{{HOMEPAGE_VAR_PRIVATE}}
+    - Comet:
+        - icon: https://static.gl-inet.com/www/images/favicon.ico
+          abbr: GL
+          description: " "
+          href: https://comet.home.arpa
+    - Ruckus:
+        - icon: https://www.ruckusnetworks.com/favicon.ico
+          abbr: RU
+          description: " "
+          href: https://ruckus.home.arpa
+    - Binardat:
+        - icon: mdi-switch
+          abbr: BN
+          description: " "
+          href: http://binardat.home.arpa
+    - PiGM:
+        - icon: home-assistant-alt
+          abbr: PI
+          description: " "
+          href: http://pigm:8123

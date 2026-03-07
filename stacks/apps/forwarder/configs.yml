@@ -1,0 +1,4 @@
+configs:
+  forwarder_config:
+    name: forwarder_config_${DEPLOY_VERSION}
+    file: ./config/forwarder/config.json

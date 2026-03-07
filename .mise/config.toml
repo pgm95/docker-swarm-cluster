@@ -1,0 +1,64 @@
+#:schema https://mise.jdx.dev/schema/mise.json
+#:tombi schema.strict = false
+
+############################ SETTINGS ############################
+[settings]
+experimental = true
+sops.age_key_file = "age.key"
+auto_install = false
+python.uv_venv_auto = true
+unix_default_file_shell_args = "bash -o errexit -o nounset -o pipefail"
+unix_default_inline_shell_args = "bash -c -o errexit -o nounset -o pipefail"
+
+[tools]
+"aqua:jdx/usage" = "latest"
+"aqua:getsops/sops" = "latest"
+"aqua:FiloSottile/age" = "latest"
+"aqua:pre-commit/pre-commit" = "latest"
+
+[env]
+PROJECT_CONFIGS_DIR = "{{config_root}}/.config"
+PROJECT_SECRETS_DIR = "{{config_root}}/.secrets"
+
+YAMLLINT_CONFIG_FILE = "{{ env.PROJECT_CONFIGS_DIR }}/yamllint.yaml"
+SOPS_AGE_KEY_FILE = "{{config_root}}/age.key"
+SOPS_CONFIG = "{{ env.PROJECT_CONFIGS_DIR }}/sops.yaml"
+GLOBAL_SECRETS = "{{ env.PROJECT_SECRETS_DIR }}/shared.yaml"
+_.file = { path = "{{ env.PROJECT_SECRETS_DIR }}/shared.yaml", redact = true }
+
+GLOBAL_TZ="UTC"
+GLOBAL_TZ_LOCAL="America/New_York"
+GLOBAL_NONROOT_PUID="1000"
+GLOBAL_NONROOT_PGID="1000"
+GLOBAL_NONROOT_DOCKER="{{ env.GLOBAL_NONROOT_PUID }}:{{ env.GLOBAL_NONROOT_PGID }}"
+
+STACKS_DIR = "{{config_root}}/stacks"
+
+############################ TASKS ############################
+[task_config]
+includes = [
+    ".mise/tasks/sops.toml",
+    ".mise/tasks/swarm.toml",
+    ".mise/tasks/site.toml"
+]
+
+[tasks."env:setup"]
+description = " " # Complete environment setup via mise
+run = [
+  "mise trust || true",
+  "mise install",
+  "pre-commit install --config .config/pre-commit.yaml"
+]
+
+[tasks."env:clean"]
+description = " " # Clean up environment and cache
+run = [
+  "mise uninstall --all || true",
+  "find . \\( -name \"*.tmp\" -o -name \"*.log\" -o -name \"__pycache__\" -o -name \"*.pyc\" -o -name \"*.egg-info\" -o -name \".cache\" -o -name \".venv\" \\) -exec rm -rf {} + || true"
+]
+
+[tasks."validate"]
+description = " " # Run all pre-commit hooks
+run = [
+  "pre-commit run --config .config/pre-commit.yaml --all-files"
+]

@@ -1,0 +1,121 @@
+{
+  "rules": [
+    {
+      "name": "Netflix Household",
+      "enabled": true,
+      "match": {
+        "senders": [
+          "*@*.netflix.com"
+        ],
+        "include": [
+          "household"
+        ],
+        "exclude": [
+          "confirmation"
+        ]
+      },
+      "actions": [
+        {
+          "recipients": [
+            "${FWD_RECIPIENT_1}"
+          ],
+          "type": "extract",
+          "patterns": [
+            "https://[^\\s]*netflix\\.com/account/update-primary-location[^\\s]*"
+          ],
+          "subject": "Update Netflix Household",
+          "filter": {
+            "include": {
+              "body_words": [
+                "mom",
+                "dad",
+                "nvidia"
+              ]
+            }
+          }
+        },
+        {
+          "recipients": [
+            "${FWD_RECIPIENT_2}"
+          ],
+          "type": "extract",
+          "patterns": [
+            "https://[^\\s]*netflix\\.com/account/update-primary-location[^\\s]*"
+          ],
+          "subject": "Update Netflix Household",
+          "filter": {
+            "exclude": {
+              "body_words": [
+                "mom",
+                "dad",
+                "nvidia"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Hulu OTP",
+      "enabled": true,
+      "match": {
+        "senders": [
+          "*@*.hulu.com"
+        ],
+        "include": [
+          "code",
+          "passcode"
+        ],
+        "exclude": [
+          "new device"
+        ]
+      },
+      "actions": [
+        {
+          "type": "extract",
+          "recipients": [
+            "${FWD_RECIPIENT_3}",
+            "${FWD_RECIPIENT_2}"
+          ],
+          "patterns": [
+            ">\\s*(\\d{6})\\s*<"
+          ],
+          "subject": "Hulu one-time passcode",
+          "display": "code"
+        }
+      ]
+    },
+    {
+      "name": "Disney+ OTP",
+      "enabled": true,
+      "match": {
+        "senders": [
+          "*@*.disneyplus.com"
+        ],
+        "include": [
+          "code",
+          "passcode",
+          "household"
+        ],
+        "exclude": [
+          "new device",
+          "updated"
+        ]
+      },
+      "actions": [
+        {
+          "type": "extract",
+          "recipients": [
+            "${FWD_RECIPIENT_3}",
+            "${FWD_RECIPIENT_2}"
+          ],
+          "patterns": [
+            ">\\s*(\\d{6})\\s*<"
+          ],
+          "subject": "Disney+ one-time passcode",
+          "display": "code"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,247 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+# Prerequisites:
+#   - infra/gateway-external deployed (provides infra_gw-external)
+#   - infra/gateway-internal deployed (provides infra_gw-internal)
+#   - infra/registry deployed (for webfinger image)
+#   - VM node has labels: location=onprem
+#   - WebFinger image built and pushed to registry
+
+# Startup order: redis → lldap → authelia, webfinger
+# Use healthchecks since Swarm doesn't support depends_on
+
+include:
+  - secrets.yml
+  - configs.yml
+
+services:
+  redis:
+    image: redis:7-alpine
+    # Uses implicit stack network only (no external routing needed)
+    logging: *logging
+    stop_grace_period: 30s
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    deploy:
+      <<: [*place-vm, *deploy]
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-small
+
+  lldap:
+    image: lldap/lldap:2026-01-22-debian-rootless
+    logging: *logging
+    stop_grace_period: 30s
+    environment:
+      - LLDAP_JWT_SECRET_FILE=/run/secrets/lldap_jwt_secret
+      - LLDAP_KEY_SEED_FILE=/run/secrets/lldap_key_seed
+      - LLDAP_LDAP_USER_DN=${LLDAP_LDAP_USER_DN}
+      - LLDAP_LDAP_USER_PASS_FILE=/run/secrets/lldap_ldap_user_pass
+      - LLDAP_LDAP_BASE_DN=${GLOBAL_LDAP_BASE_DN}
+      - LLDAP_HTTP_URL=https://ldap.${DOMAIN_PRIVATE}
+      - LLDAP_LDAP_PORT=389
+      - LLDAP_HTTP_PORT=17170
+      - LLDAP_LDAP_HOST=0.0.0.0
+      - LLDAP_HTTP_HOST=0.0.0.0
+      - LLDAP_DATABASE_URL=postgres://lldap:${LLDAP_POSTGRES_PASSWORD}@postgres:5432/lldap
+      - LLDAP_SMTP_OPTIONS__USER=${GLOBAL_SMTP_USER}
+      - LLDAP_SMTP_OPTIONS__SERVER=${GLOBAL_SMTP_HOST}
+      - LLDAP_SMTP_OPTIONS__PASSWORD=${GLOBAL_SMTP_PASS}
+      - LLDAP_SMTP_OPTIONS__FROM=LLDAP <noreply@${DOMAIN_PUBLIC}>
+    secrets:
+      - lldap_jwt_secret
+      - lldap_key_seed
+      - lldap_ldap_user_pass
+    networks:
+      - default   # For intra-stack communication (authelia, webfinger)
+      - infra_gw-internal  # For Traefik internal routing (web UI)
+      - infra_postgres  # For central Postgres access
+    configs:
+      - source: lldap_config
+        target: /data/lldap_config.toml
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      <<: [*place-vm, *deploy]
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-medium
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.internal=true"
+        - "traefik.http.routers.lldap.rule=Host(`ldap.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.lldap.entrypoints=websecure"
+        - "traefik.http.services.lldap.loadbalancer.server.port=17170"
+
+  authelia:
+    image: authelia/authelia:4.39
+    logging: *logging
+    stop_grace_period: 60s
+    environment:
+      - TZ=${GLOBAL_TZ}
+      - PUID=${GLOBAL_NONROOT_PUID}
+      - PGID=${GLOBAL_NONROOT_PGID}
+      - X_AUTHELIA_CONFIG_FILTERS=template
+      - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
+      - DOMAIN_PRIVATE=${DOMAIN_PRIVATE}
+      - LDAP_BASE_DN=${GLOBAL_LDAP_BASE_DN}
+      - LDAP_ADDRESS=ldap://lldap:389
+      - OIDC_URL=${GLOBAL_OIDC_URL}
+      - SMTP_HOST=${GLOBAL_SMTP_HOST}
+    secrets:
+      - smtp_user
+      - smtp_pass
+      - authelia_jwt_secret
+      - authelia_oidc_hmac_secret
+      - authelia_session_secret
+      - authelia_storage_encryption_key
+      - authelia_oidc_jwks_key
+      - authelia_ldap_bind_user
+      - authelia_ldap_bind_pass
+      - authelia_postgres_password
+      - oidc_client_secret_stirlingpdf
+      - oidc_client_secret_paperless
+      - oidc_client_secret_mealie
+      - oidc_client_secret_dawarich
+      - oidc_client_secret_quantum
+      - oidc_client_secret_proxmox
+      - oidc_client_secret_immich
+      - oidc_client_secret_portainer
+      - oidc_client_secret_uptimekuma
+      - oidc_client_secret_grafana
+      - oidc_client_secret_tailscale
+      - oidc_client_secret_cloudflare
+    networks:
+      - default   # For intra-stack communication (redis, lldap)
+      - infra_gw-external  # For Traefik external routing (forward auth)
+      - infra_postgres  # For central Postgres access
+    configs:
+      - source: authelia_config
+        target: /config/configuration.yml
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9091/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      <<: [*place-vm, *deploy]
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-medium
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.external=true"
+        - "traefik.http.routers.authelia.rule=Host(`auth.${DOMAIN_PUBLIC}`)"
+        - "traefik.http.routers.authelia.entrypoints=websecure"
+        - "traefik.http.routers.authelia.service=authelia"
+        - "traefik.http.services.authelia.loadbalancer.server.port=9091"
+        - "traefik.http.services.authelia.loadbalancer.healthcheck.interval=30s"
+        - "traefik.http.services.authelia.loadbalancer.healthcheck.path=/api/health"
+
+  webfinger:
+    image: ${GLOBAL_SWARM_OCI_REGISTRY}/accounts/webfinger:${OCI_TAG_WEBFINGER}
+    user: ${GLOBAL_NONROOT_DOCKER}
+    logging: *logging
+    stop_grace_period: 30s
+    environment:
+      - LDAP_BIND_USER=${CARPAL_LDAP_BIND_USER}
+      - LDAP_BIND_PASS=${CARPAL_LDAP_BIND_PASS}
+      - LDAP_BASE_DN=${GLOBAL_LDAP_BASE_DN}
+      - LDAP_ADDRESS=ldap://lldap:389
+      - OIDC_URL=${GLOBAL_OIDC_URL}
+    configs:
+      - source: webfinger_config
+        target: /config/config.yml
+      - source: webfinger_ldap_template
+        target: /config/ldap.gotmpl
+    networks:
+      - default   # For intra-stack communication (lldap)
+      - infra_gw-external  # For Traefik external routing
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      <<: [*place-vm, *deploy]
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-tiny
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.external=true"
+        - "traefik.http.routers.webfinger.rule=Host(`${DOMAIN_PUBLIC}`) && PathPrefix(`/.well-known/webfinger`) && Method(`GET`)"
+        - "traefik.http.routers.webfinger.entrypoints=websecure"
+        - "traefik.http.services.webfinger.loadbalancer.server.port=8008"
+
+  init-db:
+    image: postgres:17-alpine
+    entrypoint: ["/bin/sh", "/init-db-entrypoint.sh"]
+    logging: *logging
+    stop_grace_period: 30s
+    environment:
+      - PROVISIONER_USER=${GLOBAL_POSTGRES_PROVISIONER_USER}
+      - PROVISIONER_PASSWORD=${GLOBAL_POSTGRES_PROVISIONER_PASSWORD}
+      - AUTHELIA_DB_PASSWORD=${AUTHELIA_POSTGRES_PASSWORD}
+      - LLDAP_DB_PASSWORD=${LLDAP_POSTGRES_PASSWORD}
+    configs:
+      - source: init_db_entrypoint
+        target: /init-db-entrypoint.sh
+    networks:
+      - infra_postgres
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      <<: [*place-vm, *deploy]
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-tiny
+
+  init-ldap:
+    image: lldap/lldap:2026-01-22-debian-rootless
+    entrypoint: ["/bin/sh", "/init-ldap-entrypoint.sh"]
+    logging: *logging
+    stop_grace_period: 30s
+    environment:
+      - LLDAP_URL=http://lldap:17170
+      - LLDAP_ADMIN_USERNAME=${LLDAP_LDAP_USER_DN}
+      - LLDAP_ADMIN_PASSWORD_FILE=/run/secrets/lldap_ldap_user_pass
+      - BOOTSTRAP_AUTHELIA_ID=${AUTHELIA_LDAP_BIND_USER}
+      - BOOTSTRAP_CARPAL_ID=${CARPAL_LDAP_BIND_USER}
+      - USER_CONFIGS_DIR=/tmp/bootstrap/user-configs
+    secrets:
+      - lldap_ldap_user_pass
+      - authelia_ldap_bind_pass
+      - carpal_ldap_bind_pass
+    configs:
+      - source: init_ldap_entrypoint
+        target: /init-ldap-entrypoint.sh
+    # Uses implicit stack network only (talks to lldap via intra-stack DNS)
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      <<: [*place-vm, *deploy]
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-tiny
+
+volumes:
+  redis-data:
+
+networks:
+  infra_gw-external:
+    external: true
+  infra_gw-internal:
+    external: true
+  infra_postgres:
+    external: true

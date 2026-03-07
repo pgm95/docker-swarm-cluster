@@ -1,0 +1,53 @@
+# yaml-language-server: $schema=https://json.schemastore.org/pre-commit-config.json
+
+exclude: ^(\.old|\.archive|\.claude)/
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: detect-private-key
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.38.0
+    hooks:
+      - id: yamllint
+        args: [-c, .config/yamllint.yaml]
+        exclude: ^\.secrets/
+
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.20.0
+    hooks:
+      - id: markdownlint-cli2
+        args: [--config, .config/.markdownlint-cli2.jsonc, --fix]
+
+  - repo: https://github.com/ComPWA/taplo-pre-commit
+    rev: v0.9.3
+    hooks:
+      - id: taplo-lint
+
+  - repo: local
+    hooks:
+
+      - id: compose-validate
+        name: Validate compose files
+        entry: mise run swarm:validate
+        language: system
+        files: ^stacks/(.*/compose\.yml|_shared/anchors\.yml)$
+        pass_filenames: false
+
+      - id: check-secrets-encrypted
+        name: Check secrets are SOPS-encrypted
+        entry: "sh -c 'for f in \"$@\"; do grep -q \"^sops_\" \"$f\" || grep -q \"^sops:\" \"$f\" || { echo \"PLAINTEXT: $f\"; exit 1; }; done' --"
+        language: system
+        files: (^\.secrets/.*\.yaml$|secrets\.env$)

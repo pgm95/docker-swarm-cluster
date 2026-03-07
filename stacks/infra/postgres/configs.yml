@@ -1,0 +1,7 @@
+# Docker configs for postgres stack
+# Included via docker compose include directive
+
+configs:
+  postgres_init:
+    name: postgres_init_${DEPLOY_VERSION}
+    file: ./config/postgres/init.sh

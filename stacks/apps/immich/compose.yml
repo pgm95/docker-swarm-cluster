@@ -1,0 +1,132 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+# Prerequisites:
+#   - infra/gateway-internal deployed (provides infra_gw-internal)
+#   - Fileserver node has labels: storage=true
+#   - /mnt/photos/immich exists on storage node
+#   - OIDC client configured in Authelia (infra/accounts)
+
+include:
+  - secrets.yml
+
+services:
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:release
+    logging: *logging
+    stop_grace_period: 30s
+    environment:
+      - DB_HOSTNAME=database
+      - DB_USERNAME=postgres
+      - DB_DATABASE_NAME=immich
+      - DB_PASSWORD_FILE=/run/secrets/db_password
+      - REDIS_HOSTNAME=valkey
+    secrets:
+      - db_password
+    networks:
+      - default
+      - infra_gw-internal
+    volumes:
+      - /mnt/photos/immich:/data
+    deploy:
+      <<: [*place-storage, *deploy]
+      restart_policy:
+        condition: any
+        delay: 10s
+        max_attempts: 10
+        window: 120s
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.internal=true"
+        - "traefik.http.routers.immich.rule=Host(`immich.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.immich.entrypoints=websecure"
+        - "traefik.http.services.immich.loadbalancer.server.port=2283"
+        - "homepage.group=Applications"
+        - "homepage.name=Immich"
+        - "homepage.icon=immich"
+        - "homepage.href=https://immich.${DOMAIN_PRIVATE}"
+        - "homepage.description=Photo Management"
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 1024M
+
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:release
+    logging: *logging
+    stop_grace_period: 30s
+    volumes:
+      - ml-cache:/cache
+    deploy:
+      <<: [*place-storage, *deploy]
+      endpoint_mode: dnsrr
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 4096M
+        reservations:
+          memory: 1024M
+
+  valkey:
+    image: docker.io/valkey/valkey:9@sha256:930b41430fb727f533c5982fe509b6f04233e26d0f7354e04de4b0d5c706e44e
+    logging: *logging
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    deploy:
+      <<: [*place-storage, *deploy]
+      endpoint_mode: dnsrr
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  database:
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+    logging: *logging
+    stop_grace_period: 60s
+    environment:
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=immich
+      - POSTGRES_INITDB_ARGS=--data-checksums
+    secrets:
+      - db_password
+    tmpfs:
+      - /dev/shm:size=134217728
+    volumes:
+      - database-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d immich -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      <<: [*place-storage, *deploy-stop-first]
+      endpoint_mode: dnsrr
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 1024M
+        reservations:
+          memory: 512M
+
+volumes:
+  ml-cache:
+  database-data:
+
+networks:
+  infra_gw-internal:
+    external: true

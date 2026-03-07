@@ -1,0 +1,45 @@
+# Artifacts and local files
+*.tmp
+*.bak
+*.log
+*.old
+*.local
+.archive/
+.stversions
+*_LOCALDEV*
+
+# Python
+*.egg
+.venv
+.envrc
+*.py[codz]
+*$py.class
+*.egg-info/
+__pycache__/
+.python-version
+
+# Sensitive files
+**/full.yml
+**/data
+*.pem
+*.key
+*.crt
+*.pub
+
+# OS files
+*~
+._*
+.nfs*
+Icon[]
+.Trash-*
+__MACOSX/
+Thumbs.db
+nohup.out
+.DS_Store
+.directory
+.LSOverride
+ehthumbs.db
+.AppleDouble
+.fuse_hidden*
+$RECYCLE.BIN/
+[Dd]esktop.ini

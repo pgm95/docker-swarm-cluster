@@ -1,0 +1,7 @@
+# Docker configs for quantum stack
+# Included via docker compose include directive
+
+configs:
+  quantum_config:
+    name: quantum_config_${DEPLOY_VERSION}
+    file: ./config/config.yaml

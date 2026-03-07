@@ -1,0 +1,16 @@
+# Docker configs for metrics stack
+# Included via docker compose include directive
+
+configs:
+  prometheus_config:
+    name: prometheus_config_${DEPLOY_VERSION}
+    file: ./config/prometheus/prometheus.yml
+  prometheus_rules:
+    name: prometheus_rules_${DEPLOY_VERSION}
+    file: ./config/prometheus/node_rules.yml
+  # grafana_ini:
+  #   name: grafana_ini_${DEPLOY_VERSION}
+  #   file: ./config/grafana/grafana.ini
+  # grafana_datasource:
+  #   name: grafana_datasource_${DEPLOY_VERSION}
+  #   file: ./config/grafana/datasource.yml
