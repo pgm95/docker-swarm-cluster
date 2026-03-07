@@ -8,7 +8,7 @@ SWARM_NODE_DEFAULT = "swarm-vm.home.arpa"
 DOCKER_HOST = "ssh://root@{{ env.SWARM_NODE_DEFAULT }}"
 SWARM_NODE_STORAGE = "swarm-lxc.home.arpa"
 SWARM_NODE_GPU     = "swarm-lxc.home.arpa"
-SWARM_NODE_CLOUD   = "nerd1.jay-halibut.ts.net"
+SWARM_NODE_CLOUD   = "nerd1.{{ env.DOMAIN_TAILNET }}"
 
 GLOBAL_SWARM_OCI_REGISTRY = "registry.{{ env.DOMAIN_PRIVATE }}"
 GLOBAL_ACME_CA_SERVER = "https://acme-staging-v02.api.letsencrypt.org/directory"
