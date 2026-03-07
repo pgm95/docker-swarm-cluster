@@ -6,17 +6,130 @@ the final `docker stack deploy` goes over SSH to the remote Swarm manager.
 
 ## Table of Contents
 
+- [Getting Started](#getting-started)
 - [Architecture](#architecture)
 - [Directory Structure](#directory-structure)
 - [Environment Profiles](#environment-profiles)
-- [Configuration Precedence](#configuration-precedence)
-- [Secrets Management](#secrets-management)
+- [Secrets Architecture](#secrets-architecture)
 - [Compose Preprocessing](#compose-preprocessing)
 - [Deploy Pipeline](#deploy-pipeline)
 - [Task Reference](#task-reference)
 - [Validation and Pre-commit](#validation-and-pre-commit)
 - [Adding a New Stack](#adding-a-new-stack)
 - [Gotchas and Non-obvious Behavior](#gotchas-and-non-obvious-behavior)
+
+## Getting Started
+
+### Prerequisites
+
+- [mise](https://mise.jdx.dev) installed locally
+- SSH root access to all swarm nodes (key-based auth)
+- Docker Engine on all nodes (tested with 29.x)
+- [Tailscale](https://tailscale.com) running on all nodes (inter-node connectivity)
+- Two DNS zones: one public (Cloudflare), one private (local DNS like AdGuard Home)
+
+### 1. Clone and install tools
+
+```bash
+git clone <repo-url> && cd swarm-cluster
+mise run env:setup    # Installs tools (sops, age, pre-commit) and configures hooks
+```
+
+### 2. Initialize secrets encryption
+
+```bash
+mise run sops:init    # Generates age keypair, patches SOPS config with public key
+```
+
+This creates `age.key` (gitignored) — the private key for decrypting all secrets.
+
+### 3. Configure nodes
+
+Edit `.mise/config.dev.toml` (or `config.prod.toml` for production):
+
+| Variable | Purpose |
+|----------|---------|
+| `SWARM_NODE_DEFAULT` | Hostname of Swarm manager (VM) |
+| `SWARM_NODE_STORAGE` | Hostname of storage node (bulk mounts) |
+| `SWARM_NODE_GPU` | Hostname of GPU node (transcoding) |
+| `SWARM_NODE_CLOUD` | Hostname of VPS node (public ingress) |
+| `DOCKER_HOST` | Auto-derived as `ssh://root@SWARM_NODE_DEFAULT` |
+
+Multiple `SWARM_NODE_*` vars can point to the same host in smaller setups.
+
+### 4. Configure domains and shared secrets
+
+Create the SOPS-encrypted secrets files. Each file needs specific keys:
+
+**Per-environment secrets** (`mise run sops:edit .secrets/dev.yaml`):
+
+| Key | Purpose |
+|-----|---------|
+| `DOMAIN_PUBLIC` | Public domain for external gateway |
+| `DOMAIN_PRIVATE` | Private domain for internal gateway |
+| `GLOBAL_OIDC_URL` | Authelia OIDC issuer URL |
+| `GLOBAL_LDAP_BASE_DN` | LLDAP base DN |
+
+**Shared secrets** (`mise run sops:edit .secrets/shared.yaml`):
+
+| Key | Purpose |
+|-----|---------|
+| `REGISTRY_USER`, `REGISTRY_PASS` | Private registry htpasswd credentials |
+| `GLOBAL_SMTP_*` | SMTP relay for notifications |
+| `GLOBAL_LDAP_ADDRESS` | LLDAP server address |
+| `GLOBAL_POSTGRES_PROVISIONER_USER` | Postgres provisioner role name |
+| `GLOBAL_POSTGRES_PROVISIONER_PASSWORD` | Postgres provisioner role password |
+| `GLOBAL_USERNAME`, `GLOBAL_PASSWORD` | Default admin credentials |
+
+### 5. Configure external API keys
+
+These live in stack-level `secrets.env` files:
+
+| Stack | Key | Purpose |
+|-------|-----|---------|
+| `gateway-internal` | `CLOUDFLARE_DNS_API_TOKEN_INTERNAL` | DNS-01 challenge for `*.DOMAIN_PRIVATE` |
+| `gateway-external` | `CLOUDFLARE_DNS_API_TOKEN_EXTERNAL` | DNS-01 challenge for `*.DOMAIN_PUBLIC` |
+| `gateway-external` | `GEOBLOCK_IP2LOCATION_TOKEN` | IP geolocation database download |
+| `gateway-external` | `BOUNCER_KEY_TRAEFIK` | CrowdSec bouncer ↔ LAPI authentication |
+| `gateway-external` | `CROWDSEC_CTI_KEY` | CrowdSec threat intelligence API |
+| `gateway-external` | `CROWDSEC_POSTGRES_PASSWORD` | CrowdSec database role password |
+| `registry` | `REGISTRY_HTPASSWD_B64` | Registry auth file (base64-encoded) |
+| `registry` | `REGISTRY_HTTP_SECRET` | Upload session token signing |
+| `postgres` | `POSTGRES_PASSWORD` | Postgres superuser password |
+
+Edit with `mise run sops:edit <stack>/secrets.env`.
+
+### 6. Initialize the swarm
+
+On the manager node, initialize Docker Swarm and join workers. Then apply node labels:
+
+```bash
+# On each node, apply the appropriate labels
+docker node update --label-add location=onprem --label-add ip=private --label-add type=vm <manager-node>
+docker node update --label-add location=onprem --label-add storage=true <storage-node>
+docker node update --label-add location=cloud --label-add ip=public <cloud-node>
+```
+
+### 7. Configure DNS
+
+| Zone | Provider | Records |
+|------|----------|---------|
+| `*.DOMAIN_PUBLIC` | Cloudflare | A → VPS public IP |
+| `*.DOMAIN_PRIVATE` | Local DNS (AGH) | A → VM LAN IP |
+
+The private domain must have **no public DNS records**.
+
+### 8. Bootstrap and deploy
+
+```bash
+mise run registry:auth      # Login onprem nodes to private registry
+mise run site:deploy        # Deploy everything (infra then apps)
+```
+
+`site:deploy` handles the full sequence: network/volume initialization, infra stacks in
+dependency order, then app stacks. First deploy may require
+`docker service update --force <service>` for services that start before their
+dependencies converge (see [Gotchas](#deploy-and-update)).
 
 ## Architecture
 
@@ -90,7 +203,7 @@ Docker Configs. Service routing uses Swarm provider labels under `deploy.labels`
 | `infra/socket` | socket-proxy | Read-only Docker API proxy for all consumers |
 | `infra/postgres` | postgres | Central PostgreSQL 17 instance |
 | `infra/gateway-internal` | traefik | Internal reverse proxy + TLS termination |
-| `infra/gateway-external` | traefik, crowdsec, geoblock | Public reverse proxy + WAF |
+| `infra/gateway-external` | traefik, crowdsec, init-db | Public reverse proxy + WAF |
 | `infra/metrics` | prometheus, grafana, victoria-metrics, node-exporter, uptime-kuma | Monitoring |
 | `infra/registry` | registry | Private OCI registry (htpasswd auth, Traefik TLS) |
 | `infra/accounts` | authelia, lldap, redis, webfinger, init-db, init-ldap | SSO + LDAP + bootstrap sidecars |
@@ -180,65 +293,84 @@ Each profile provides:
 - **`GLOBAL_SWARM_OCI_REGISTRY`**: derived from `DOMAIN_PRIVATE` (which comes from SOPS)
 - **`GLOBAL_ACME_CA_SERVER`**: Let's Encrypt staging CA in dev, production CA in prod
 
-## Configuration Precedence
+## Secrets Architecture
 
-mise processes config in this order (later entries override earlier ones for the same key):
+### Encryption Layer (SOPS + age)
+
+All secrets are SOPS-encrypted in Git using age keys. The SOPS config (`.config/sops.yaml`)
+maps file paths to encryption keys. `mise run sops:init` generates the keypair and patches
+the config.
+
+### Three Layers of Secrets
+
+Secrets are organized by scope. Each layer has a different delivery mechanism:
 
 ```text
-1. .config/miserc.toml           → sets MISE_ENV=dev
-2. .mise/config.toml [env]       → shared plaintext vars (TZ, PUID, paths)
-   └─ _.file: .secrets/shared.yaml  → shared SOPS secrets (SMTP, registry, LDAP, Postgres provisioner)
-3. .mise/config.{env}.toml [env] → profile-specific vars (nodes, DOCKER_HOST, OCI registry, ACME CA)
-   └─ _.file: .secrets/{env}.yaml   → env-specific SOPS secrets (domains, OIDC URL, LDAP base DN)
+┌─────────────────────────────────────────────────┐
+│  1. Shared secrets (.secrets/shared.yaml)       │
+│     SMTP, registry creds, Postgres provisioner  │
+│     → auto-injected as env vars by mise _.file  │
+│     → available to ALL stacks, no per-stack     │
+│       decryption needed                         │
+├─────────────────────────────────────────────────┤
+│  2. Environment secrets (.secrets/{env}.yaml)   │
+│     Domains, OIDC URL, LDAP base DN             │
+│     → auto-injected as env vars by mise _.file  │
+│     → different values per MISE_ENV profile     │
+├─────────────────────────────────────────────────┤
+│  3. Stack secrets (<stack>/secrets.env)          │
+│     Service-specific passwords, API keys        │
+│     → decrypted by swarm:deploy at deploy time  │
+│     → scoped to a single stack                  │
+└─────────────────────────────────────────────────┘
 ```
 
-Both `_.file` directives are additive, so variables from shared and env-specific secrets coexist
-in the environment.
+**Configuration precedence:**
+
+```text
+1. .mise/config.toml [env]       → shared plaintext vars (TZ, PUID, paths)
+   └─ _.file: .secrets/shared.yaml  → shared SOPS secrets
+2. .mise/config.{env}.toml [env] → profile-specific vars (nodes, DOCKER_HOST, ACME CA)
+   └─ _.file: .secrets/{env}.yaml   → env-specific SOPS secrets
+```
+
+Both `_.file` directives are additive — variables from shared and env-specific secrets coexist.
 
 **Important**: Base config `[env]` is processed before profile `[env]`. Tera templates in
 base config cannot reference variables defined in profile configs. This is why
 `GLOBAL_SWARM_OCI_REGISTRY` (which uses `DOMAIN_PRIVATE` from the profile's SOPS file) must
 live in each profile file, not in base config.
 
-## Secrets Management
-
-### Encryption Layer (SOPS + age)
-
-All secrets are SOPS-encrypted in Git using age keys. The SOPS config (`.config/sops.yaml`)
-maps file paths to encryption keys:
-
-| Pattern | Files |
-|---------|-------|
-| `.secrets/*.yaml` | Shared and per-environment secrets |
-| `stacks/*/secrets.env` | Stack-specific secrets |
-
-Initial setup: `mise run sops:init` generates an age keypair and patches the SOPS config with
-the public key.
-
 ### Runtime Delivery
 
-Secrets reach containers through two mechanisms:
+Secrets reach containers through two mechanisms, determined by the stack's file structure:
 
-| Mode | Trigger | How It Works |
-|------|---------|-------------|
-| **Versioned Swarm Secrets** | `${DEPLOY_VERSION}` present in `secrets.yml` | SOPS decrypt -> `docker secret create <name>_<sha>_<ts>` -> mounted at `/run/secrets/` |
-| **Env var injection** | No `DEPLOY_VERSION` references | SOPS decrypt -> compose interpolation -> container env vars |
+| Mode | Trigger | Flow |
+|------|---------|------|
+| **Versioned Swarm Secrets** | `${DEPLOY_VERSION}` in `secrets.yml` | SOPS decrypt → `docker secret create <name>_<sha>_<ts>` → mounted at `/run/secrets/` |
+| **Env var injection** | No `DEPLOY_VERSION` references | SOPS decrypt → compose interpolation → container env vars |
 
 Versioned secrets are immutable. Each deploy creates new ones with a unique suffix
 (`<git-sha>_<epoch>`). Old versions persist until `swarm:cleanup` removes unused ones.
 
-### Shared vs. Stack-specific Secrets
+**Which mode to use** depends on the application:
 
-Versioned Swarm secrets are scoped to a single stack (each deploy generates a unique
-`DEPLOY_VERSION`). Credentials needed by multiple stacks (SMTP, registry, LDAP, Postgres
-provisioner) live in `GLOBAL_SECRETS` (`.secrets/shared.yaml`) and are auto-injected as
-environment variables by mise's `_.file` integration, so no per-stack decryption is needed.
+- Apps with `_FILE` support → versioned Docker secrets (mounted files, more secure)
+- Apps without `_FILE` support → env var injection (only option)
+- Multi-line values (PEM keys) → `_B64` suffix in `secrets.env`, auto-decoded during deploy
 
 ### The `_B64` Convention
 
-Multi-line values (PEM keys, certificates) can't be stored in `.env` files. Base64-encode
-them and use a `_B64` suffix in `secrets.env`. The deploy task automatically base64-decodes
-the value and creates the Docker secret under the name without the suffix.
+Multi-line values (PEM keys, certificates, htpasswd files) can't be stored in `.env` files.
+Base64-encode them and use a `_B64` suffix in `secrets.env`. The deploy task automatically
+base64-decodes the value and creates the Docker secret under the name without the suffix.
+
+### Shared Secrets Limitation
+
+Versioned Swarm secrets are scoped to a single stack — each `swarm:deploy` generates a unique
+`DEPLOY_VERSION`. Credentials needed by multiple stacks (SMTP, registry, LDAP, Postgres
+provisioner) live in `GLOBAL_SECRETS` and are auto-injected as environment variables by
+mise's `_.file` integration.
 
 ## Compose Preprocessing
 
