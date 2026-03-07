@@ -114,6 +114,10 @@ Authelia and LLDAP need dedicated Postgres roles and databases. The `init-db` si
 
 **Convergence behavior**: All accounts services start concurrently. `init-db` polls postgres via `pg_isready`, provisions within seconds. LLDAP/Authelia crash on first attempt (database doesn't exist yet), succeed on retry within the `max_attempts: 3` / `window: 120s` restart policy.
 
+### Registry Auth — Node Login
+
+`REGISTRY_USER` and `REGISTRY_PASS` in `GLOBAL_SECRETS` are consumed by `registry:auth` to run `docker login` on all onprem swarm nodes. The cloud node (VPS) is excluded — `registry.DOMAIN_PRIVATE` resolves via internal DNS only (AGH on LAN), and the VPS uses Tailscale MagicDNS which doesn't know about private domain records. This is non-blocking — the VPS only runs `gateway-external` and `crowdsec`, neither of which pulls custom images.
+
 ### Docker Overlay Encryption Over WireGuard Is Broken
 
 Docker's `--opt encrypted=true` (IPsec over VXLAN) breaks over Tailscale WireGuard. Triple encapsulation causes cross-node connectivity failures. All 5 overlay networks run unencrypted — Tailscale provides the encryption layer.

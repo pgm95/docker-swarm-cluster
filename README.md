@@ -355,6 +355,9 @@ mise run swarm:status                         # Node health + all stack replica 
 mise run swarm:cleanup                        # Remove unused versioned secrets/configs, prune containers
 mise run swarm:cleanup --prune-images         # Also prune all unused images on every node
 
+# Registry
+mise run registry:auth                        # Login all onprem nodes to private registry
+
 # Secrets
 mise run sops:init                            # Generate age key, patch SOPS config
 mise run sops:encrypt                         # Encrypt all plaintext secrets files

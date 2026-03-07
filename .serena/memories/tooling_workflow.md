@@ -13,6 +13,7 @@ The project uses a layered tooling approach: **mise** for task orchestration, **
 | Status | `swarm:status` | Cluster nodes, stack health, and node placement |
 | Bootstrap | `swarm:init-networks` (hidden), `swarm:init-volumes` (hidden) | Cluster initialization (auto-run by `site:deploy-infra`) |
 | Cleanup | `swarm:cleanup` | Remove unused versioned secrets/configs (manager), prune containers and images (all nodes via SSH) |
+| Registry | `registry:auth` | Login all onprem nodes to private registry (cloud node excluded — no DNS resolution) |
 | Validation | `swarm:validate` (hidden) | Compose + Swarm compatibility validation |
 | SOPS | `sops:init`, `sops:encrypt`, `sops:edit`, `sops:status` | Encryption management |
 
