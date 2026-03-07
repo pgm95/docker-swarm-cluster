@@ -1,0 +1,10 @@
+# Docker configs for gateway-internal stack
+# Included via docker compose include directive
+
+configs:
+  traefik_dynamic_base:
+    name: traefik_internal_dynamic_base_${DEPLOY_VERSION}
+    file: ./config/traefik/dynamic/base.yml
+  traefik_dynamic_hass-private:
+    name: traefik_internal_dynamic_hass-private_${DEPLOY_VERSION}
+    file: ./config/traefik/dynamic/hass-private.yml

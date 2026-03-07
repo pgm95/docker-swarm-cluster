@@ -1,0 +1,98 @@
+#:schema https://mise.jdx.dev/schema/mise-task.json
+#:tombi schema.strict = false
+
+["sops:init"]
+description = "Generate age key and update SOPS_CONFIG"
+run = '''
+#!/usr/bin/env bash
+if [[ -f "${SOPS_AGE_KEY_FILE}" ]]; then
+    echo "Age key exists: ${SOPS_AGE_KEY_FILE}"
+else
+    mkdir -p "$(dirname "${SOPS_AGE_KEY_FILE}")"
+    age-keygen -o "${SOPS_AGE_KEY_FILE}"
+    chmod 600 "${SOPS_AGE_KEY_FILE}"
+    echo "Age key created: ${SOPS_AGE_KEY_FILE}"
+fi
+PUBKEY=$(grep "public key:" "${SOPS_AGE_KEY_FILE}" | cut -d: -f2 | tr -d ' ')
+[[ -n "${PUBKEY}" ]] || { echo "Error: Failed to extract public key from ${SOPS_AGE_KEY_FILE}"; exit 1; }
+echo "Public key: ${PUBKEY}"
+if [[ -f "${SOPS_CONFIG}" ]] && grep -q "age1xxxxxxxxx" "${SOPS_CONFIG}"; then
+    # Pure bash replacement - portable across macOS/Linux
+    content=$(<"${SOPS_CONFIG}")
+    content="${content//age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/${PUBKEY}}"
+    printf '%s' "${content}" > "${SOPS_CONFIG}"
+    echo "Updated ${SOPS_CONFIG} with public key"
+elif [[ -f "${SOPS_CONFIG}" ]]; then
+    echo "${SOPS_CONFIG} already configured"
+else
+    echo "Warning: ${SOPS_CONFIG} not found"
+fi
+'''
+
+["sops:encrypt"]
+description = "Encrypt all plaintext secrets files"
+run = '''{% raw %}
+#!/usr/bin/env bash
+[[ -f "${SOPS_AGE_KEY_FILE}" ]] || { echo "Error: No key. Run: mise run sops:init"; exit 1; }
+encrypted=() skipped=()
+encrypt_if_needed() {
+    local file="$1"
+    [[ -f "${file}" ]] || return 0
+    if grep -q "^sops_" "${file}" || grep -q "^sops:" "${file}"; then
+        skipped+=("${file}")
+    elif sops encrypt -i "${file}" 2>/dev/null; then
+        encrypted+=("${file}")
+    else
+        skipped+=("${file}")
+    fi
+}
+while IFS= read -r file; do
+    encrypt_if_needed "${file}"
+done < <(find "${PROJECT_SECRETS_DIR}" -maxdepth 1 -name "*.yaml" 2>/dev/null | sort)
+while IFS= read -r file; do
+    encrypt_if_needed "${file}"
+done < <(find stacks -name "secrets.env" 2>/dev/null | sort)
+if [[ ${#encrypted[@]} -gt 0 ]]; then
+    echo "Encrypted:"
+    printf "  %s\n" "${encrypted[@]}"
+fi
+if [[ ${#skipped[@]} -gt 0 ]]; then
+    echo "Already encrypted:"
+    printf "  %s\n" "${skipped[@]}"
+fi
+[[ ${#encrypted[@]} -eq 0 && ${#skipped[@]} -eq 0 ]] && echo "No secrets files found"
+exit 0
+{% endraw %}'''
+
+["sops:edit"]
+description = "Edit encrypted secrets file"
+usage = 'arg "<file>" help="Path to secrets file (default: GLOBAL_SECRETS)"'
+env.EDITOR = "code --wait"
+run = '''
+#!/usr/bin/env bash
+file="${usage_file:-${GLOBAL_SECRETS}}"
+[[ -f "${file}" ]] || { echo "Error: ${file} not found"; exit 1; }
+sops "${file}"
+'''
+
+["sops:status"]
+description = "Show encryption status of secrets files"
+run = '''
+#!/usr/bin/env bash
+check_status() {
+    local file="$1"
+    [[ -f "${file}" ]] || return 0
+    if grep -q "^sops_" "${file}" || grep -q "^sops:" "${file}"; then
+        echo "  Encrypted ✓ ${file}"
+    else
+        echo "  PLAINTEXT ✗ ${file}"
+    fi
+}
+echo "Secrets:"
+while IFS= read -r file; do
+    check_status "${file}"
+done < <(find "${PROJECT_SECRETS_DIR}" -maxdepth 1 -name "*.yaml" 2>/dev/null | sort)
+while IFS= read -r file; do
+    check_status "${file}"
+done < <(find stacks -name "secrets.env" 2>/dev/null | sort)
+'''

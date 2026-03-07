@@ -1,0 +1,99 @@
+# Centralized YAML anchors for all compose files.
+# Concatenated with each compose.yml before docker compose config processes it.
+# See compose_config() in .mise/tasks/scripts/compose-config.sh
+
+# --- Logging ---
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+# --- Deploy behavior (restart, update, rollback) ---
+
+# Default: zero-downtime rolling updates
+x-deploy: &deploy
+  restart_policy:
+    condition: any
+    delay: 5s
+    max_attempts: 3
+    window: 120s
+  update_config:
+    parallelism: 1
+    delay: 10s
+    failure_action: rollback
+    order: start-first
+  rollback_config:
+    parallelism: 1
+    delay: 10s
+    order: stop-first
+
+# For host-mode ports, databases, exclusive-access volumes
+x-deploy-stop-first: &deploy-stop-first
+  <<: *deploy
+  update_config:
+    parallelism: 1
+    delay: 10s
+    failure_action: rollback
+    order: stop-first
+
+# --- Placement (node targeting only) ---
+
+x-place-onprem: &place-onprem
+  placement:
+    constraints:
+      - node.labels.location == onprem
+      - node.labels.ip == private
+
+x-place-cloud: &place-cloud
+  placement:
+    constraints:
+      - node.labels.location == cloud
+      - node.labels.ip == public
+
+x-place-vm: &place-vm
+  placement:
+    constraints:
+      - node.labels.location == onprem
+      - node.labels.type == vm
+
+x-place-storage: &place-storage
+  placement:
+    constraints:
+      - node.labels.location == onprem
+      - node.labels.type == lxc
+      - node.labels.storage == true
+
+x-place-gpu: &place-gpu
+  placement:
+    constraints:
+      - node.labels.location == onprem
+      - node.labels.type == lxc
+      - node.labels.gpu == true
+
+# --- Resources ---
+
+x-resources-tiny: &resources-tiny
+  limits:
+    memory: 64M
+  reservations:
+    memory: 32M
+
+x-resources-small: &resources-small
+  limits:
+    memory: 128M
+  reservations:
+    memory: 64M
+
+x-resources-medium: &resources-medium
+  limits:
+    memory: 256M
+  reservations:
+    memory: 128M
+
+x-resources-large: &resources-large
+  limits:
+    memory: 512M
+  reservations:
+    memory: 256M

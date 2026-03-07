@@ -1,0 +1,17 @@
+project_name: "swarm-cluster"
+languages:
+- yaml
+- toml
+encoding: "utf-8"
+ignore_all_files_in_gitignore: true
+read_only: false
+initial_prompt: ""
+excluded_tools: []
+base_modes:
+default_modes:
+fixed_tools: []
+included_optional_tools: []
+ignored_paths: []
+symbol_info_budget:
+language_backend:
+read_only_memory_patterns: []

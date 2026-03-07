@@ -1,0 +1,65 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+include:
+  - configs.yml
+
+# Prerequisites:
+#   - infra/gateway-internal deployed (provides infra_gw-internal)
+#   - Fileserver node has labels: storage=true
+#   - OIDC client configured in Authelia
+
+services:
+  quantum:
+    image: gtstef/filebrowser:latest
+    user: ${GLOBAL_NONROOT_DOCKER}
+    logging: *logging
+    stop_grace_period: 30s
+    environment:
+      - FILEBROWSER_DATABASE=/quantum/data.db
+      - FILEBROWSER_CONFIG=/quantum/config.yaml
+      # FileBrowser doesn't support _FILE env vars - keep as env injection
+      - FILEBROWSER_ADMIN_USERNAME=${FILEBROWSER_ADMIN_USERNAME}
+      - FILEBROWSER_ADMIN_PASSWORD=${FILEBROWSER_ADMIN_PASSWORD}
+      - FILEBROWSER_OIDC_CLIENT_ID=${FILEBROWSER_OIDC_CLIENT_ID}
+      - FILEBROWSER_JWT_TOKEN_SECRET=${FILEBROWSER_JWT_TOKEN_SECRET}
+      - FILEBROWSER_OIDC_CLIENT_SECRET=${FILEBROWSER_OIDC_CLIENT_SECRET}
+    configs:
+      - source: quantum_config
+        target: /quantum/config.yaml
+    networks:
+      - infra_gw-internal
+    volumes:
+      - quantum-data:/quantum
+      - /mnt/personal:/mnt/personal
+      - /mnt/archive:/mnt/archive
+      - /mnt/apple:/mnt/apple:ro
+      - /mnt/photos:/mnt/photos
+      - /mnt/media:/mnt/media
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:15031/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    deploy:
+      <<: [*place-storage, *deploy]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.internal=true"
+        - "traefik.http.routers.quantum.rule=Host(`files.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.quantum.entrypoints=websecure"
+        - "traefik.http.services.quantum.loadbalancer.server.port=15031"
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+volumes:
+  quantum-data:
+
+networks:
+  infra_gw-internal:
+    external: true

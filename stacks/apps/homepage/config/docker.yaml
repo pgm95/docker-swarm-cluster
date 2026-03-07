@@ -1,0 +1,7 @@
+---
+## https://github.com/gethomepage/homepage/blob/dev/docs/configs/docker.md
+
+swarm-proxy:
+  host: socket-proxy
+  port: 2375
+  swarm: true

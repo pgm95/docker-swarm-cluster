@@ -1,0 +1,23 @@
+# Traefik Dynamic Configuration - CrowdSec Bouncer Plugin
+# https://github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin
+---
+# yaml-language-server: $schema=https://json.schemastore.org/traefik-v3-file-provider.json
+
+http:
+  middlewares:
+    crowdsec:
+      plugin:
+        bouncer:
+          enabled: true
+          crowdsecMode: stream
+          updateIntervalSeconds: 60
+          logLevel: INFO
+          clientTrustedIPs: '{{ env "TRUSTED_IPS" }}'
+          forwardedHeadersTrustedIPs: '{{ env "TRUSTED_IPS" }}'
+          crowdsecAppsecEnabled: true
+          crowdsecAppsecHost: crowdsec:7422
+          crowdsecAppsecFailureBlock: true
+          crowdsecAppsecUnreachableBlock: true
+          crowdsecLapiHost: crowdsec:8085
+          crowdsecLapiKey: '{{ env "CROWDSEC_LAPI_KEY" }}'
+          crowdsecLapiScheme: http

@@ -1,0 +1,42 @@
+# Prometheus Configuration (Swarm)
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets: []
+    scheme: http
+    timeout: 10s
+    api_version: v2
+
+rule_files:
+  - "node_rules.yml"
+
+scrape_configs:
+  # Self-monitoring
+  - job_name: prometheus
+    honor_timestamps: true
+    static_configs:
+      - targets:
+        - localhost:9090
+
+  # Traefik metrics (external gateway)
+  - job_name: traefik-external
+    static_configs:
+      - targets:
+        - traefik-external:9091
+
+  # CrowdSec metrics (external gateway)
+  # - job_name: crowdsec
+  #   static_configs:
+  #     - targets:
+  #       - crowdsec:6060
+
+  # Uptime Kuma metrics (if enabled)
+  # - job_name: uptime-kuma
+  #   static_configs:
+  #     - targets:
+  #       - uptime-kuma:3001

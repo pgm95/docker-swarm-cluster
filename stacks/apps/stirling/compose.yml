@@ -1,0 +1,83 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+# Prerequisites:
+#   - infra/gateway-internal deployed (provides infra_gw-internal)
+#   - GLOBAL_USERNAME and GLOBAL_PASSWORD in SOPS shared secrets
+
+services:
+  stirling-pdf:
+    image: stirlingtools/stirling-pdf:latest-fat
+    logging: *logging
+    stop_grace_period: 30s
+    environment:
+      # Core settings
+      - PUID=${GLOBAL_NONROOT_PUID}
+      - PGID=${GLOBAL_NONROOT_PGID}
+      - MODE=BOTH
+      - LANGS=en_US
+      - FAT_DOCKER=true
+      - SHOW_SURVEY=false
+      - METRICS_ENABLED=true
+      - SERVER_PORT=8070
+      - BACKEND_INTERNAL_PORT=8081
+      - DISABLE_ADDITIONAL_FEATURES=false
+      # UI settings
+      - UI_APPNAME=Stirling-PDF
+      - UI_APPNAMENAVBAR=Stirling-PDF
+      - UI_HOMEDESCRIPTION=Full-featured Stirling-PDF with all capabilities
+      # System settings
+      - SYSTEM_ENABLEANALYTICS=false
+      - SYSTEM_DEFAULTLOCALE=en-US
+      - SYSTEM_ROOTURIPATH=/
+      - SYSTEM_FRONTENDURL=https://pdf.${DOMAIN_PRIVATE}
+      - SYSTEM_CORSALLOWEDORIGINS=https://pdf.${DOMAIN_PRIVATE}
+      - SYSTEM_GOOGLEVISIBILITY=false
+      - SYSTEM_CONNECTIONTIMEOUTMINUTES=5
+      - SYSTEM_SHOWUPDATEONLYADMIN=true
+      - SYSTEM_SHOWUPDATE=false
+      - SYSTEM_MAXFILESIZE=2000
+      # Security settings
+      - DOCKER_ENABLE_SECURITY=true
+      - SECURITY_ENABLELOGIN=false
+      - SECURITY_LOGINMETHOD=normal
+      - SECURITY_INITIALLOGIN_USERNAME=${GLOBAL_USERNAME}
+      - SECURITY_INITIALLOGIN_PASSWORD=${GLOBAL_PASSWORD}
+      - SECURITY_OAUTH2_ENABLED=false
+    networks:
+      - infra_gw-internal
+    volumes:
+      - stirling-logs:/logs
+      - stirling-configs:/configs
+      - stirling-pipeline:/pipeline
+      - stirling-tessdata:/usr/share/tessdata
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8070/login || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      <<: [*place-vm, *deploy]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.internal=true"
+        - "traefik.http.routers.stirling-pdf.rule=Host(`pdf.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.stirling-pdf.entrypoints=websecure"
+        - "traefik.http.services.stirling-pdf.loadbalancer.server.port=8070"
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M
+
+volumes:
+  stirling-logs:
+  stirling-configs:
+  stirling-pipeline:
+  stirling-tessdata:
+
+networks:
+  infra_gw-internal:
+    external: true

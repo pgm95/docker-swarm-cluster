@@ -1,0 +1,124 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+# Prerequisites:
+#   - infra/gateway-internal deployed (provides infra_gw-internal)
+#   - Fileserver node has labels: storage=true
+#   - /mnt/servarr exists on storage node
+
+services:
+  radarr:
+    image: linuxserver/radarr:latest
+    logging: *logging
+    stop_grace_period: 30s
+    environment:
+      - PUID=${GLOBAL_NONROOT_PUID}
+      - PGID=${GLOBAL_NONROOT_PGID}
+      - RADARR__AUTH__APIKEY=${RADARR__AUTH__APIKEY:-}
+    networks:
+      - infra_gw-internal
+    volumes:
+      - radarr-data:/config
+      - /mnt/servarr:/servarr
+    deploy:
+      <<: [*place-storage, *deploy]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.internal=true"
+        - "traefik.http.routers.radarr.rule=Host(`radarr.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.radarr.entrypoints=websecure"
+        - "traefik.http.services.radarr.loadbalancer.server.port=7878"
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  sonarr:
+    image: linuxserver/sonarr:latest
+    logging: *logging
+    stop_grace_period: 30s
+    environment:
+      - PUID=${GLOBAL_NONROOT_PUID}
+      - PGID=${GLOBAL_NONROOT_PGID}
+      - SONARR__AUTH__APIKEY=${SONARR__AUTH__APIKEY:-}
+    networks:
+      - infra_gw-internal
+    volumes:
+      - sonarr-data:/config
+      - /mnt/servarr:/servarr
+    deploy:
+      <<: [*place-storage, *deploy]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.internal=true"
+        - "traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.sonarr.entrypoints=websecure"
+        - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  prowlarr:
+    image: linuxserver/prowlarr:latest
+    logging: *logging
+    stop_grace_period: 30s
+    environment:
+      - PUID=${GLOBAL_NONROOT_PUID}
+      - PGID=${GLOBAL_NONROOT_PGID}
+      - PROWLARR__AUTH__APIKEY=${PROWLARR__AUTH__APIKEY:-}
+    networks:
+      - default
+      - infra_gw-internal
+    volumes:
+      - prowlarr-data:/config
+    deploy:
+      <<: [*place-storage, *deploy]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.internal=true"
+        - "traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.prowlarr.entrypoints=websecure"
+        - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  flaresolverr:
+    image: flaresolverr/flaresolverr:latest
+    logging: *logging
+    stop_grace_period: 30s
+    environment:
+      - LOG_LEVEL=info
+      - LOG_HTML=false
+      - CAPTCHA_SOLVER=none
+    networks:
+      - default
+    deploy:
+      <<: [*place-storage, *deploy]
+      endpoint_mode: dnsrr
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+volumes:
+  radarr-data:
+  sonarr-data:
+  prowlarr-data:
+
+networks:
+  infra_gw-internal:
+    external: true

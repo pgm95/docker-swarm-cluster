@@ -1,0 +1,28 @@
+# CrowdSec Local API Configuration
+api:
+  cti:
+    key: ${CTI_KEY}
+    enabled: true
+    log_level: info
+  server:
+    log_level: warn
+    listen_uri: 0.0.0.0:8085
+    trusted_ips:
+      - 127.0.0.0/16
+      - 172.16.0.0/12
+      - 10.0.0.0/8
+      - 100.64.0.0/10
+    use_forwarded_for_headers: true
+
+db_config:
+  log_level: info
+  type: pgx
+  host: postgres
+  port: 5432
+  db_name: crowdsec
+  user: crowdsec
+  password: ${CROWDSEC_POSTGRES_PASSWORD}
+  sslmode: disable
+  flush:
+    max_items: 40000
+    max_age: 56d

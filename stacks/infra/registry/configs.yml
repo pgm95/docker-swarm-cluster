@@ -1,0 +1,7 @@
+# Docker configs for registry stack
+# Included via docker compose include directive
+
+configs:
+  registry_htpasswd:
+    name: registry_htpasswd_${DEPLOY_VERSION}
+    file: ./config/htpasswd

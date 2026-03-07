@@ -1,0 +1,17 @@
+# Use Swarm API service names instead of container names
+# Connects to socket-proxy on manager via infra-socket network
+---
+## Traefik Swarm Access Logs
+source: docker
+service_name_regexp:
+  - gateway-external_traefik-external.*
+labels:
+  type: traefik
+docker_host: tcp://socket-proxy:2375
+---
+## AppSec
+appsec_config: crowdsecurity/appsec-default
+listen_addr: 0.0.0.0:7422
+source: appsec
+labels:
+  type: appsec

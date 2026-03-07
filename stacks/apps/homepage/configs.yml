@@ -1,0 +1,31 @@
+# Docker configs for homepage stack
+# Included via docker compose include directive
+
+configs:
+  homepage_settings:
+    name: homepage_settings_${DEPLOY_VERSION}
+    file: ./config/settings.yaml
+  homepage_bookmarks:
+    name: homepage_bookmarks_${DEPLOY_VERSION}
+    file: ./config/bookmarks.yaml
+  homepage_widgets:
+    name: homepage_widgets_${DEPLOY_VERSION}
+    file: ./config/widgets.yaml
+  homepage_docker:
+    name: homepage_docker_${DEPLOY_VERSION}
+    file: ./config/docker.yaml
+  homepage_custom_css:
+    name: homepage_custom_css_${DEPLOY_VERSION}
+    file: ./config/custom.css
+  homepage_custom_js:
+    name: homepage_custom_js_${DEPLOY_VERSION}
+    file: ./config/custom.js
+  homepage_services:
+    name: homepage_services_${DEPLOY_VERSION}
+    file: ./config/services.yaml
+  homepage_kubernetes:
+    name: homepage_kubernetes_${DEPLOY_VERSION}
+    file: ./config/kubernetes.yaml
+  homepage_proxmox:
+    name: homepage_proxmox_${DEPLOY_VERSION}
+    file: ./config/proxmox.yaml

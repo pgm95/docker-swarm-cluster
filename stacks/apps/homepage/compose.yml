@@ -1,0 +1,75 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+# Homepage Dashboard: Label-based Swarm service discovery
+# Prerequisites:
+#   - infra/socket deployed (provides infra_socket)
+#   - infra/gateway-internal deployed (provides infra_gw-internal)
+#   - VM node has labels: location=onprem, type=vm
+# Service discovery via homepage.* labels on other Swarm services
+
+include:
+  - configs.yml
+
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    user: ${GLOBAL_NONROOT_DOCKER}
+    logging: *logging
+    stop_grace_period: 30s
+    environment:
+      - HOMEPAGE_ALLOWED_HOSTS=home.${DOMAIN_PRIVATE}
+      - LOG_TARGETS=stdout
+      - HOMEPAGE_VAR_PRIVATE=${DOMAIN_PRIVATE}
+      - HOMEPAGE_VAR_PUBLIC=${DOMAIN_PUBLIC}
+      - HOMEPAGE_VAR_JELLYFIN_KEY=${HOMEPAGE_VAR_JELLYFIN_KEY}
+      - HOMEPAGE_VAR_PORTAINER_KEY=${HOMEPAGE_VAR_PORTAINER_KEY}
+      - HOMEPAGE_VAR_MEALIE_KEY=${HOMEPAGE_VAR_MEALIE_KEY}
+    configs:
+      - source: homepage_settings
+        target: /app/config/settings.yaml
+      - source: homepage_bookmarks
+        target: /app/config/bookmarks.yaml
+      - source: homepage_widgets
+        target: /app/config/widgets.yaml
+      - source: homepage_docker
+        target: /app/config/docker.yaml
+      - source: homepage_custom_css
+        target: /app/config/custom.css
+      - source: homepage_custom_js
+        target: /app/config/custom.js
+      - source: homepage_services
+        target: /app/config/services.yaml
+      - source: homepage_kubernetes
+        target: /app/config/kubernetes.yaml
+      - source: homepage_proxmox
+        target: /app/config/proxmox.yaml
+    networks:
+      - infra_gw-internal
+      - infra_socket
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      <<: [*place-onprem, *deploy]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.internal=true"
+        - "traefik.http.routers.homepage.rule=Host(`home.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.homepage.entrypoints=websecure"
+        - "traefik.http.services.homepage.loadbalancer.server.port=3000"
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+networks:
+  infra_gw-internal:
+    external: true
+  infra_socket:
+    external: true

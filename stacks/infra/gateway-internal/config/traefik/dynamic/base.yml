@@ -1,0 +1,31 @@
+# Traefik Dynamic Configuration - Internal Gateway
+# https://github.com/traefik/traefik/blob/master/docs/content/reference/dynamic-configuration/file.yaml
+---
+## yaml-language-server: $schema=https://json.schemastore.org/traefik-v3-file-provider.json
+
+http:
+  routers:
+    traefik-dashboard:
+      rule: 'Host(`traefik.{{ env "DOMAIN_PRIVATE" }}`)'
+      entryPoints:
+        - websecure
+      service: api@internal
+
+  middlewares:
+    security-headers:
+      headers:
+        contentTypeNosniff: true
+        customFrameOptionsValue: SAMEORIGIN
+        customResponseHeaders:
+          Server: ""
+          X-Forwarded-Proto: https
+          X-Powered-By: ""
+        forceSTSHeader: true
+        hostsProxyHeaders:
+          - X-Forwarded-Host
+        referrerPolicy: strict-origin-when-cross-origin
+        sslProxyHeaders:
+          X-Forwarded-Proto: https
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 63072000
