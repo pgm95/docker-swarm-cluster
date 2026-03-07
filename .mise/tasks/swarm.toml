@@ -534,3 +534,36 @@ else
     echo "Volumes: ${created} created, ${skipped} existed, ${failed} failed"
 fi
 {% endraw %}'''
+
+["registry:auth"]
+description = "Login all swarm nodes to the private registry"
+run = '''{% raw %}
+#!/usr/bin/env bash
+# Cloud node excluded — private registry is LAN/Tailscale only
+nodes=()
+for n in "${SWARM_NODE_DEFAULT}" "${SWARM_NODE_STORAGE}" "${SWARM_NODE_GPU}"; do
+    [[ -z "${n}" ]] && continue
+    for existing in "${nodes[@]}"; do
+        [[ "${existing}" == "${n}" ]] && continue 2
+    done
+    nodes+=("${n}")
+done
+echo "Registry: ${GLOBAL_SWARM_OCI_REGISTRY}"
+echo "Nodes: ${#nodes[@]} (onprem only — registry not reachable from cloud)"
+echo ""
+failed=0
+for node in "${nodes[@]}"; do
+    if ssh "root@${node}" "echo '${REGISTRY_PASS}' | docker login -u '${REGISTRY_USER}' --password-stdin '${GLOBAL_SWARM_OCI_REGISTRY}'" 2>/dev/null; then
+        echo "  ${node}: ok"
+    else
+        echo "  ${node}: FAILED"
+        ((failed++))
+    fi
+done
+echo ""
+if [[ ${failed} -gt 0 ]]; then
+    echo "ERROR: ${failed} node(s) failed to authenticate"
+    exit 1
+fi
+echo "All nodes authenticated."
+{% endraw %}'''
