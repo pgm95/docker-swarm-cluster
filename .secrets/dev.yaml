@@ -1,5 +1,6 @@
 DOMAIN_PUBLIC: ENC[AES256_GCM,data:iL6vTGy2k0dr+Q==,iv:5JpRTiFNhEQxjytFCRm1BvP+oAT/xrQWJDK1wFvOEDo=,tag:4zYI3YxMwoowuNUAYpq27g==,type:str]
 DOMAIN_PRIVATE: ENC[AES256_GCM,data:5tK/DPL1kUW9drRBa4ScpLJN,iv:qYI55aeaNbHuMiBGhy1iUBIrOe0rzNrWUB4UF25O3gQ=,tag:5uEOIfX7YU8b8txYUjd+9Q==,type:str]
+DOMAIN_TAILNET: ENC[AES256_GCM,data:OEBPif0dIAKO4CSPzqmhzLy/,iv:BWrm8W76IRAwcYO4w0uiWWReNGM+LZ+lM92pmSHxYag=,tag:8oJX9yPzOj0Vm1k9mq6kQQ==,type:str]
 GLOBAL_OIDC_URL: ENC[AES256_GCM,data:FUpSTrPYz3atKgODfHLB,iv:80cdklmhUmP986AaEkDpbTkJQjix2nz9qHXzFJu0LPc=,tag:lHDH/oMMECsWNKV4/Htd/A==,type:str]
 GLOBAL_LDAP_BASE_DN: ENC[AES256_GCM,data:Bc2QGa1KGBcOVD4n2d5DBQ==,iv:YUSWfbkIHNS0TqLvoJjpV8fRLO4FO6MApb2diIAXk7c=,tag:0PuC7adi/Lk3B8Za/dXIaQ==,type:str]
 sops:
@@ -13,7 +14,7 @@ sops:
             K0ZpWWYzKzNpQ3Vaak9DODhvOWh0clUK3cc9Y0VS8J0vQEU7xaJHqm1hn4mEcTok
             xvwbvJvWSliItwMO823oD5jvyw27g1/K/kfnGuOq1F8BdACevR1+rw==
             -----END AGE ENCRYPTED FILE-----
-    lastmodified: "2026-02-17T21:23:47Z"
-    mac: ENC[AES256_GCM,data:scCPA7PIrqJdsxvhymNp8vQK6B1HDUQNFP6q9O8x2FS5SBOWCLEcMJMbhB/uWVOD3qooiSfYzqW2OUayLllWHf4kEoPnxcLXjQdI9BpuEgkF0HTtUPd3JIaALmnjDfAzUDVtUSlZ6JhsKqVHvpw8z6ehq6qhJAhYE/kfBnzqLa4=,iv:cBeWUTwj+1IthpXPVJRjkx5QbgFIiAc5Q3WeZFrss9U=,tag:q0tPkKQfLYl/pIH2HUEf4w==,type:str]
+    lastmodified: "2026-03-07T06:43:51Z"
+    mac: ENC[AES256_GCM,data:ZGfOowPVexh+5FXzfSXoEn5If4Vmd3EcNN856Vrnnjsg2hSPQgvHWDVlNVII0SsZ4SQgj/UWwVSQkjHmVdOLYdL28WQRi98WcW7zzbNn9YXNbGqC2grU+H+7KbnepXfB7XUjWcpXgZ5VU0o78pxNxBr9236ol6tNr29hbVuB6Io=,iv:4wadX99ophZpM56XNMJnTxPbMqunXxCB2aVlGrbnRBc=,tag:2hNjQJx09NbfR9uQa/yv7w==,type:str]
     unencrypted_suffix: _unencrypted
     version: 3.11.0
