@@ -2,14 +2,13 @@
 
 # Prerequisites:
 #   - infra/gateway-internal deployed (provides infra_gw-internal)
-#   - VM node has labels: location=onprem
 #   - Run 'mise run registry:auth' to generate htpasswd and docker login
-# Image naming convention:
-#   registry.${DOMAIN_PRIVATE}/<stack>/<service>:<tag>
-#   Example: registry.${DOMAIN_PRIVATE}/accounts/webfinger:v1
+# Secrets:
+#   - REGISTRY_HTPASSWD_B64: htpasswd file (Docker Secret via _B64 auto-decode in swarm:deploy mise task)
+#   - REGISTRY_HTTP_SECRET: upload session signing (env var — no _FILE support)
 
 include:
-  - configs.yml
+  - secrets.yml
 
 services:
   registry:
@@ -22,13 +21,13 @@ services:
       REGISTRY_HTTP_ADDR: 0.0.0.0:5000
       REGISTRY_AUTH: htpasswd
       REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
-      REGISTRY_AUTH_HTPASSWD_PATH: /etc/docker/registry/htpasswd
+      REGISTRY_AUTH_HTPASSWD_PATH: /run/secrets/registry_htpasswd
       REGISTRY_STORAGE_DELETE_ENABLED: "true"
+      REGISTRY_HTTP_SECRET: ${REGISTRY_HTTP_SECRET}
       REGISTRY_LOG_LEVEL: info
-      OTEL_SDK_DISABLED: "true"
-    configs:
-      - source: registry_htpasswd
-        target: /etc/docker/registry/htpasswd
+      OTEL_TRACES_EXPORTER: none
+    secrets:
+      - registry_htpasswd
     networks:
       - infra_gw-internal
     volumes:
