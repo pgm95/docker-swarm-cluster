@@ -1,6 +1,3 @@
-# Docker configs for metrics stack
-# Included via docker compose include directive
-
 configs:
   prometheus_config:
     name: prometheus_config_${DEPLOY_VERSION}

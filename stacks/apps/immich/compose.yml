@@ -1,10 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 
-# Prerequisites:
-#   - infra/gateway-internal deployed (provides infra_gw-internal)
-#   - Fileserver node has labels: storage=true
-#   - /mnt/photos/immich exists on storage node
-#   - OIDC client configured in Authelia (infra/accounts)
+# /mnt/photos/immich must exist on storage node
+# OIDC client configured in Authelia
 
 include:
   - secrets.yml

@@ -1,13 +1,5 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 
-# Internal Proxy Stack: Traefik for LAN/Tailscale
-# Prerequisites:
-#   - infra/socket deployed (provides infra_socket)
-#   - infra/metrics deployed (provides infra_metrics)
-#   - VM node has labels: location=onprem
-#   - DNS: *.DOMAIN_PRIVATE resolves to VM LAN IP (internal only)
-# Primary network: infra_gw-internal
-
 include:
   - secrets.yml
   - configs.yml

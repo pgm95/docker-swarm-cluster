@@ -1,11 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 
-# Prerequisites:
-#   - infra/gateway-internal deployed (provides infra_gw-internal)
-#   - Run 'mise run registry:auth' to generate htpasswd and docker login
-# Secrets:
-#   - REGISTRY_HTPASSWD_B64: htpasswd file (Docker Secret via _B64 auto-decode in swarm:deploy mise task)
-#   - REGISTRY_HTTP_SECRET: upload session signing (env var — no _FILE support)
+# Run 'mise run registry:auth' after deploy to login all nodes
+# REGISTRY_HTTP_SECRET: env var injection (no _FILE support)
 
 include:
   - secrets.yml

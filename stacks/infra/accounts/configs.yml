@@ -1,6 +1,3 @@
-# Docker configs for accounts stack
-# Included via docker compose include directive
-
 configs:
   authelia_config:
     name: authelia_config_${DEPLOY_VERSION}

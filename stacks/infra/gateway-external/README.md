@@ -41,7 +41,7 @@ Traefik uses two providers:
 
 | Provider | Purpose |
 |----------|---------|
-| Docker (swarmMode) | Discovers Swarm services via labels |
+| Swarm (`providers.swarm`) | Discovers Swarm services via labels |
 | File | Static routes for LAN hosts (jellyfin, hass, etc.) |
 
 The Swarm provider is scoped with a constraint: only services with `traefik.scope.external=true` are discovered. This prevents the external gateway from attempting to route internal-only services, eliminating `Could not find network` and `EntryPoint doesn't exist` log noise.
@@ -93,9 +93,10 @@ Uses `mode: host` for ports 80/443 to bind directly to the VPS public IP. Swarm'
 | File | Purpose |
 |------|---------|
 | `config/traefik/entrypoint.sh` | Bootstrap wrapper — downloads geoblock DB on first boot, then chains into Traefik |
-| `config/traefik/static/traefik.yml` | Providers, entrypoints, ACME |
-| `config/traefik/dynamic/*.yml` | Routes, middlewares, services |
+| `config/traefik/dynamic/*.yml` | Routes, middlewares, services (file provider) |
 | `config/crowdsec/config.yaml` | LAPI + Postgres connection config (`.local` overlay) |
 | `config/crowdsec/acquis.yaml` | Log acquisition sources |
 | `config/crowdsec/profiles.yaml` | Alert remediation rules |
 | `config/bootstrap/init-db.sh` | Postgres sidecar — creates role, database, schema grants |
+
+Static Traefik config (providers, entrypoints, ACME) is defined via CLI flags in compose `command:`, not a config file.

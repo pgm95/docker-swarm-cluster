@@ -38,7 +38,7 @@ deploy:
 | Anchor | Constraint |
 |--------|------------|
 | `*place-vm` | `location == onprem`, `type == vm` |
-| `*place-onprem` | `location == onprem` |
+| `*place-onprem` | `location == onprem`, `ip == private` |
 | `*place-storage` | `storage == true` |
 | `*place-cloud` | `location == cloud`, `ip == public` |
 | `*place-gpu` | `gpu == true` |

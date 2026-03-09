@@ -1,12 +1,5 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 
-# Homepage Dashboard: Label-based Swarm service discovery
-# Prerequisites:
-#   - infra/socket deployed (provides infra_socket)
-#   - infra/gateway-internal deployed (provides infra_gw-internal)
-#   - VM node has labels: location=onprem, type=vm
-# Service discovery via homepage.* labels on other Swarm services
-
 include:
   - configs.yml
 

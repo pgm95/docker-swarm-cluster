@@ -1,15 +1,5 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 
-# Prerequisites:
-#   - infra/gateway-external deployed (provides infra_gw-external)
-#   - infra/gateway-internal deployed (provides infra_gw-internal)
-#   - infra/registry deployed (for webfinger image)
-#   - VM node has labels: location=onprem
-#   - WebFinger image built and pushed to registry
-
-# Startup order: redis → lldap → authelia, webfinger
-# Use healthchecks since Swarm doesn't support depends_on
-
 include:
   - secrets.yml
   - configs.yml
@@ -17,7 +7,6 @@ include:
 services:
   redis:
     image: redis:7-alpine
-    # Uses implicit stack network only (no external routing needed)
     logging: *logging
     stop_grace_period: 30s
     volumes:
@@ -60,9 +49,9 @@ services:
       - lldap_key_seed
       - lldap_ldap_user_pass
     networks:
-      - default   # For intra-stack communication (authelia, webfinger)
-      - infra_gw-internal  # For Traefik internal routing (web UI)
-      - infra_postgres  # For central Postgres access
+      - default
+      - infra_gw-internal
+      - infra_postgres
     configs:
       - source: lldap_config
         target: /data/lldap_config.toml
@@ -120,9 +109,9 @@ services:
       - oidc_client_secret_tailscale
       - oidc_client_secret_cloudflare
     networks:
-      - default   # For intra-stack communication (redis, lldap)
-      - infra_gw-external  # For Traefik external routing (forward auth)
-      - infra_postgres  # For central Postgres access
+      - default
+      - infra_gw-external
+      - infra_postgres
     configs:
       - source: authelia_config
         target: /config/configuration.yml
@@ -165,8 +154,8 @@ services:
       - source: webfinger_ldap_template
         target: /config/ldap.gotmpl
     networks:
-      - default   # For intra-stack communication (lldap)
-      - infra_gw-external  # For Traefik external routing
+      - default
+      - infra_gw-external
     healthcheck:
       test: ["NONE"]
     deploy:
@@ -225,7 +214,6 @@ services:
     configs:
       - source: init_ldap_entrypoint
         target: /init-ldap-entrypoint.sh
-    # Uses implicit stack network only (talks to lldap via intra-stack DNS)
     healthcheck:
       test: ["NONE"]
     deploy:

@@ -44,12 +44,13 @@ Dev/prod separation uses mise's native `MISE_ENV` profile system. Dev is the def
 
 ## Swarm Patterns
 
-| Host | Role | Key Labels |
-| ------ | ------ | ------------ |
-| vm | Manager | `location=onprem`, `ip=private` |
-| fileserver | Manager | `storage=true` |
-| mediaserver | Manager | `gpu=true` |
-| vps | Worker | `location=cloud`, `ip=public` |
+Node count is environment-specific. Labels drive placement — hostnames are irrelevant to scheduling.
+
+| Node Role | Swarm Role | Key Labels |
+| --------- | ---------- | ---------- |
+| VM | Manager | `location=onprem`, `ip=private`, `type=vm` |
+| LXC | Manager | `location=onprem`, `storage=true`, `gpu=true`, `type=lxc` |
+| VPS | Worker | `location=cloud`, `ip=public`, `type=vps` |
 
 **Image naming:** `${GLOBAL_SWARM_OCI_REGISTRY}/<stack>/<service>:<tag>`
 

@@ -1,20 +1,14 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 
-# Socket-proxy for Swarm service discovery
-# Primary network: infra_socket (Docker API access)
-
 services:
   socket-proxy:
-    # All consumers connect via infra_socket overlay network
     image: tecnativa/docker-socket-proxy:v0.4.2
     logging: *logging
     stop_grace_period: 30s
     environment:
-      # Enabled by default
       EVENTS: 1
       VERSION: 1
       PING: 1
-      # Read-only access
       POST: 0
       CONFIGS: 1
       CONTAINERS: 1

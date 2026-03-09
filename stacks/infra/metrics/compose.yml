@@ -4,13 +4,6 @@ include:
   - secrets.yml
   - configs.yml
 
-# Prerequisites:
-#   - infra/socket deployed (provides infra_socket)
-#   - infra/gateway-internal deployed (provides infra_gw-internal)
-#   - infra/accounts deployed (Grafana needs Authelia for OIDC)
-#   - VM node has labels: location=onprem
-# Primary network: infra_metrics
-
 services:
   prometheus:
     image: prom/prometheus:v3.9.1 # Consider hardened dhi.io/prometheus:3.9
