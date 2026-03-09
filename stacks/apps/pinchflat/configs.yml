@@ -1,0 +1,7 @@
+# Docker configs for pinchflat stack
+# Included via docker compose include directive
+
+configs:
+  pinchflat_init:
+    name: pinchflat_init_${DEPLOY_VERSION}
+    file: ./config/init.sh

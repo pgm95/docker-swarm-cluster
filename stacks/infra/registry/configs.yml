@@ -1,0 +1,7 @@
+# Docker configs for registry stack
+# Included via docker compose include directive
+
+configs:
+  registry_init:
+    name: registry_init_${DEPLOY_VERSION}
+    file: ./config/init.sh

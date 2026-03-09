@@ -58,12 +58,17 @@ services:
 
   victoriametrics:
     image: victoriametrics/victoria-metrics:v1.135.0
-    user: ${GLOBAL_NONROOT_DOCKER}
+    entrypoint: ["/bin/sh", "/init.sh"]
     logging: *logging
     stop_grace_period: 30s
     command:
       - "--storageDataPath=/storage"
       - "--httpListenAddr=:8428"
+    environment:
+      VM_OWNER: ${GLOBAL_NONROOT_DOCKER}
+    configs:
+      - source: victoriametrics_init
+        target: /init.sh
     networks:
       - infra_metrics
       - infra_gw-internal

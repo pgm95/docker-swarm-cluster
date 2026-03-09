@@ -1,0 +1,7 @@
+# Docker configs for jellyfin stack
+# Included via docker compose include directive
+
+configs:
+  jellyfin_init:
+    name: jellyfin_init_${DEPLOY_VERSION}
+    file: ./config/init.sh

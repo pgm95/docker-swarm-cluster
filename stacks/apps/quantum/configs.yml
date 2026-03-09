@@ -5,3 +5,6 @@ configs:
   quantum_config:
     name: quantum_config_${DEPLOY_VERSION}
     file: ./config/config.yaml
+  quantum_init:
+    name: quantum_init_${DEPLOY_VERSION}
+    file: ./config/init.sh
