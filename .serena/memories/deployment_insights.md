@@ -116,7 +116,7 @@ Authelia and LLDAP need dedicated Postgres roles and databases. The `init-db` si
 
 ### Registry Auth — Node Login
 
-`REGISTRY_USER` and `REGISTRY_PASS` in `GLOBAL_SECRETS` are consumed by `registry:auth` to run `docker login` on all onprem swarm nodes. The cloud node (VPS) is excluded — `registry.DOMAIN_PRIVATE` resolves via internal DNS only (AGH on LAN), and the VPS uses Tailscale MagicDNS which doesn't know about private domain records. This is non-blocking — the VPS only runs `gateway-external` and `crowdsec`, neither of which pulls custom images.
+`REGISTRY_USER` and `REGISTRY_PASS` in `GLOBAL_SECRETS` are consumed by `registry:auth` to run `docker login` on all swarm nodes. All nodes must be able to resolve `DOMAIN_PRIVATE` (configure Tailscale DNS or split DNS for cloud nodes).
 
 ### Docker Overlay Encryption Over WireGuard Is Broken
 
@@ -157,6 +157,18 @@ Timeline:
 **Key insight**: `start-first` + `FailureAction: rollback` can silently revert to the old task when new tasks fail due to cross-stack dependency races. Unlike `max_attempts` exhaustion (which stalls visibly), rollback restores the old task and the deploy appears successful.
 
 **Env var note**: CrowdSec requires `CROWDSEC_BYPASS_DB_VOLUME_CHECK=true` when the `crowdsec-db` volume (`/var/lib/crowdsec/data`) is removed — the entrypoint hard-exits without it.
+
+## Volume Init Migration — Resolved Issues
+
+### `swarm:validate` bind mount section was silent (RESOLVED)
+
+**Symptom**: Bind mount path checks produced no output after migrating to `resolve-nodes.sh`.
+**Root cause**: Python f-string `v[\"source\"]` inside a single-quoted bash string passed to `python3 -c`. The literal `\"` caused a Python SyntaxError. The `2>/dev/null` on the python command silently swallowed the error.
+**Fix**: Extract dict access to a local variable (`src = v["source"]`), avoiding backslashes in the f-string.
+
+### Quantum OIDC TLS (UNRESOLVED)
+
+FileBrowser (`quantum`) fails with `x509: certificate signed by unknown authority` when validating OIDC against `auth.DOMAIN_PUBLIC`. The container's CA bundle doesn't trust the Let's Encrypt cert chain. Not a volume issue — init wrapper works correctly (no more permission denied). User plans to fix via Tailscale DNS so all nodes can resolve `DOMAIN_PRIVATE` and the OIDC URL can point to the internal gateway instead.
 
 ## DNS Setup
 

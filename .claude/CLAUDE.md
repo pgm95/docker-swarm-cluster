@@ -10,7 +10,7 @@ Docker Swarm homelab infrastructure with centralized management.
 | `PROJECT_SECRETS_DIR/shared.yaml` | SOPS-encrypted shared secrets (`GLOBAL_SECRETS`) |
 | `PROJECT_SECRETS_DIR/{env}.yaml` | SOPS-encrypted env-specific secrets (per `MISE_ENV`) |
 | `.config/miserc.toml` | Default `MISE_ENV` (dev) |
-| `.mise/config.{env}.toml` | Per-environment config (nodes, `_.file`, OCI registry) |
+| `.mise/config.{env}.toml` | Per-environment config (manager node, `_.file`, OCI registry) |
 | `stacks/<namespace>/<stack>/secrets.env` | SOPS-encrypted stack-specific secrets |
 | `stacks/<namespace>/<stack>/secrets.yml` | Swarm secret definitions (versioned) |
 | `stacks/<namespace>/<stack>/configs.yml` | Docker config definitions (versioned) |
@@ -28,7 +28,7 @@ SOPS decryption and compose preprocessing happen locally; only final deployment 
 Dev/prod separation uses mise's native `MISE_ENV` profile system. Dev is the default; prod requires `MISE_ENV=prod`.
 
 - `.config/miserc.toml` sets default `MISE_ENV=dev`
-- `.mise/config.{env}.toml` holds env-specific `_.file` (SOPS secrets) + plaintext node hostnames + derived OCI registry
+- `.mise/config.{env}.toml` holds env-specific `_.file` (SOPS secrets) + manager hostname + derived OCI registry
 - `.mise/config.toml` holds shared config + shared `_.file` for `GLOBAL_SECRETS`
 - Both `_.file` directives are processed additively
 
@@ -71,13 +71,8 @@ Dev/prod separation uses mise's native `MISE_ENV` profile system. Dev is the def
 
 ## Data Patterns
 
-**Initialization:** `site:deploy-infra` automatically runs `swarm:init-networks` and `swarm:init-volumes` via `depends` before deploying stacks. For manual use: `mise run swarm:init-networks` and `mise run swarm:init-volumes`.
+**Initialization:** `site:deploy-infra` automatically runs `swarm:init-networks` via `depends` before deploying stacks. For manual use: `mise run swarm:init-networks`.
 
-**Node mapping:**
+**Volume ownership:** Services needing non-root file access use entrypoint wrappers (Docker Config init scripts) that chown volume dirs and drop privileges via `setpriv` before exec'ing the stock entrypoint. This runs inside the container on the correct node — no external pre-creation needed.
 
-| Constraint | SSH Target |
-|------------|------------|
-| `storage == true` | `SWARM_NODE_STORAGE` |
-| `gpu == true` | `SWARM_NODE_GPU` |
-| `location == cloud` | `SWARM_NODE_CLOUD` |
-| Default | `SWARM_NODE_DEFAULT` |
+**Node discovery:** Swarm nodes are discovered dynamically via `docker node inspect`. The `resolve-nodes.sh` helper matches placement constraints against live node labels for operations that need SSH access (bind mount validation, cleanup, registry auth). Only `SWARM_NODE_DEFAULT` (manager) is configured manually; all other nodes are auto-discovered.

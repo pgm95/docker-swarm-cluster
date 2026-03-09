@@ -9,7 +9,7 @@ depends_post = ["swarm:status"]
 
 ["site:deploy-infra"]
 description = "Deploy infrastructure stacks in order"
-depends = ["swarm:init-networks", "swarm:init-volumes"]
+depends = ["swarm:init-networks"]
 run = '''{% raw %}
 #!/usr/bin/env bash
 STACKS=(
@@ -91,18 +91,12 @@ for stack in "${INFRA_STACKS[@]}"; do
     mise run swarm:remove "${stack}"
 done
 if [[ "${usage_volumes}" == "true" ]]; then
+    source .mise/tasks/scripts/resolve-nodes.sh
     echo ""
     echo "--- Removing volumes ---"
-    nodes=()
-    for n in "${SWARM_NODE_DEFAULT}" "${SWARM_NODE_STORAGE}" "${SWARM_NODE_GPU}" "${SWARM_NODE_CLOUD}"; do
-        [[ -z "${n}" ]] && continue
-        for existing in "${nodes[@]}"; do
-            [[ "${existing}" == "${n}" ]] && continue 2
-        done
-        nodes+=("${n}")
-    done
+    mapfile -t nodes < <(get_swarm_nodes | cut -f1)
     for node in "${nodes[@]}"; do
-        pruned=$(ssh "root@${node}" "docker volume prune -af" 2>/dev/null)
+        pruned=$(ssh_node "${node}" "docker volume prune -af" 2>/dev/null)
         count=$(echo "${pruned}" | grep -c '^[a-f0-9]' || true)
         echo "  ${node}: ${count} removed"
     done

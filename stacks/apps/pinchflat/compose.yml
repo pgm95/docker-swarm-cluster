@@ -1,18 +1,20 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 
-# Runs as non-root via user:. Dockerfile mkdir's /config as root, so:
-# - swarm:init-volumes must pre-create the named volume with a marker file to prevent Docker's volume-init from overwriting ownership.
-# - /downloads bind mount: Pinchflat's startup overwrites .keep files in each checked directory (File.write, not create).
-# - Pre-existing root-owned .keep files cause EACCES — delete them before first non-root launch.
+include:
+  - configs.yml
 
 services:
   pinchflat:
     image: keglin/pinchflat:latest
-    user: ${GLOBAL_NONROOT_DOCKER}
+    entrypoint: ["/bin/sh", "/init.sh"]
     logging: *logging
     stop_grace_period: 30s
     environment:
+      - PINCHFLAT_OWNER=${GLOBAL_NONROOT_DOCKER}
       - LOG_LEVEL=info
+    configs:
+      - source: pinchflat_init
+        target: /init.sh
     networks:
       - infra_gw-internal
     volumes:

@@ -8,6 +8,9 @@ configs:
   prometheus_rules:
     name: prometheus_rules_${DEPLOY_VERSION}
     file: ./config/prometheus/node_rules.yml
+  victoriametrics_init:
+    name: victoriametrics_init_${DEPLOY_VERSION}
+    file: ./config/victoriametrics/init.sh
   # grafana_ini:
   #   name: grafana_ini_${DEPLOY_VERSION}
   #   file: ./config/grafana/grafana.ini

@@ -4,7 +4,7 @@ Research for consolidating container embedded databases onto a shared `infra/pos
 
 ## Services With Native Postgres Support
 
-### Authelia (infra/accounts)
+### Authelia (infra/accounts) [COMPLETED AND TESTED]
 
 **Current:** SQLite at `/config/db.sqlite3`, config via Docker Config with Go template secrets.
 
@@ -22,7 +22,7 @@ Research for consolidating container embedded databases onto a shared `infra/pos
 - Redis is optional for single-replica deployments (memory sessions work). Only required for multi-replica HA
 - **Databases:** 1
 
-### LLDAP (infra/accounts)
+### LLDAP (infra/accounts) [COMPLETED AND TESTED]
 
 **Current:** SQLite at `/data/users.db`, configured via `lldap_config.toml`.
 
@@ -35,7 +35,7 @@ Research for consolidating container embedded databases onto a shared `infra/pos
 - `/data` volume can be **removed entirely** with Postgres — the SQLite DB moves to Postgres, private key is derived from `LLDAP_KEY_SEED` (deterministic, no file written to disk), LDAPS is disabled, and config is a Docker Config mount. Official docs confirm: "you can remove this step if you use a different DB and configure with environment variables only"
 - **Databases:** 1
 
-### CrowdSec (infra/gateway-external)
+### CrowdSec (infra/gateway-external) [COMPLETED AND TESTED]
 
 **Current:** SQLite, configured in `config/crowdsec/config.yaml`.
 

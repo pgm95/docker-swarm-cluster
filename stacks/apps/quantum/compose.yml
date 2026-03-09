@@ -11,10 +11,11 @@ include:
 services:
   quantum:
     image: gtstef/filebrowser:latest
-    user: ${GLOBAL_NONROOT_DOCKER}
+    entrypoint: ["/bin/sh", "/init.sh"]
     logging: *logging
     stop_grace_period: 30s
     environment:
+      - QUANTUM_OWNER=${GLOBAL_NONROOT_DOCKER}
       - FILEBROWSER_DATABASE=/quantum/data.db
       - FILEBROWSER_CONFIG=/quantum/config.yaml
       # FileBrowser doesn't support _FILE env vars - keep as env injection
@@ -26,6 +27,8 @@ services:
     configs:
       - source: quantum_config
         target: /quantum/config.yaml
+      - source: quantum_init
+        target: /init.sh
     networks:
       - infra_gw-internal
     volumes:

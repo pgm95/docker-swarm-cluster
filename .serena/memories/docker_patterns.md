@@ -25,7 +25,7 @@ Infra stack deployment order (hardcoded in site tasks):
 7. infra/accounts
 ```
 
-`site:deploy-infra` auto-calls `swarm:init-networks` and `swarm:init-volumes`.
+`site:deploy-infra` auto-calls `swarm:init-networks`.
 `site:reset` removes stacks in reverse order, then purges all versioned secrets/configs and removes overlay networks.
 
 ## Manual Pre-Deployment Tasks
@@ -112,6 +112,34 @@ stacks/
 │       ├── secrets.yml    # Swarm secret definitions (versioned)
 │       └── configs.yml    # Docker config definitions (versioned)
 ```
+
+## Volume Ownership — Entrypoint Wrappers
+
+Services needing non-root file access use entrypoint wrappers instead of `user:` in compose. A Docker Config init script runs as root, chowns volume dirs (skipped if `.volume-init` marker exists), then drops to the target UID via `setpriv` before exec'ing the stock entrypoint.
+
+**Pattern per service:**
+
+- Remove `user: ${GLOBAL_NONROOT_DOCKER}` from compose
+- Add `entrypoint: ["/bin/sh", "/init.sh"]`
+- Add owner env var (e.g., `JELLYFIN_OWNER: ${GLOBAL_NONROOT_DOCKER}`)
+- Mount init script as Docker Config at `/init.sh`
+- Add `configs.yml` entry and `include:` if not existing
+
+**Services with entrypoint wrappers:**
+
+| Service | Stack | Owner Env Var | Stock Entrypoint |
+|---------|-------|---------------|-----------------|
+| registry | infra/registry | `REGISTRY_OWNER` | `/entrypoint.sh "$@"` |
+| victoriametrics | infra/metrics | `VM_OWNER` | `/victoria-metrics-prod "$@"` |
+| jellyfin | apps/jellyfin | `JELLYFIN_OWNER` | `/jellyfin/jellyfin "$@"` |
+| pinchflat | apps/pinchflat | `PINCHFLAT_OWNER` | `/app/bin/docker_start "$@"` |
+| quantum | apps/quantum | `QUANTUM_OWNER` | `./filebrowser "$@"` |
+
+**Services NOT needing wrappers:**
+
+- `homepage` and `webfinger` have `user:` but no named volumes
+- LinuxServer images (servarr) handle permissions via PUID/PGID
+- All other services run as root by default
 
 ## Validation
 

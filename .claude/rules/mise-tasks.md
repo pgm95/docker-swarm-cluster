@@ -44,7 +44,7 @@ content=$(<file); content="${content//old/new}"; printf '%s' "$content" > file
 
 ## Organization
 
-- **Hidden helpers**: `hide = true` for internal tasks (e.g., `swarm:validate`, `swarm:init-networks`, `swarm:init-volumes`)
+- **Hidden helpers**: `hide = true` for internal tasks (e.g., `swarm:validate`, `swarm:init-networks`)
 - **Shared scripts**: Reusable bash functions in `.mise/tasks/scripts/`. Tasks source only what they need. Sourced scripts run in-process and can `export` vars; hidden tasks spawn subshells and cannot.
 - **Task files**: `tasks/swarm.toml` (stack operations + `registry:auth`), `tasks/site.toml` (cluster-wide operations), `tasks/sops.toml` (encryption)
 - **`.nodeploy` opt-out**: A `.nodeploy` file in a stack root opts it out of `site:deploy-apps`. Stack remains validated and deployable via manual `swarm:deploy`.

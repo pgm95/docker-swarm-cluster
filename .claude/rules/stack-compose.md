@@ -71,7 +71,7 @@ Use node labels for placement (`location`, `ip`, `gpu`, `storage`), never hardco
 | Config files | `./config/<service>/` | Docker Configs (versioned) |
 | Bulk storage | `/mnt/*` | Bind mount |
 
-**Volume initialization caveat:** Docker copies image-layer permissions into empty named volumes on first mount. `swarm:init-volumes` creates a `.volume-init` marker file after chowning to prevent this. Only affects services using `user:` directive — LinuxServer images with PUID/PGID handle their own permissions.
+**Volume ownership for non-root services:** Services needing non-root file access use entrypoint wrappers instead of `user:` in compose. A Docker Config init script runs as root, chowns volume dirs (skipped if `.volume-init` marker exists), then drops to the target UID via `setpriv` before exec'ing the stock entrypoint. This avoids external volume pre-creation and runs on the correct node by definition. LinuxServer images with PUID/PGID handle their own permissions and don't need wrappers.
 
 **Bind mount paths must pre-exist:** Swarm rejects tasks immediately (`Rejected` state) when bind mount source paths don't exist on the target node. Unlike Docker Compose, Swarm does not auto-create missing directories. Ensure paths exist before deploying — `swarm:validate` catches this but only as a warning.
 

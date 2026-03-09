@@ -164,6 +164,7 @@ run = '''{% raw %}
 #!/usr/bin/env bash
 source .mise/tasks/scripts/content-hash.sh
 source .mise/tasks/scripts/compose-config.sh
+source .mise/tasks/scripts/resolve-nodes.sh
 # Export OCI_TAG_* env vars for stacks with build contexts
 for build_dir in stacks/*/build/*/  stacks/*/*/build/*/; do
     [[ -d "${build_dir}" ]] || continue
@@ -189,58 +190,59 @@ while IFS= read -r f; do
 done < <(find stacks -name "compose.yml" | sort)
 [[ ${FAILED} -eq 0 ]] || exit 1
 # --- Bind mount path checks ---
-get_target_node() {
-    local stack_file="$1"
-    local constraints
-    constraints=$(grep -A5 'placement:' "${stack_file}" 2>/dev/null | grep 'node.labels' || true)
-    if echo "${constraints}" | grep -q 'storage == true'; then
-        echo "${SWARM_NODE_STORAGE}"
-    elif echo "${constraints}" | grep -q 'gpu == true'; then
-        echo "${SWARM_NODE_GPU}"
-    elif echo "${constraints}" | grep -q 'location == cloud'; then
-        echo "${SWARM_NODE_CLOUD}"
-    else
-        echo "${SWARM_NODE_DEFAULT}"
-    fi
-}
 echo ""
 echo "=== Bind mount paths ==="
 warnings=0
 for stack_file in $(find stacks -name "compose.yml" | sort); do
-    bind_paths=$(compose_config "${stack_file}" --format json 2>/dev/null | python3 -c '
+    # Extract bind mounts and target node per service from resolved compose
+    bind_info=$(compose_config "${stack_file}" --format json 2>/dev/null | python3 -c '
 import json, sys
 config = json.load(sys.stdin)
-for svc in config.get("services", {}).values():
+for svc_name, svc in config.get("services", {}).items():
     for v in svc.get("volumes", []):
         if v.get("type") == "bind":
-            print(v["source"])
-' 2>/dev/null | sort -u) || continue
-    [[ -z "${bind_paths}" ]] && continue
-    target=$(get_target_node "${stack_file}")
+            src = v["source"]
+            print(f"{svc_name}\t{src}")
+' 2>/dev/null) || continue
+    [[ -z "${bind_info}" ]] && continue
+    # Get service→node mapping for this stack
+    declare -A svc_nodes=()
+    while IFS=$'\t' read -r svc_name node_name; do
+        svc_nodes["${svc_name}"]="${node_name}"
+    done < <(get_service_node "${stack_file}" 2>/dev/null)
+    # Group bind paths by target node
+    declare -A node_paths=()
+    while IFS=$'\t' read -r svc_name bind_path; do
+        node="${svc_nodes[${svc_name}]:-UNKNOWN}"
+        node_paths["${node}"]+="${bind_path}"$'\n'
+    done <<< "${bind_info}"
     stack_name="$(dirname "${stack_file}")"
-    # Build a single SSH command to stat all paths
-    stat_cmd=""
-    declare -a paths=()
-    while IFS= read -r p; do
-        [[ -z "${p}" ]] && continue
-        paths+=("${p}")
-        stat_cmd+="if [ -e '${p}' ]; then stat -c '%A %U:%G ${p}' '${p}'; else echo 'MISSING ${p}'; fi;"
-    done <<< "${bind_paths}"
-    [[ ${#paths[@]} -eq 0 ]] && continue
-    results=$(ssh "root@${target}" "${stat_cmd}" 2>/dev/null) || {
-        echo "⚠ ${stack_name} → ${target}: unreachable"
-        ((warnings++))
-        continue
-    }
-    echo "${stack_name} (${target}):"
-    while IFS= read -r line; do
-        if [[ "${line}" == MISSING* ]]; then
-            echo "  ⚠ ${line}"
+    for node in "${!node_paths[@]}"; do
+        # Deduplicate paths for this node
+        unique_paths=$(echo -n "${node_paths[${node}]}" | sort -u)
+        [[ -z "${unique_paths}" ]] && continue
+        stat_cmd=""
+        while IFS= read -r p; do
+            [[ -z "${p}" ]] && continue
+            stat_cmd+="if [ -e '${p}' ]; then stat -c '%A %U:%G ${p}' '${p}'; else echo 'MISSING ${p}'; fi;"
+        done <<< "${unique_paths}"
+        [[ -z "${stat_cmd}" ]] && continue
+        results=$(ssh_node "${node}" "${stat_cmd}" 2>/dev/null) || {
+            echo "⚠ ${stack_name} → ${node}: unreachable"
             ((warnings++))
-        else
-            echo "  ${line}"
-        fi
-    done <<< "${results}"
+            continue
+        }
+        echo "${stack_name} (${node}):"
+        while IFS= read -r line; do
+            if [[ "${line}" == MISSING* ]]; then
+                echo "  ⚠ ${line}"
+                ((warnings++))
+            else
+                echo "  ${line}"
+            fi
+        done <<< "${results}"
+    done
+    unset svc_nodes node_paths
 done
 if [[ ${warnings} -gt 0 ]]; then
     echo ""
@@ -359,6 +361,7 @@ description = "Remove unused versioned secrets, configs, dead containers, and da
 usage = 'flag "--prune-images" help="Also prune all unused images on every node (destructive)"'
 run = '''{% raw %}
 #!/usr/bin/env bash
+source .mise/tasks/scripts/resolve-nodes.sh
 removed=0
 cleanup_versioned_items() {
     local item_type="$1"
@@ -379,18 +382,10 @@ echo ""
 echo "=== Configs ==="
 cleanup_versioned_items "config"
 echo ""
-nodes=()
-for n in "${SWARM_NODE_DEFAULT}" "${SWARM_NODE_STORAGE}" "${SWARM_NODE_GPU}" "${SWARM_NODE_CLOUD}"; do
-    [[ -z "${n}" ]] && continue
-    # Deduplicate (some nodes share hostnames)
-    for existing in "${nodes[@]}"; do
-        [[ "${existing}" == "${n}" ]] && continue 2
-    done
-    nodes+=("${n}")
-done
+mapfile -t nodes < <(get_swarm_nodes | cut -f1)
 echo "=== Containers ==="
 for node in "${nodes[@]}"; do
-    pruned=$(ssh "root@${node}" "docker container prune -f" 2>/dev/null)
+    pruned=$(ssh_node "${node}" "docker container prune -f" 2>/dev/null)
     count=$(echo "${pruned}" | grep -c '^[a-f0-9]' || true)
     echo "  ${node}: ${count}"
     ((removed += count))
@@ -399,7 +394,7 @@ echo ""
 if [[ "${usage_prune_images}" == "true" ]]; then
     echo "=== Images ==="
     for node in "${nodes[@]}"; do
-        pruned=$(ssh "root@${node}" "docker image prune -af" 2>/dev/null)
+        pruned=$(ssh_node "${node}" "docker image prune -af" 2>/dev/null)
         reclaimed=$(echo "${pruned}" | sed -n 's/.*reclaimed space: //p')
         [[ -z "${reclaimed}" ]] && reclaimed="0B"
         count=$(echo "${pruned}" | grep -c '^deleted:' || true)
@@ -410,7 +405,7 @@ if [[ "${usage_prune_images}" == "true" ]]; then
 fi
 echo "=== Volumes ==="
 for node in "${nodes[@]}"; do
-    pruned=$(ssh "root@${node}" "docker volume prune -f" 2>/dev/null)
+    pruned=$(ssh_node "${node}" "docker volume prune -f" 2>/dev/null)
     count=$(echo "${pruned}" | grep -c '^[a-f0-9]' || true)
     reclaimed=$(echo "${pruned}" | sed -n 's/.*reclaimed space: //p')
     [[ -z "${reclaimed}" ]] && reclaimed="0B"
@@ -449,111 +444,18 @@ for net in "${!NETWORKS[@]}"; do
 done
 '''
 
-["swarm:init-volumes"]
-description = "Internal: pre-create named volumes with correct ownership for services using user: directive"
-hide = true
-run = '''{% raw %}
-#!/usr/bin/env bash
-source .mise/tasks/scripts/content-hash.sh
-source .mise/tasks/scripts/compose-config.sh
-# Export OCI_TAG_* env vars for stacks with build contexts (needed for docker compose config)
-for build_dir in stacks/*/build/*/  stacks/*/*/build/*/; do
-    [[ -d "${build_dir}" ]] || continue
-    service=$(basename "${build_dir}")
-    tag=$(compute_content_hash "${build_dir}")
-    var_name="OCI_TAG_$(echo "${service}" | tr '[:lower:]' '[:upper:]')"
-    export "${var_name}=${tag}"
-done
-# Map placement constraints to SSH targets
-get_target_node() {
-    local stack_file="$1"
-    local constraints
-    constraints=$(grep -A5 'placement:' "${stack_file}" 2>/dev/null | grep 'node.labels' || true)
-    if echo "${constraints}" | grep -q 'storage == true'; then
-        echo "${SWARM_NODE_STORAGE}"
-    elif echo "${constraints}" | grep -q 'gpu == true'; then
-        echo "${SWARM_NODE_GPU}"
-    elif echo "${constraints}" | grep -q 'location == cloud'; then
-        echo "${SWARM_NODE_CLOUD}"
-    else
-        echo "${SWARM_NODE_DEFAULT}"
-    fi
-}
-created=0; skipped=0; failed=0
-for stack_dir in stacks/infra/* stacks/apps/*; do
-    stack_file="${stack_dir}/compose.yml"
-    [[ -f "${stack_file}" ]] || continue
-    stack_name=$(basename "${stack_dir}")
-    # Parse resolved compose config for services with user: directive and named volumes
-    vol_info=$(compose_config "${stack_file}" --format json 2>/dev/null | python3 -c '
-import json, sys
-config = json.load(sys.stdin)
-services = config.get("services", {})
-for svc_name, svc in services.items():
-    user = svc.get("user")
-    if not user:
-        continue
-    for v in svc.get("volumes", []):
-        src = v.get("source")
-        if v.get("type") == "volume" and src:
-            print(f"{src} {user}")
-' 2>/dev/null) || continue
-    [[ -z "${vol_info}" ]] && continue
-    target=$(get_target_node "${stack_file}")
-    echo "--- ${stack_name} (${target}) ---"
-    while IFS=' ' read -r vol_name user_spec; do
-        [[ -z "${vol_name}" ]] && continue
-        prefixed="${stack_name}_${vol_name}"
-        # Check if volume already initialized (exists + has marker file), otherwise create + chown
-        # Marker file prevents Docker's volume-init from overwriting ownership
-        # (empty volumes get image-layer permissions copied in on first mount)
-        status=$(ssh -n "root@${target}" "
-if docker volume inspect '${prefixed}' >/dev/null 2>&1 \
-   && docker run --rm -v '${prefixed}:/data' alpine test -f /data/.volume-init 2>/dev/null; then
-    echo SKIP
-else
-    docker volume create '${prefixed}' >/dev/null 2>&1
-    if docker run --rm -v '${prefixed}:/data' alpine sh -c 'chown -R ${user_spec} /data && touch /data/.volume-init'; then
-        echo CREATED
-    else
-        echo FAILED
-    fi
-fi" 2>/dev/null)
-        case "${status}" in
-            SKIP)    echo "  exists:  ${prefixed}" ; ((skipped++)) ;;
-            CREATED) echo "  created: ${prefixed} (${user_spec})" ; ((created++)) ;;
-            *)       echo "  FAILED:  ${prefixed}" ; ((failed++)) ;;
-        esac
-    done <<< "${vol_info}"
-    echo ""
-done
-total=$((created + skipped + failed))
-if [[ ${total} -eq 0 ]]; then
-    echo "No volumes need pre-creation (no services with user: directive)."
-else
-    echo "Volumes: ${created} created, ${skipped} existed, ${failed} failed"
-fi
-{% endraw %}'''
-
 ["registry:auth"]
 description = "Login all swarm nodes to the private registry"
 run = '''{% raw %}
 #!/usr/bin/env bash
-# Cloud node excluded — private registry is LAN/Tailscale only
-nodes=()
-for n in "${SWARM_NODE_DEFAULT}" "${SWARM_NODE_STORAGE}" "${SWARM_NODE_GPU}"; do
-    [[ -z "${n}" ]] && continue
-    for existing in "${nodes[@]}"; do
-        [[ "${existing}" == "${n}" ]] && continue 2
-    done
-    nodes+=("${n}")
-done
+source .mise/tasks/scripts/resolve-nodes.sh
+mapfile -t nodes < <(get_swarm_nodes | cut -f1)
 echo "Registry: ${GLOBAL_SWARM_OCI_REGISTRY}"
-echo "Nodes: ${#nodes[@]} (onprem only — registry not reachable from cloud)"
+echo "Nodes: ${#nodes[@]}"
 echo ""
 failed=0
 for node in "${nodes[@]}"; do
-    if ssh "root@${node}" "echo '${REGISTRY_PASS}' | docker login -u '${REGISTRY_USER}' --password-stdin '${GLOBAL_SWARM_OCI_REGISTRY}'" 2>/dev/null; then
+    if ssh_node "${node}" "echo '${REGISTRY_PASS}' | docker login -u '${REGISTRY_USER}' --password-stdin '${GLOBAL_SWARM_OCI_REGISTRY}'" 2>/dev/null; then
         echo "  ${node}: ok"
     else
         echo "  ${node}: FAILED"

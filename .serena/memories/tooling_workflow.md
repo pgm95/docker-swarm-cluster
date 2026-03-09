@@ -11,9 +11,9 @@ The project uses a layered tooling approach: **mise** for task orchestration, **
 | Site | `site:deploy`, `site:deploy-infra`, `site:deploy-apps`, `site:reset` | Full-cluster deploy/teardown |
 | Deployment | `swarm:deploy`, `swarm:remove` | Single-stack deploy/remove |
 | Status | `swarm:status` | Cluster nodes, stack health, and node placement |
-| Bootstrap | `swarm:init-networks` (hidden), `swarm:init-volumes` (hidden) | Cluster initialization (auto-run by `site:deploy-infra`) |
+| Bootstrap | `swarm:init-networks` (hidden) | Overlay network creation (auto-run by `site:deploy-infra`) |
 | Cleanup | `swarm:cleanup` | Remove unused versioned secrets/configs (manager), prune containers and images (all nodes via SSH) |
-| Registry | `registry:auth` | Login all onprem nodes to private registry (cloud node excluded — no DNS resolution) |
+| Registry | `registry:auth` | Login all swarm nodes to private registry |
 | Validation | `swarm:validate` (hidden) | Compose + Swarm compatibility validation |
 | SOPS | `sops:init`, `sops:encrypt`, `sops:edit`, `sops:status` | Encryption management |
 
@@ -21,8 +21,9 @@ The project uses a layered tooling approach: **mise** for task orchestration, **
 
 | Script | Function | Used by |
 |--------|----------|---------|
-| `compose-config.sh` | `compose_config <file> [args...]` — concatenates shared anchors with compose file | `swarm:deploy`, `swarm:validate`, `swarm:init-volumes` |
+| `compose-config.sh` | `compose_config <file> [args...]` — concatenates shared anchors with compose file | `swarm:deploy`, `swarm:validate` |
 | `content-hash.sh` | `compute_content_hash <dir>` — 12-char SHA-256 of build context | `swarm:deploy`, `swarm:validate` |
+| `resolve-nodes.sh` | `get_swarm_nodes()`, `get_service_node()`, `ssh_node()` — dynamic node discovery from swarm API | `swarm:validate`, `swarm:cleanup`, `registry:auth`, `site:reset` |
 | `sops-decrypt.sh` | `sops_decrypt <file>` — decrypt SOPS file, output key=value lines | `sops-export.sh`, `swarm:deploy` |
 | `sops-export.sh` | `sops_export <file>` — decrypt + export as env vars (handles `_B64` suffix) | `swarm:deploy` |
 
@@ -71,7 +72,7 @@ mise processes base config `[env]` BEFORE profile `[env]`. This means:
 | Variable | Source | Location |
 |----------|--------|----------|
 | `DOMAIN_PUBLIC`, `DOMAIN_PRIVATE`, `GLOBAL_OIDC_URL`, `GLOBAL_LDAP_BASE_DN` | SOPS | `PROJECT_SECRETS_DIR/{env}.yaml` |
-| `SWARM_NODE_*`, `DOCKER_HOST` | Plaintext | `.mise/config.{env}.toml` |
+| `SWARM_NODE_DEFAULT`, `DOCKER_HOST`, `SWARM_SSH_USER` | Plaintext | `.mise/config.{env}.toml` |
 | `GLOBAL_SWARM_OCI_REGISTRY` | Derived from `DOMAIN_PRIVATE` | `.mise/config.{env}.toml` |
 | `GLOBAL_SMTP_*`, `REGISTRY_*`, `GLOBAL_LDAP_ADDRESS` | SOPS | `PROJECT_SECRETS_DIR/shared.yaml` |
 | `GLOBAL_TZ`, `GLOBAL_NONROOT_*`, etc. | Plaintext | `.mise/config.toml` (base) |

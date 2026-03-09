@@ -9,14 +9,16 @@
 
 include:
   - secrets.yml
+  - configs.yml
 
 services:
   registry:
     image: registry:3
-    user: ${GLOBAL_NONROOT_DOCKER}
+    entrypoint: ["/bin/sh", "/init.sh"]
     logging: *logging
     stop_grace_period: 30s
     environment:
+      REGISTRY_OWNER: ${GLOBAL_NONROOT_DOCKER}
       REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
       REGISTRY_HTTP_ADDR: 0.0.0.0:5000
       REGISTRY_AUTH: htpasswd
@@ -28,6 +30,9 @@ services:
       OTEL_TRACES_EXPORTER: none
     secrets:
       - registry_htpasswd
+    configs:
+      - source: registry_init
+        target: /init.sh
     networks:
       - infra_gw-internal
     volumes:

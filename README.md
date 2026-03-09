@@ -23,9 +23,10 @@ the final `docker stack deploy` goes over SSH to the remote Swarm manager.
 ### Prerequisites
 
 - [mise](https://mise.jdx.dev) installed locally
-- SSH root access to all swarm nodes (key-based auth)
+- DNS-based (hostname) SSH access to all swarm nodes
 - Docker Engine on all nodes (tested with 29.x)
 - [Tailscale](https://tailscale.com) running on all nodes (inter-node connectivity)
+- All swarm nodes must resolve `DOMAIN_PRIVATE` (configure Tailscale DNS or split DNS so cloud nodes can reach the private registry)
 - Two DNS zones: one public (Cloudflare), one private (local DNS like AdGuard Home)
 
 ### 1. Clone and install tools
@@ -49,13 +50,12 @@ Edit `.mise/config.dev.toml` (or `config.prod.toml` for production):
 
 | Variable | Purpose |
 |----------|---------|
-| `SWARM_NODE_DEFAULT` | Hostname of Swarm manager (VM) |
-| `SWARM_NODE_STORAGE` | Hostname of storage node (bulk mounts) |
-| `SWARM_NODE_GPU` | Hostname of GPU node (transcoding) |
-| `SWARM_NODE_CLOUD` | Hostname of VPS node (public ingress) |
+| `SWARM_NODE_DEFAULT` | Hostname of Swarm manager node |
 | `DOCKER_HOST` | Auto-derived as `ssh://root@SWARM_NODE_DEFAULT` |
 
-Multiple `SWARM_NODE_*` vars can point to the same host in smaller setups.
+Other nodes are discovered automatically from the swarm via `docker node inspect`.
+Node hostnames must be SSH-resolvable from the local machine (DNS, `/etc/hosts`, or Tailscale MagicDNS).
+The SSH user is configurable via `SWARM_SSH_USER` in base config (default: `root`).
 
 ### 4. Configure domains and shared secrets
 
@@ -221,9 +221,10 @@ Docker Configs. Service routing uses Swarm provider labels under `deploy.labels`
 | Configuration | `./config/<service>/` | Docker Configs (versioned, immutable) |
 | Bulk media/files | `/mnt/*` | Bind mount to host |
 
-Volumes are node-local. `swarm:init-volumes` pre-creates named volumes with correct ownership
-for services using `user:` directives (Docker copies image-layer permissions into empty volumes
-on first mount, which can conflict with non-root UIDs).
+Volumes are node-local. Services that need non-root ownership use entrypoint wrappers
+(Docker Config init scripts) that chown volume directories and drop privileges via `setpriv`
+before exec'ing the stock entrypoint. This runs inside the container on the correct node,
+avoiding external volume pre-creation.
 
 ## Directory Structure
 
@@ -245,6 +246,7 @@ on first mount, which can conflict with non-root UIDs).
 │       └── scripts/               # Shared bash functions sourced by tasks
 │           ├── compose-config.sh  # compose_config(): anchor concatenation + docker compose config
 │           ├── content-hash.sh    # compute_content_hash(): SHA-256 of build context
+│           ├── resolve-nodes.sh   # get_swarm_nodes(), get_service_node(), ssh_node(): dynamic node discovery
 │           ├── sops-decrypt.sh    # sops_decrypt(): SOPS file to key=value lines
 │           └── sops-export.sh     # sops_export(): decrypt + export as env vars (handles _B64)
 ├── .secrets/                      # SOPS-encrypted secrets
@@ -288,8 +290,8 @@ MISE_ENV=prod mise run swarm:deploy stacks/infra/socket
 Each profile provides:
 
 - **`_.file`**: path to its SOPS-encrypted secrets file (`PROJECT_SECRETS_DIR/{env}.yaml`)
-- **Node hostnames**: `SWARM_NODE_DEFAULT`, `SWARM_NODE_STORAGE`, `SWARM_NODE_GPU`, `SWARM_NODE_CLOUD`
-- **`DOCKER_HOST`**: SSH target for the Swarm manager
+- **`SWARM_NODE_DEFAULT`**: Swarm manager hostname
+- **`DOCKER_HOST`**: SSH target for the Swarm manager (derived from `SWARM_NODE_DEFAULT`)
 - **`GLOBAL_SWARM_OCI_REGISTRY`**: derived from `DOMAIN_PRIVATE` (which comes from SOPS)
 - **`GLOBAL_ACME_CA_SERVER`**: Let's Encrypt staging CA in dev, production CA in prod
 
@@ -488,7 +490,7 @@ mise run swarm:cleanup                        # Remove unused versioned secrets/
 mise run swarm:cleanup --prune-images         # Also prune all unused images on every node
 
 # Registry
-mise run registry:auth                        # Login all onprem nodes to private registry
+mise run registry:auth                        # Login all swarm nodes to private registry
 
 # Secrets
 mise run sops:init                            # Generate age key, patch SOPS config
