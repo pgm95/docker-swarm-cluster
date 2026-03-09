@@ -126,7 +126,7 @@ mise run registry:auth      # Login onprem nodes to private registry
 mise run site:deploy        # Deploy everything (infra then apps)
 ```
 
-`site:deploy` handles the full sequence: network/volume initialization, infra stacks in
+`site:deploy` handles the full sequence: network initialization, infra stacks in
 dependency order, then app stacks. First deploy may require
 `docker service update --force <service>` for services that start before their
 dependencies converge (see [Gotchas](#deploy-and-update)).
@@ -204,7 +204,7 @@ Docker Configs. Service routing uses Swarm provider labels under `deploy.labels`
 | `infra/postgres` | postgres | Central PostgreSQL 17 instance |
 | `infra/gateway-internal` | traefik | Internal reverse proxy + TLS termination |
 | `infra/gateway-external` | traefik, crowdsec, init-db | Public reverse proxy + WAF |
-| `infra/metrics` | prometheus, grafana, victoria-metrics, node-exporter, uptime-kuma | Monitoring |
+| `infra/metrics` | prometheus, victoria-metrics | Monitoring |
 | `infra/registry` | registry | Private OCI registry (htpasswd auth, Traefik TLS) |
 | `infra/accounts` | authelia, lldap, redis, webfinger, init-db, init-ldap | SSO + LDAP + bootstrap sidecars |
 

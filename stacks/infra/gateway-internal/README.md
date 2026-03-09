@@ -68,11 +68,14 @@ Jellyfin and Home Assistant are also accessible via the external gateway at thei
 ```text
 stacks/infra/gateway-internal/
 ├── compose.yml              # Stack definition
+├── configs.yml              # Docker Config definitions (versioned)
+├── secrets.yml              # Swarm secret definitions (versioned)
+├── secrets.env              # SOPS-encrypted stack secrets
 ├── config/traefik/
-│   ├── static/traefik.yml        # Entrypoints, providers, resolvers
-│   └── dynamic/base.yml          # Middlewares, file-based routes
-├── data/traefik/
-│   ├── certs/                    # ACME certificates (gitignored)
-│   └── logs/                     # Access logs
+│   └── dynamic/
+│       ├── base.yml              # Middlewares, default routes
+│       └── hass-private.yml      # Home Assistant file-provider route
 └── README.md
 ```
+
+Static Traefik config (entrypoints, providers, resolvers) is defined via CLI flags in compose `command:`, not a config file. ACME certificates and access logs are stored in named Docker volumes (`traefik-certs`, `traefik-logs`).

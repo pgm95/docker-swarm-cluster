@@ -1,8 +1,5 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 
-# Prerequisites:
-#   - infra/gateway-internal deployed (provides infra_gw-internal)
-
 services:
   it-tools:
     image: corentinth/it-tools:latest

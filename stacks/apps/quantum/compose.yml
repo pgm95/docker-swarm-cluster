@@ -3,10 +3,7 @@
 include:
   - configs.yml
 
-# Prerequisites:
-#   - infra/gateway-internal deployed (provides infra_gw-internal)
-#   - Fileserver node has labels: storage=true
-#   - OIDC client configured in Authelia
+# OIDC client configured in Authelia
 
 services:
   quantum:

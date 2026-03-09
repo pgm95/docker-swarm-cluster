@@ -1,6 +1,3 @@
-# Docker configs for gateway-internal stack
-# Included via docker compose include directive
-
 configs:
   traefik_dynamic_base:
     name: traefik_internal_dynamic_base_${DEPLOY_VERSION}

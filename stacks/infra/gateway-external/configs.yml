@@ -1,6 +1,3 @@
-# Docker configs for gateway-external stack
-# Included via docker compose include directive
-
 configs:
   traefik_entrypoint:
     name: traefik_external_entrypoint_${DEPLOY_VERSION}
