@@ -51,7 +51,7 @@ services:
     volumes:
       - mealie-data:/app/data
     healthcheck:
-      test: ["CMD", "python", "-m", "mealie.scripts.healthcheck"]
+      test: ["CMD", "curl", "-f", "http://localhost:9025/api/app/about"]
       interval: 30s
       timeout: 10s
       retries: 3
