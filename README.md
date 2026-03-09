@@ -178,9 +178,11 @@ Five pre-created overlay networks partition traffic by function:
 | `infra_metrics` | Prometheus scraping | |
 | `infra_postgres` | Central Postgres access | |
 
-Networks are created by `swarm:init-networks` (runs automatically before infra deployment).
-They exist independently of any stack, which breaks the circular dependency between gateways
-and metrics, which each need to join the other's network.
+Networks are discovered dynamically from `infra_*: external: true` declarations in compose
+files and created by `swarm:init-networks` (runs automatically before infra deployment).
+Adding a new overlay network to any infra compose file automatically includes it in creation
+and teardown. Networks exist independently of any stack, which breaks the circular dependency
+between gateways and metrics, which each need to join the other's network.
 
 **Dual Traefik gateways** handle ingress:
 
@@ -243,12 +245,16 @@ avoiding external volume pre-creation.
 │       ├── swarm.toml             # Stack operations (deploy, remove, status, cleanup, init-*)
 │       ├── site.toml              # Cluster-wide operations (deploy-infra, deploy-apps, reset)
 │       ├── sops.toml              # Encryption management (init, encrypt, edit, status)
-│       └── scripts/               # Shared bash functions sourced by tasks
-│           ├── compose-config.sh  # compose_config(): anchor concatenation + docker compose config
-│           ├── content-hash.sh    # compute_content_hash(): SHA-256 of build context
-│           ├── resolve-nodes.sh   # get_swarm_nodes(), get_service_node(), ssh_node(): dynamic node discovery
-│           ├── sops-decrypt.sh    # sops_decrypt(): SOPS file to key=value lines
-│           └── sops-export.sh     # sops_export(): decrypt + export as env vars (handles _B64)
+│       └── scripts/                   # Shared bash function libraries sourced by tasks
+│           ├── compose-config.sh      # compose_config(): anchor concatenation + docker compose config
+│           ├── content-hash.sh        # compute_content_hash(): SHA-256 of build context
+│           ├── deploy-convergence.sh  # wait_for_convergence(), check_replica_health()
+│           ├── deploy-secrets.sh      # validate_required_secrets(), create_versioned_secrets()
+│           ├── find-secret-files.sh   # find_secret_files(): SOPS-managed file discovery
+│           ├── resolve-networks.sh    # get_infra_networks(): dynamic overlay network discovery
+│           ├── resolve-nodes.sh       # get_swarm_nodes(), get_service_node(), ssh_node()
+│           ├── sops-decrypt.sh        # sops_decrypt(): SOPS file to key=value lines
+│           └── sops-export.sh         # sops_export(): decrypt + export as env vars (handles _B64)
 ├── .secrets/                      # SOPS-encrypted secrets
 │   ├── shared.yaml                # Cross-environment secrets (SMTP, registry, LDAP, Postgres provisioner)
 │   ├── dev.yaml                   # Dev-specific secrets (domains, OIDC URL, LDAP base DN)
@@ -428,7 +434,7 @@ on source files before `docker compose config` runs.
    pushes to the private registry if the image doesn't already exist
 6. **Compose preprocessing**: `compose_config` + sed transforms
 7. **Stack deploy**: `docker stack deploy --detach --with-registry-auth -c -`
-8. **Convergence wait**: polls for up to 180s until all service replicas are running
+8. **Convergence wait**: polls until all service replicas are running (configurable via `CONVERGE_TIMEOUT`, default 180s)
 9. **Health check**: reports any services that failed to converge
 
 ### Deployment Order

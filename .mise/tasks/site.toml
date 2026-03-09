@@ -10,30 +10,18 @@ depends_post = ["swarm:status"]
 ["site:deploy-infra"]
 description = "Deploy infrastructure stacks in order"
 depends = ["swarm:init-networks"]
-run = '''{% raw %}
-#!/usr/bin/env bash
-STACKS=(
-    stacks/infra/socket
-    stacks/infra/postgres
-    stacks/infra/gateway-internal
-    stacks/infra/gateway-external
-    stacks/infra/metrics
-    stacks/infra/registry
-    stacks/infra/accounts
-)
-echo "=== Infra Deploy ==="
-echo "Stacks: ${#STACKS[@]}"
-echo ""
-for stack in "${STACKS[@]}"; do
-    echo "━━━ $(basename "${stack}") ━━━"
-    mise run swarm:deploy "${stack}" || { echo "ABORT: $(basename "${stack}") failed"; exit 1; }
-    sleep 5
-    echo ""
-done
-{% endraw %}'''
+run = [
+  "mise run swarm:deploy stacks/infra/socket",
+  "mise run swarm:deploy stacks/infra/postgres",
+  "mise run swarm:deploy stacks/infra/gateway-internal",
+  "mise run swarm:deploy stacks/infra/gateway-external",
+  "mise run swarm:deploy stacks/infra/metrics",
+  "mise run swarm:deploy stacks/infra/registry",
+  "mise run swarm:deploy stacks/infra/accounts",
+]
 
 ["site:deploy-apps"]
-description = "Deploy application stacks in order"
+description = "Deploy all application stacks"
 run = '''{% raw %}
 #!/usr/bin/env bash
 mapfile -t STACKS < <(find stacks/apps -mindepth 1 -maxdepth 1 -type d | sort)
@@ -68,9 +56,11 @@ echo "=== Apps deploy complete (${summary}) ==="
 ["site:reset"]
 description = "Remove all stacks in reverse order"
 usage = 'flag "--volumes" help="Also remove all named volumes from nodes"'
+confirm = "This will remove ALL stacks, secrets, configs, and networks. Continue?"
 depends_post = ["swarm:cleanup"]
 run = '''{% raw %}
 #!/usr/bin/env bash
+source .mise/tasks/scripts/resolve-networks.sh
 INFRA_STACKS=(
     stacks/infra/accounts
     stacks/infra/registry
@@ -80,7 +70,6 @@ INFRA_STACKS=(
     stacks/infra/postgres
     stacks/infra/socket
 )
-NETWORKS=(infra_socket infra_gw-internal infra_gw-external infra_metrics infra_postgres)
 echo "--- Removing app stacks ---"
 for stack in $(find stacks/apps -mindepth 1 -maxdepth 1 -type d | sort); do
     mise run swarm:remove "${stack}"
@@ -103,11 +92,12 @@ if [[ "${usage_volumes}" == "true" ]]; then
 fi
 echo ""
 echo "--- Removing overlay networks ---"
-for net in "${NETWORKS[@]}"; do
+while IFS= read -r net; do
+    [[ -z "${net}" ]] && continue
     if docker network rm "${net}" >/dev/null 2>&1; then
         echo "  removed: ${net}"
     else
         echo "  skipped: ${net} (not found or in use)"
     fi
-done
+done < <(get_infra_networks)
 {% endraw %}'''

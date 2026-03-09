@@ -31,8 +31,9 @@ fi
 
 ["sops:encrypt"]
 description = "Encrypt all plaintext secrets files"
-run = '''{% raw %}
+run = '''
 #!/usr/bin/env bash
+source .mise/tasks/scripts/find-secret-files.sh
 [[ -f "${SOPS_AGE_KEY_FILE}" ]] || { echo "Error: No key. Run: mise run sops:init"; exit 1; }
 encrypted=() skipped=()
 encrypt_if_needed() {
@@ -48,10 +49,7 @@ encrypt_if_needed() {
 }
 while IFS= read -r file; do
     encrypt_if_needed "${file}"
-done < <(find "${PROJECT_SECRETS_DIR}" -maxdepth 1 -name "*.yaml" 2>/dev/null | sort)
-while IFS= read -r file; do
-    encrypt_if_needed "${file}"
-done < <(find stacks -name "secrets.env" 2>/dev/null | sort)
+done < <(find_secret_files)
 if [[ ${#encrypted[@]} -gt 0 ]]; then
     echo "Encrypted:"
     printf "  %s\n" "${encrypted[@]}"
@@ -62,7 +60,7 @@ if [[ ${#skipped[@]} -gt 0 ]]; then
 fi
 [[ ${#encrypted[@]} -eq 0 && ${#skipped[@]} -eq 0 ]] && echo "No secrets files found"
 exit 0
-{% endraw %}'''
+'''
 
 ["sops:edit"]
 description = "Edit encrypted secrets file"
@@ -79,6 +77,7 @@ sops "${file}"
 description = "Show encryption status of secrets files"
 run = '''
 #!/usr/bin/env bash
+source .mise/tasks/scripts/find-secret-files.sh
 check_status() {
     local file="$1"
     [[ -f "${file}" ]] || return 0
@@ -91,8 +90,5 @@ check_status() {
 echo "Secrets:"
 while IFS= read -r file; do
     check_status "${file}"
-done < <(find "${PROJECT_SECRETS_DIR}" -maxdepth 1 -name "*.yaml" 2>/dev/null | sort)
-while IFS= read -r file; do
-    check_status "${file}"
-done < <(find stacks -name "secrets.env" 2>/dev/null | sort)
+done < <(find_secret_files)
 '''
