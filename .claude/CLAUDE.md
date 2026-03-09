@@ -78,6 +78,6 @@ Node count is environment-specific. Labels drive placement — hostnames are irr
 
 **Initialization:** `site:deploy-infra` automatically runs `swarm:init-networks` via `depends` before deploying stacks. For manual use: `mise run swarm:init-networks`. Overlay networks are discovered dynamically from `infra_*: external: true` declarations in compose files — adding a network to any infra stack automatically includes it in creation and teardown.
 
-**Volume ownership:** Services needing non-root file access use entrypoint wrappers (Docker Config init scripts) that chown volume dirs and drop privileges via `setpriv` before exec'ing the stock entrypoint. This runs inside the container on the correct node — no external pre-creation needed.
+**Volume ownership:** Services needing non-root file access use entrypoint wrappers (Docker Config init scripts) that chown volume dirs and drop privileges before exec'ing the target binary. Debian-based images use `setpriv`; Alpine-based images (BusyBox) use `su` with a dynamically created passwd entry. This runs inside the container on the correct node — no external pre-creation needed.
 
 **Node discovery:** Swarm nodes are discovered dynamically via `docker node inspect`. The `resolve-nodes.sh` helper matches placement constraints against live node labels for operations that need SSH access (bind mount validation, cleanup, registry auth). Only `SWARM_NODE_DEFAULT` (manager) is configured manually; all other nodes are auto-discovered.

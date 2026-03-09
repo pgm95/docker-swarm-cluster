@@ -115,7 +115,14 @@ stacks/
 
 ## Volume Ownership — Entrypoint Wrappers
 
-Services needing non-root file access use entrypoint wrappers instead of `user:` in compose. A Docker Config init script runs as root, chowns volume dirs (skipped if `.volume-init` marker exists), then drops to the target UID via `setpriv` before exec'ing the stock entrypoint.
+Services needing non-root file access use entrypoint wrappers instead of `user:` in compose. A Docker Config init script runs as root, chowns volume dirs (skipped if `.volume-init` marker exists), then drops to the target UID before exec'ing the binary/entrypoint.
+
+**Privilege drop method depends on base image:**
+
+| Base | Tool | Notes |
+|------|------|-------|
+| Debian (util-linux) | `setpriv --reuid --regid --clear-groups` | Direct UID/GID, no passwd entry needed |
+| Alpine (BusyBox) | `su -s /bin/sh $USER -c 'exec ...'` | Requires `addgroup`/`adduser` first for passwd entry |
 
 **Pattern per service:**
 
@@ -127,18 +134,24 @@ Services needing non-root file access use entrypoint wrappers instead of `user:`
 
 **Services with entrypoint wrappers:**
 
-| Service | Stack | Owner Env Var | Stock Entrypoint |
-|---------|-------|---------------|-----------------|
-| registry | infra/registry | `REGISTRY_OWNER` | `/entrypoint.sh "$@"` |
-| victoriametrics | infra/metrics | `VM_OWNER` | `/victoria-metrics-prod "$@"` |
-| jellyfin | apps/jellyfin | `JELLYFIN_OWNER` | `/jellyfin/jellyfin "$@"` |
-| pinchflat | apps/pinchflat | `PINCHFLAT_OWNER` | `/app/bin/docker_start "$@"` |
-| quantum | apps/quantum | `QUANTUM_OWNER` | `./filebrowser "$@"` |
+| Service | Stack | Base | Owner Env Var | Priv Drop | Target |
+|---------|-------|------|---------------|-----------|--------|
+| registry | infra/registry | Alpine | `REGISTRY_OWNER` | `su` | `/entrypoint.sh` (hardcoded CMD) |
+| victoriametrics | infra/metrics | Alpine | `VM_OWNER` | `su` | `/victoria-metrics-prod "$@"` |
+| quantum | apps/quantum | Alpine | `QUANTUM_OWNER` | `su` | `./filebrowser "$@"` |
+| jellyfin | apps/jellyfin | Debian | `JELLYFIN_OWNER` | `setpriv` | `/jellyfin/jellyfin "$@"` |
+| pinchflat | apps/pinchflat | Debian | `PINCHFLAT_OWNER` | `setpriv` | `/app/bin/docker_start "$@"` |
+
+**Gotchas:**
+
+- Registry hardcodes `registry serve /etc/distribution/config.yml` because compose `entrypoint:` override strips image CMD (`$@` is empty). Services with explicit `command:` in compose are unaffected.
+- Quantum suppresses chown errors (`2>/dev/null || true`) because a Docker Config is mounted inside the volume directory.
 
 **Services NOT needing wrappers:**
 
 - `homepage` and `webfinger` have `user:` but no named volumes
 - LinuxServer images (servarr) handle permissions via PUID/PGID
+- Mealie handles its own user switching via `gosu` in its stock entrypoint
 - All other services run as root by default
 
 ## Validation

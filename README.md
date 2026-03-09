@@ -224,8 +224,10 @@ Docker Configs. Service routing uses Swarm provider labels under `deploy.labels`
 | Bulk media/files | `/mnt/*` | Bind mount to host |
 
 Volumes are node-local. Services that need non-root ownership use entrypoint wrappers
-(Docker Config init scripts) that chown volume directories and drop privileges via `setpriv`
-before exec'ing the stock entrypoint. This runs inside the container on the correct node,
+(Docker Config init scripts) that chown volume directories and drop privileges before
+exec'ing the service binary. The privilege-drop method depends on the base image: Debian
+images use `setpriv`, Alpine images use BusyBox `su` (BusyBox `setpriv` only handles
+capabilities, not UID/GID switching). This runs inside the container on the correct node,
 avoiding external volume pre-creation.
 
 ## Directory Structure

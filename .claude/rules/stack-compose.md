@@ -71,7 +71,9 @@ Use node labels for placement (`location`, `ip`, `gpu`, `storage`), never hardco
 | Config files | `./config/<service>/` | Docker Configs (versioned) |
 | Bulk storage | `/mnt/*` | Bind mount |
 
-**Volume ownership for non-root services:** Services needing non-root file access use entrypoint wrappers instead of `user:` in compose. A Docker Config init script runs as root, chowns volume dirs (skipped if `.volume-init` marker exists), then drops to the target UID via `setpriv` before exec'ing the stock entrypoint. This avoids external volume pre-creation and runs on the correct node by definition. LinuxServer images with PUID/PGID handle their own permissions and don't need wrappers.
+**Volume ownership for non-root services:** Services needing non-root file access use entrypoint wrappers instead of `user:` in compose. A Docker Config init script runs as root, chowns volume dirs (skipped if `.volume-init` marker exists), then drops to the target UID before exec'ing the stock entrypoint. This avoids external volume pre-creation and runs on the correct node by definition. LinuxServer images with PUID/PGID handle their own permissions and don't need wrappers.
+
+**Privilege dropping — `setpriv` vs `su`:** Debian-based images have full `util-linux` `setpriv` (`--reuid`/`--regid`/`--clear-groups`). Alpine-based images ship BusyBox `setpriv` which only handles capabilities — use BusyBox `su` instead. `su` requires a passwd entry, so the init script must create a group+user via `addgroup`/`adduser` before dropping privileges.
 
 **Bind mount paths must pre-exist:** Swarm rejects tasks immediately (`Rejected` state) when bind mount source paths don't exist on the target node. Unlike Docker Compose, Swarm does not auto-create missing directories. Ensure paths exist before deploying — `swarm:validate` catches this but only as a warning.
 
@@ -79,6 +81,7 @@ Use node labels for placement (`location`, `ip`, `gpu`, `storage`), never hardco
 
 - **Non-zero size**: Docker rejects configs with 0 bytes. Empty placeholder files need minimal content (a YAML doc separator `---`, a JS comment, etc.).
 - **Read-only for non-root**: Configs mount as mode 0444 owned by root. Non-root containers can read them but cannot create sibling files in the same directory. Apps that write skeleton configs at startup fail with EACCES — provide ALL expected files as Docker Configs, even empty stubs.
+- **chown conflicts**: Docker Configs mounted inside a volume dir (e.g., `/quantum/config.yaml` inside the `/quantum` volume) cause `chown -R` to fail on the read-only config file. Use `2>/dev/null || true` on `chown -R` when configs share a volume mount point.
 - **No `mode` field**: `docker compose config` serializes `mode` as an octal string, rejected by `docker stack config`. Workaround: invoke scripts via `/bin/sh /script.sh` instead of setting execute permission.
 
 ## LXC Node Constraints (Unprivileged)
@@ -111,3 +114,5 @@ For services needing pre-start initialization, mount a shell script as a Docker 
 - Invoke via `/bin/sh /script.sh` (bypasses mode/permission issues)
 - Script runs initialization, then chains into stock entrypoint: `exec /entrypoint.sh "$@"`
 - Keep non-fatal: log warnings on failure, still start the service
+
+**`$@` caveat:** When compose sets `entrypoint:` without `command:`, `docker compose config` sets `Command` but leaves `Args` null — `$@` in the init script is empty. Services that exec a binary directly (e.g., `/victoria-metrics-prod "$@"`) work because compose `command:` populates `Args`. Services that chain through a stock entrypoint expecting CMD args (e.g., registry's `exec /entrypoint.sh "$@"`) must hardcode the default command.
