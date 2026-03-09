@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
+
 # Decrypt a SOPS-encrypted file and export all key=value pairs as env vars.
 # Handles _B64 suffix: base64-decodes value and strips suffix from key name.
-#
-# Usage: sops_export <file>
 # Effect: Exports decrypted vars into the caller's environment
 
 source "$(dirname "${BASH_SOURCE[0]}")/sops-decrypt.sh"

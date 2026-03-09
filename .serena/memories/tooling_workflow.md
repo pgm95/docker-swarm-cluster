@@ -23,11 +23,17 @@ The project uses a layered tooling approach: **mise** for task orchestration, **
 |--------|----------|---------|
 | `compose-config.sh` | `compose_config <file> [args...]` — concatenates shared anchors with compose file | `swarm:deploy`, `swarm:validate` |
 | `content-hash.sh` | `compute_content_hash <dir>` — 12-char SHA-256 of build context | `swarm:deploy`, `swarm:validate` |
-| `resolve-nodes.sh` | `get_swarm_nodes()`, `get_service_node()`, `ssh_node()` — dynamic node discovery from swarm API | `swarm:validate`, `swarm:cleanup`, `registry:auth`, `site:reset` |
+| `deploy-convergence.sh` | `wait_for_convergence()`, `check_replica_health()` — stack convergence and health | `swarm:deploy` |
+| `deploy-secrets.sh` | `validate_required_secrets()`, `create_versioned_secrets()`, `validate_config_files()` | `swarm:deploy` |
+| `find-secret-files.sh` | `find_secret_files()` — discover SOPS-managed files | `sops:encrypt`, `sops:status` |
+| `resolve-networks.sh` | `get_infra_networks()`, `is_internal_network()` — dynamic overlay network discovery from compose files | `swarm:init-networks`, `site:reset` |
+| `resolve-nodes.sh` | `get_swarm_nodes()`, `get_service_node()`, `ssh_node()`, `ssh_node_stdin()` — dynamic node discovery from swarm API | `swarm:validate`, `swarm:cleanup`, `registry:auth`, `site:reset` |
 | `sops-decrypt.sh` | `sops_decrypt <file>` — decrypt SOPS file, output key=value lines | `sops-export.sh`, `swarm:deploy` |
 | `sops-export.sh` | `sops_export <file>` — decrypt + export as env vars (handles `_B64` suffix) | `swarm:deploy` |
 
 `sops-export.sh` auto-sources `sops-decrypt.sh` via `BASH_SOURCE` relative path.
+
+Shared scripts are pure function libraries with no hardcoded configuration. Operational knobs (timeouts, network flags) are set via task-level `env` and read from env vars in the scripts.
 
 ## Pre-commit Integration
 
@@ -83,9 +89,12 @@ mise processes base config `[env]` BEFORE profile `[env]`. This means:
 2. **Centralized anchors**: All `x-logging`, `x-place-*`, `x-deploy*`, `x-resources-*` anchors in `stacks/_shared/anchors.yml`, concatenated via `compose_config()`
 3. **Single validation task**: `swarm:validate` is the single source of truth, called by both mise and pre-commit
 4. **Versioned secrets**: Immutable Swarm secrets with timestamp suffix enable zero-downtime rotation
-5. **Shared scripts over hidden tasks**: Sourced bash functions run in-process (can `export` vars), vs hidden tasks that spawn subshells
-6. **Fail-fast deployment**: SOPS errors abort immediately; deploy verifies convergence (180s timeout) before returning success
-7. **Site-level automation**: `site:deploy` and `site:reset` encode the full deployment order — no manual sequencing
+5. **Mise orchestration over bash loops**: `site:deploy-infra` uses `run = [{ task }]` for independent sequential invocations; bash loops reserved for imperative flow (`.nodeploy` filtering, soft-failure collection)
+6. **Sourced functions over task decomposition**: Deploy phases that share env vars (secrets, `DEPLOY_VERSION`, `OCI_TAG_*`) stay in one process via sourced function libraries. Mise task references run in separate processes and can't share env.
+7. **Discovery over duplication**: Overlay networks discovered from compose files (`resolve-networks.sh`), swarm nodes discovered from API (`resolve-nodes.sh`). No parallel hardcoded lists to maintain.
+8. **Configuration via task-level `env`**: Operational knobs (timeouts, network flags) are task-level `env` defaults, not hardcoded in scripts. Overridable via environment.
+9. **Fail-fast deployment**: SOPS errors abort immediately; deploy verifies convergence (configurable timeout) before returning success
+10. **Site-level automation**: `site:deploy` and `site:reset` encode the full deployment order — no manual sequencing. `site:reset` requires `confirm` before proceeding.
 
 ## Reliability Patterns
 

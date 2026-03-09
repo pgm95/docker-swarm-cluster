@@ -6,7 +6,9 @@
 # Optional label filters narrow results. A node must match ALL filters.
 get_swarm_nodes() {
     local filters=("$@")
-    docker node inspect "$(docker node ls -q)" 2>/dev/null | python3 -c '
+    # word splitting on node IDs is intentional
+    # shellcheck disable=SC2046
+    docker node inspect $(docker node ls -q) 2>/dev/null | python3 -c '
 import json, sys
 filters = sys.argv[1:]
 nodes = json.load(sys.stdin)
@@ -30,7 +32,9 @@ for node in nodes:
 get_service_node() {
     local compose_file="$1"
     local node_json
-    node_json=$(docker node inspect "$(docker node ls -q)" 2>/dev/null)
+    # word splitting on node IDs is intentional
+    # shellcheck disable=SC2046
+    node_json=$(docker node inspect $(docker node ls -q) 2>/dev/null)
     compose_config "${compose_file}" --format json 2>/dev/null | python3 -c '
 import json, sys
 node_json = json.loads(sys.argv[1])
@@ -82,9 +86,18 @@ sys.exit(1 if unresolved else 0)
 }
 
 # SSH to a swarm node. User is configurable via SWARM_SSH_USER (default: root).
+# Uses -n to prevent stdin consumption (safe for all command-arg callers).
 ssh_node() {
     local hostname="$1"
     shift
     local user="${SWARM_SSH_USER:-root}"
     ssh -n "${user}@${hostname}" "$@"
+}
+
+# SSH to a swarm node with stdin passthrough (for piping data to remote commands).
+ssh_node_stdin() {
+    local hostname="$1"
+    shift
+    local user="${SWARM_SSH_USER:-root}"
+    ssh "${user}@${hostname}" "$@"
 }

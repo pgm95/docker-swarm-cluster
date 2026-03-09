@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
+
 # Shared function: concatenates centralized anchors with a compose file
 # before passing to docker compose config.
-#
-# Usage:
-#   source .mise/tasks/scripts/compose-config.sh
-#   compose_config stacks/<ns>/<stack>/compose.yml [extra args...]
 
 SHARED_ANCHORS="stacks/_shared/anchors.yml"
 

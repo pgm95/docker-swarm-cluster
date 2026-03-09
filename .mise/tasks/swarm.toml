@@ -4,11 +4,15 @@
 ["swarm:deploy"]
 description = "Deploy a stack with automatic secret management"
 usage = 'arg "<path>" help="Path to stack directory"'
-run = '''{% raw %}
+env.CONVERGE_TIMEOUT = "180"
+env.CONVERGE_INTERVAL = "2"
+run = '''
 #!/usr/bin/env bash
 source .mise/tasks/scripts/content-hash.sh
 source .mise/tasks/scripts/sops-export.sh
 source .mise/tasks/scripts/compose-config.sh
+source .mise/tasks/scripts/deploy-secrets.sh
+source .mise/tasks/scripts/deploy-convergence.sh
 STACK_PATH="${usage_path}"
 STACK_FILE="${STACK_PATH}/compose.yml"
 [[ -f "${STACK_FILE}" ]] || { echo "Error: ${STACK_FILE} not found"; exit 1; }
@@ -20,62 +24,14 @@ if grep -qE 'DEPLOY_VERSION' "${STACK_PATH}"/*.yml 2>/dev/null; then
     DEPLOY_VERSION="$(git rev-parse --short HEAD 2>/dev/null || echo 'local')_$(date +%s)"
     export DEPLOY_VERSION STACK_PATH
     echo "Deploy version: ${DEPLOY_VERSION}"
-    # Load secrets into environment for pre-flight and compose interpolation and verify required secrets are available
-    sops_export "${STACK_PATH}/secrets.env" || exit 1
-    if [[ -f "${STACK_PATH}/secrets.yml" ]] && grep -q 'DEPLOY_VERSION' "${STACK_PATH}/secrets.yml" 2>/dev/null; then
-        missing=()
-        while IFS= read -r required_var; do
-            [[ -z "${required_var}" ]] && continue
-            if [[ -z "${!required_var:-}" ]]; then
-                missing+=("${required_var}")
-            fi
-        done < <(grep 'name:.*DEPLOY_VERSION' "${STACK_PATH}/secrets.yml" 2>/dev/null \
-            | sed 's/.*name: *\([a-z_]*\)_.*/\1/' | sort -u \
-            | while read -r secret; do echo "${secret^^}"; done)
-        if [[ ${#missing[@]} -gt 0 ]]; then
-            echo "ERROR: Missing required secrets:"
-            printf "  %s\n" "${missing[@]}"
-            echo "Add them to ${STACK_PATH}/secrets.env or GLOBAL_SECRETS"
-            exit 1
-        fi
-        # Create versioned Docker secrets
-        echo "Creating versioned secrets..."
-        for secret_file in "${STACK_PATH}/secrets.env" "${GLOBAL_SECRETS}"; do
-            [[ -f "${secret_file}" ]] || continue
-            echo "  From: ${secret_file}"
-            created=0; skipped=0
-            while IFS= read -r line; do
-                key="${line%%=*}"
-                value="${line#*=}"
-                if [[ "${key}" == *_B64 ]]; then
-                    key="${key%_B64}"
-                    value=$(echo -n "${value}" | base64 -d) || { echo "ERROR: base64-decode failed for ${key}_B64"; exit 1; }
-                fi
-                secret_name="${key,,}_${DEPLOY_VERSION}"
-                if docker secret inspect "${secret_name}" >/dev/null 2>&1; then
-                    ((skipped++))
-                elif echo -n "${value}" | docker secret create "${secret_name}" -; then
-                    echo "    + ${secret_name}"
-                    ((created++))
-                else
-                    echo "ERROR: Failed to create secret '${secret_name}'"
-                    exit 1
-                fi
-            done < <(sops_decrypt "${secret_file}")
-            echo "    Created: ${created}, Skipped: ${skipped}"
-        done
-    fi
-    # Pre-flight: verify config files exist
-    if [[ -f "${STACK_PATH}/configs.yml" ]]; then
-        while IFS= read -r config_file; do
-            [[ -z "${config_file}" ]] && continue
-            [[ -f "${STACK_PATH}/${config_file}" ]] || { echo "Error: Missing config file: ${STACK_PATH}/${config_file}"; exit 1; }
-        done < <(grep 'file:' "${STACK_PATH}/configs.yml" 2>/dev/null | sed 's/.*file:[[:space:]]*//')
-    fi
+    sops_export "${STACK_PATH}/secrets.env"
+    validate_required_secrets
+    create_versioned_secrets
+    validate_config_files
     echo ""
 else
     echo "Stack uses env vars only"
-    sops_export "${STACK_PATH}/secrets.env" || exit 1
+    sops_export "${STACK_PATH}/secrets.env"
 fi
 
 # --- Auto-build custom images ---
@@ -108,54 +64,15 @@ fi
 
 # --- Wait for convergence ---
 echo ""
-echo "Waiting for services to converge..."
-timeout=180; elapsed=0
-while [[ ${elapsed} -lt ${timeout} ]]; do
-    # Wait if any tasks are still transitioning
-    if docker stack ps "${STACK_NAME}" 2>/dev/null | grep -qE "Pending|Preparing|Starting|Ready"; then
-        sleep 2; ((elapsed+=2))
-        continue
-    fi
-    # Check if all replicas are up (accounts for API lag between task state and replica count)
-    all_healthy=true
-    while IFS=$'\t' read -r name replicas; do
-        current="${replicas%%/*}"
-        desired="${replicas##*/}"
-        if [[ "${current}" -lt "${desired}" ]]; then
-            all_healthy=false
-            break
-        fi
-    done < <(docker stack services "${STACK_NAME}" --format '{{.Name}}\t{{.Replicas}}' 2>/dev/null)
-    ${all_healthy} && break
-    sleep 2; ((elapsed+=2))
-done
-if [[ ${elapsed} -ge ${timeout} ]]; then
-    echo "WARNING: Timeout waiting for convergence after ${timeout}s"
-fi
-
-# Final replica health check
-unhealthy=0
-while IFS=$'\t' read -r name replicas; do
-    current="${replicas%%/*}"
-    desired="${replicas##*/}"
-    if [[ "${current}" -lt "${desired}" ]]; then
-        echo "UNHEALTHY: ${name} ${replicas}"
-        ((unhealthy++))
-    fi
-done < <(docker stack services "${STACK_NAME}" --format '{{.Name}}\t{{.Replicas}}' 2>/dev/null)
-if [[ ${unhealthy} -gt 0 ]]; then
-    echo ""
-    echo "ERROR: ${unhealthy} service(s) not converged"
-    docker stack ps "${STACK_NAME}" --no-trunc --filter "desired-state=running" 2>/dev/null | grep -vE "Running|\\\\\_" | head -5
-    exit 1
-fi
+wait_for_convergence "${STACK_NAME}"
+check_replica_health "${STACK_NAME}"
 echo ""
 docker stack services "${STACK_NAME}"
 if [[ -n "${DEPLOY_VERSION:-}" ]]; then
     echo ""
     echo "Deployed with DEPLOY_VERSION=${DEPLOY_VERSION}"
 fi
-{% endraw %}'''
+'''
 
 ["swarm:validate"]
 description = "Internal: validate all compose files for Swarm compatibility"
@@ -253,6 +170,8 @@ fi
 ["swarm:remove"]
 description = "Remove a deployed stack and wait for services to drain"
 usage = 'arg "<path>" help="Path to stack directory"'
+env.DRAIN_TIMEOUT = "60"
+env.DRAIN_INTERVAL = "3"
 run = '''{% raw %}
 #!/usr/bin/env bash
 STACK_NAME=$(basename "${usage_path}")
@@ -263,12 +182,12 @@ fi
 echo "Removing: ${STACK_NAME}"
 docker stack rm "${STACK_NAME}"
 echo "Waiting for services to drain..."
-timeout=60; elapsed=0
-while [[ ${elapsed} -lt ${timeout} ]] && docker stack ps "${STACK_NAME}" >/dev/null 2>&1; do
-    sleep 3; ((elapsed+=3))
+elapsed=0
+while [[ ${elapsed} -lt ${DRAIN_TIMEOUT} ]] && docker stack ps "${STACK_NAME}" >/dev/null 2>&1; do
+    sleep "${DRAIN_INTERVAL}"; ((elapsed += DRAIN_INTERVAL))
 done
 if docker stack ps "${STACK_NAME}" >/dev/null 2>&1; then
-    echo "WARNING: Stack still draining after ${timeout}s"
+    echo "WARNING: Stack still draining after ${DRAIN_TIMEOUT}s"
 else
     echo "Removed: ${STACK_NAME}"
 fi
@@ -423,25 +342,23 @@ fi
 ["swarm:init-networks"]
 description = "Internal: create overlay networks (idempotent)"
 hide = true
+env.SWARM_INTERNAL_NETWORKS = "infra_socket"
 run = '''
 #!/usr/bin/env bash
-declare -A NETWORKS=(
-    [infra_socket]="--internal"
-    [infra_gw-internal]=""
-    [infra_gw-external]=""
-    [infra_metrics]=""
-    [infra_postgres]=""
-)
-for net in "${!NETWORKS[@]}"; do
+source .mise/tasks/scripts/resolve-networks.sh
+while IFS= read -r net; do
+    [[ -z "${net}" ]] && continue
+    local_flags=""
+    is_internal_network "${net}" && local_flags="--internal"
     if docker network inspect "${net}" >/dev/null 2>&1; then
         echo "  exists: ${net}"
-    elif docker network create -d overlay --attachable ${NETWORKS[${net}]} "${net}" >/dev/null 2>&1; then
+    elif docker network create -d overlay --attachable ${local_flags} "${net}" >/dev/null 2>&1; then
         echo "  created: ${net}"
     else
         echo "  FAILED: ${net}"
         exit 1
     fi
-done
+done < <(get_infra_networks)
 '''
 
 ["registry:auth"]
@@ -455,7 +372,7 @@ echo "Nodes: ${#nodes[@]}"
 echo ""
 failed=0
 for node in "${nodes[@]}"; do
-    if ssh_node "${node}" "echo '${REGISTRY_PASS}' | docker login -u '${REGISTRY_USER}' --password-stdin '${GLOBAL_SWARM_OCI_REGISTRY}'" 2>/dev/null; then
+    if echo "${REGISTRY_PASS}" | ssh_node_stdin "${node}" "docker login -u '${REGISTRY_USER}' --password-stdin '${GLOBAL_SWARM_OCI_REGISTRY}'" 2>/dev/null; then
         echo "  ${node}: ok"
     else
         echo "  ${node}: FAILED"
