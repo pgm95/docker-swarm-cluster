@@ -168,7 +168,49 @@ Timeline:
 
 ### Quantum OIDC TLS (UNRESOLVED)
 
-FileBrowser (`quantum`) fails with `x509: certificate signed by unknown authority` when validating OIDC against `auth.DOMAIN_PUBLIC`. The container's CA bundle doesn't trust the Let's Encrypt cert chain. Not a volume issue — init wrapper works correctly (no more permission denied). User plans to fix via Tailscale DNS so all nodes can resolve `DOMAIN_PRIVATE` and the OIDC URL can point to the internal gateway instead.
+FileBrowser (`quantum`) fails with `x509: certificate signed by unknown authority` when validating OIDC against `auth.DOMAIN_PUBLIC`. The container's CA bundle doesn't trust the Let's Encrypt cert chain. Not a volume issue — init wrapper works correctly. The OIDC URL is on `DOMAIN_PUBLIC` (internet-reachable), so this is not a DNS/routing problem — the container's CA certificates need updating or the image needs rebuilding with current root CAs.
+
+## BusyBox setpriv on Alpine Images (RESOLVED)
+
+**Symptom**: Init scripts using `setpriv --reuid/--regid/--clear-groups` fail silently on Alpine-based images (registry:3, victoriametrics, filebrowser).
+
+**Root cause**: Alpine ships BusyBox `setpriv`, which only handles capabilities (`--nnp`, `--inh-caps`, `--ambient-caps`). `--reuid`, `--regid`, `--clear-groups` are `util-linux` extensions not available in BusyBox. Detection: `setpriv --version` errors out on BusyBox, prints version on util-linux.
+
+**Fix**: Use BusyBox `su` instead. Requires creating a passwd entry first (`addgroup -g GID -S app` + `adduser -u UID -G group -S -D -H app`) since `su` resolves by username. Privilege drop: `exec su -s /bin/sh "$APP_USER" -c 'exec /binary "$@"' -- sh "$@"`.
+
+**Affected images**: `registry:3` (Alpine 3.21), `victoriametrics/victoria-metrics` (Alpine 3.23), `gtstef/filebrowser` (Alpine/BusyBox). Debian-based images (`jellyfin`, `pinchflat`) have full util-linux `setpriv` and are unaffected.
+
+## Compose Entrypoint Override Strips Image CMD
+
+**Symptom**: Registry starts, runs init script, then exits 0 silently with no logs.
+
+**Root cause**: When `entrypoint:` is overridden in compose without a `command:`, `docker compose config` does NOT forward the image's default CMD as arguments. The service spec shows `Args: null`. `$@` in the init script is always empty. Registry's stock entrypoint dispatches on `$@` — with no args, `exec "$@"` becomes `exec ""` and exits 0.
+
+**Fix**: Hardcode the default command for services that chain through a stock entrypoint (e.g., `registry serve /etc/distribution/config.yml`). Services that exec the binary directly (victoriametrics, jellyfin, pinchflat) are unaffected if they have explicit `command:` in compose (which Swarm preserves as `Args`).
+
+**Detection**: `docker service inspect <svc> --format '{{json .Spec.TaskTemplate.ContainerSpec.Args}}'` returns `null` when CMD is missing.
+
+## Rollback-Paused State Recovery
+
+When `start-first` + `FailureAction: rollback` triggers and the rollback target is also broken, the service enters `rollback_paused` with zero running tasks. `docker service update --force` retries but rolls back to the same broken spec. Only `swarm:remove` + fresh `swarm:deploy` breaks the cycle.
+
+## Mealie Healthcheck v3 Incompatibility (RESOLVED)
+
+**Symptom**: Mealie containers kept cycling with `Complete` (exit 0). App was actually running and listening on port 9025 the entire time.
+
+**Root cause**: `python -m mealie.scripts.healthcheck` module was removed in mealie v3. The healthcheck always returned exit 1, causing Swarm to kill healthy containers.
+
+**Fix**: Switch to `curl -f http://localhost:9025/api/app/about`.
+
+**Debugging lesson**: `Complete` (exit 0) in `docker service ps` doesn't mean the container is healthy — it means the process exited cleanly. Always check actual container logs and test the healthcheck command manually inside the container.
+
+## Docker Config Chown Conflicts (RESOLVED)
+
+**Symptom**: Quantum init script fails with `chown: /quantum/config.yaml: Read-only file system`.
+
+**Root cause**: Docker Configs mount as 0444 owned by root. When a Config is mounted inside a volume directory, `chown -R` on the volume hits the read-only config and fails under `set -e`.
+
+**Fix**: `chown -R "${OWNER}" "${dir}" 2>/dev/null || true` to tolerate read-only mounts.
 
 ## DNS Setup
 
