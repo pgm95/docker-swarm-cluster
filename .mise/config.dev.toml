@@ -9,4 +9,5 @@ SWARM_SSH_USER = "root"
 DOCKER_HOST = "ssh://{{ env.SWARM_SSH_USER }}@{{ env.SWARM_NODE_DEFAULT }}"
 
 GLOBAL_SWARM_OCI_REGISTRY = "registry.{{ env.DOMAIN_PRIVATE }}"
-GLOBAL_ACME_CA_SERVER = "https://acme-staging-v02.api.letsencrypt.org/directory"
+GLOBAL_ACME_CA_SERVER = "https://acme-v02.api.letsencrypt.org/directory"
+# GLOBAL_ACME_CA_SERVER = "https://acme-staging-v02.api.letsencrypt.org/directory"
