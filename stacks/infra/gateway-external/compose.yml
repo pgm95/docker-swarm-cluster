@@ -151,12 +151,12 @@ services:
       # If rate limited by CrowdSec, set OFFLINE_MODE to true
       # See: https://github.com/crowdsecurity/crowdsec/issues/4165
       - OFFLINE_MODE=true
-      - DISABLE_HUB_UPGRADE=${OFFLINE_MODE:-false}
-      - DISABLE_ONLINE_API=${OFFLINE_MODE:-false}
+      - DISABLE_HUB_UPGRADE=true
+      - DISABLE_ONLINE_API=true
       # Enrollment only needed on first run, comment out after that
       # - ENROLL_KEY=${CROWDSEC_ENROLL_KEY}
-      # - ENROLL_TAGS=VPS Swarm Docker Traefik
-      # - ENROLL_INSTANCE_NAME=${CROWDSEC_ENROLL_INSTANCE_NAME}
+      # - ENROLL_TAGS=Swarm Docker Traefik
+      # - ENROLL_INSTANCE_NAME=swarm-cluster
     configs:
       - source: crowdsec_acquis
         target: /etc/crowdsec/acquis.yaml
