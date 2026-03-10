@@ -58,6 +58,23 @@ Use node labels for placement (`location`, `ip`, `gpu`, `storage`), never hardco
 
 **Restart exhaustion with cross-stack dependencies:** The shared deploy anchors use `max_attempts: 3` with `window: 120s`. Services that fatally validate external dependencies at startup (OIDC providers, databases in other stacks, external APIs) will permanently stall if those dependencies aren't ready within the retry window. This commonly happens during initial `site:deploy` when app stacks start before infra stacks fully converge. Fix: `docker service update --force <service>` after dependencies are healthy. Do not increase `max_attempts` to mask the issue — the limit exists to prevent infinite crash loops.
 
+## Environment Variable Interpolation
+
+`${VAR}` in compose `environment:` blocks is resolved by `docker compose config` against the **host/mise environment**, not against sibling entries in the same block. A container env var defined on one line cannot be referenced by `${VAR}` on another line — compose doesn't see it.
+
+```yaml
+# BUG — OFFLINE_MODE is a container env var, not in mise env
+environment:
+  - OFFLINE_MODE=true
+  - DISABLE_ONLINE_API=${OFFLINE_MODE:-false}  # resolves to "false"
+
+# CORRECT — hardcode directly
+environment:
+  - DISABLE_ONLINE_API=true
+```
+
+All `${VAR}` references must resolve against mise `[env]`, SOPS secrets (`_.file`), or the shell environment. Never reference a value defined in the same `environment:` block.
+
 ## Required on All Services
 
 - `x-logging` anchor: `driver: json-file`, `max-size: 10m`, `max-file: 3`
