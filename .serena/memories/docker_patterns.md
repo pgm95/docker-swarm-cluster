@@ -152,6 +152,8 @@ Services needing non-root file access use entrypoint wrappers instead of `user:`
 - `homepage` and `webfinger` have `user:` but no named volumes
 - LinuxServer images (servarr) handle permissions via PUID/PGID
 - Mealie handles its own user switching via `gosu` in its stock entrypoint
+- Grafana runs as UID 472 (image default) — Docker named volumes initialize with correct ownership
+- Uptime Kuma (`2-slim-rootless`) runs as UID 1000 — no wrapper needed
 - All other services run as root by default
 
 ## Validation

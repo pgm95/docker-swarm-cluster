@@ -206,7 +206,7 @@ Docker Configs. Service routing uses Swarm provider labels under `deploy.labels`
 | `infra/postgres` | postgres | Central PostgreSQL 17 instance |
 | `infra/gateway-internal` | traefik | Internal reverse proxy + TLS termination |
 | `infra/gateway-external` | traefik, crowdsec, init-db | Public reverse proxy + WAF |
-| `infra/metrics` | prometheus, victoria-metrics | Monitoring |
+| `infra/metrics` | prometheus, victoria-metrics, grafana, uptime-kuma, init-db | Monitoring + dashboards + status |
 | `infra/registry` | registry | Private OCI registry (htpasswd auth, Traefik TLS) |
 | `infra/accounts` | authelia, lldap, redis, webfinger, init-db, init-ldap | SSO + LDAP + bootstrap sidecars |
 

@@ -10,7 +10,7 @@ Core infrastructure stacks that support the cluster.
 | [postgres](postgres/) | Central PostgreSQL database | `*place-storage` | `infra_postgres` |
 | [gateway-internal](gateway-internal/) | Internal Traefik (*.DOMAIN_PRIVATE) | `*place-vm` | `infra_gw-internal` |
 | [gateway-external](gateway-external/) | External Traefik + CrowdSec (*.DOMAIN_PUBLIC) | `*place-cloud` | `infra_gw-external`, `infra_postgres` |
-| [metrics](metrics/) | Prometheus, VictoriaMetrics | `*place-vm` | `infra_metrics` |
+| [metrics](metrics/) | Prometheus, VictoriaMetrics, Grafana, Uptime Kuma | `*place-vm` | `infra_metrics`, `infra_postgres` |
 | [registry](registry/) | Docker image hosting | `*place-vm` | `infra_gw-internal` |
 | [accounts](accounts/) | Authentication (Authelia + LLDAP) | `*place-vm` | `infra_postgres` |
 

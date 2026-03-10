@@ -26,6 +26,8 @@ All nodes communicate over Tailscale (100.88.0.x addresses). Docker Engine 29.2.
 - Registry docker login works end-to-end through Traefik TLS
 - Prometheus healthy at `prometheus.DOMAIN_PRIVATE`
 - VictoriaMetrics healthy at `victoria.DOMAIN_PRIVATE`
+- Grafana healthy at `grafana.DOMAIN_PRIVATE` (Postgres-backed, OIDC via Authelia)
+- Uptime Kuma running at `status.DOMAIN_PRIVATE` (SQLite, built-in auth)
 - LLDAP dashboard at `ldap.DOMAIN_PRIVATE` (HTTP 200)
 - Authelia login portal at `auth.DOMAIN_PUBLIC` (HTTP 200, health endpoint verified)
 - Authelia OIDC provider chain: Traefik-external → TLS → geoblock → CrowdSec bouncer → Authelia
@@ -166,10 +168,6 @@ Timeline:
 **Root cause**: Python f-string `v[\"source\"]` inside a single-quoted bash string passed to `python3 -c`. The literal `\"` caused a Python SyntaxError. The `2>/dev/null` on the python command silently swallowed the error.
 **Fix**: Extract dict access to a local variable (`src = v["source"]`), avoiding backslashes in the f-string.
 
-### Quantum OIDC TLS (UNRESOLVED)
-
-FileBrowser (`quantum`) fails with `x509: certificate signed by unknown authority` when validating OIDC against `auth.DOMAIN_PUBLIC`. The container's CA bundle doesn't trust the Let's Encrypt cert chain. Not a volume issue — init wrapper works correctly. The OIDC URL is on `DOMAIN_PUBLIC` (internet-reachable), so this is not a DNS/routing problem — the container's CA certificates need updating or the image needs rebuilding with current root CAs.
-
 ## BusyBox setpriv on Alpine Images (RESOLVED)
 
 **Symptom**: Init scripts using `setpriv --reuid/--regid/--clear-groups` fail silently on Alpine-based images (registry:3, victoriametrics, filebrowser).
@@ -189,6 +187,12 @@ FileBrowser (`quantum`) fails with `x509: certificate signed by unknown authorit
 **Fix**: Hardcode the default command for services that chain through a stock entrypoint (e.g., `registry serve /etc/distribution/config.yml`). Services that exec the binary directly (victoriametrics, jellyfin, pinchflat) are unaffected if they have explicit `command:` in compose (which Swarm preserves as `Args`).
 
 **Detection**: `docker service inspect <svc> --format '{{json .Spec.TaskTemplate.ContainerSpec.Args}}'` returns `null` when CMD is missing.
+
+### Prometheus TSDB Lock With `*deploy` (RESOLVED)
+
+**Symptom**: `"opening storage failed: lock DB directory: resource temporarily unavailable"` after rolling update.
+
+**Root cause**: Pre-existing misconfiguration. Prometheus uses `*deploy` (start-first) but TSDB holds an exclusive flock on its data directory. New task starts before old one releases the lock. Fixed by switching to `*deploy-stop-first`.
 
 ## Rollback-Paused State Recovery
 

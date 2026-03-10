@@ -1,8 +1,13 @@
-apiVersion: 2
+apiVersion: 1
 datasources:
-- name: Prometheus
-  type: prometheus
-  url: http://prometheus:9090
-  isDefault: true
-  access: proxy
-  editable: true
+  - name: Prometheus
+    type: prometheus
+    url: http://prometheus:9090
+    isDefault: true
+    access: proxy
+    editable: true
+  - name: VictoriaMetrics
+    type: prometheus
+    url: http://victoriametrics:8428
+    access: proxy
+    editable: true

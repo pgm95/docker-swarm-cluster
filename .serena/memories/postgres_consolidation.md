@@ -109,8 +109,8 @@ With DB on central Postgres, some services require less/no named volumes
 
 ## Totals
 
-- **10 databases** across 7 services (4 services need 1 DB each, 3 servarr apps need 2 each)
-- **7 roles** (one per service, database-owner privileges recommended for servarr apps)
+- **11 databases** across 8 services (5 services need 1 DB each, 3 servarr apps need 2 each)
+- **8 roles** (one per service, database-owner privileges recommended for servarr apps)
 
 ## Postgres Stack Design
 
@@ -193,7 +193,7 @@ Postgres must converge before any consumer stack. Position in `site:deploy-infra
 2. **`infra/postgres`** — must converge and pass healthcheck before proceeding
 3. `infra/gateway-internal`
 4. `infra/gateway-external` (CrowdSec sidecar connects to postgres)
-5. `infra/metrics`
+5. `infra/metrics` (Grafana sidecar connects to postgres)
 6. `infra/registry`
 7. `infra/accounts` (Authelia + LLDAP sidecars connect to postgres)
 
