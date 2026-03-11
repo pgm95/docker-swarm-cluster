@@ -187,15 +187,16 @@ A dedicated role that all consumer sidecars authenticate as. Not superuser — s
 
 #### Deployment Order
 
-Postgres must converge before any consumer stack. Position in `site:deploy-infra`:
+Postgres must converge before any consumer stack. Order is determined by `NN_` folder prefix in `stacks/infra/` and discovered automatically by `site:deploy-infra`:
 
-1. `infra/socket`
-2. **`infra/postgres`** — must converge and pass healthcheck before proceeding
-3. `infra/gateway-internal`
-4. `infra/gateway-external` (CrowdSec sidecar connects to postgres)
-5. `infra/metrics` (Grafana sidecar connects to postgres)
-6. `infra/registry`
-7. `infra/accounts` (Authelia + LLDAP sidecars connect to postgres)
+1. `00_socket`
+2. **`10_postgres`** — must converge and pass healthcheck before proceeding
+3. `20_backup`
+4. `30_gateway-internal`
+5. `31_gateway-external` (CrowdSec sidecar connects to postgres)
+6. `40_metrics` (Grafana sidecar connects to postgres)
+7. `50_registry`
+8. `60_accounts` (Authelia + LLDAP sidecars connect to postgres)
 
 App stacks (`site:deploy-apps`) run after infra. Each app's sidecar handles its own postgres bootstrapping on deploy.
 

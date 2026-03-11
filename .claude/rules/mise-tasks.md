@@ -54,16 +54,18 @@ Mise task references (`run = [{ task = "..." }]`) run in separate processes — 
 | Bash loop with `mise run` | Imperative flow needed: conditional skipping, soft-failure collection, summary reporting |
 | Sourced function libraries | Phases that share runtime env vars (secrets, computed tags, deploy versions) |
 
-**Key constraint**: `swarm:deploy` phases share env vars (`DEPLOY_VERSION`, secrets, `OCI_TAG_*`), so they must stay in one shell process via sourced functions. `site:deploy-infra` invocations are independent, so they use task list orchestration.
+**Key constraint**: `swarm:deploy` phases share env vars (`DEPLOY_VERSION`, secrets, `OCI_TAG_*`), so they must stay in one shell process via sourced functions. `site:deploy-infra` and `site:deploy-apps` both use bash loops with `find_stacks()` for dynamic stack discovery.
 
 ## Discovery over Duplication
 
 Derive operational data from the source of truth instead of maintaining parallel lists:
 
+- **Infra stack order**: determined by `NN_` folder prefix (`resolve-stack.sh`), discovered via `find_stacks()`, not hardcoded in tasks
+- **Stack names**: derived by `stack_name()` which strips the `NN_` prefix — Swarm never sees the prefix
 - **Overlay networks**: discovered from `infra_*: external: true` declarations in compose files (`resolve-networks.sh`), not hardcoded in tasks
 - **Swarm nodes**: discovered from `docker node inspect` (`resolve-nodes.sh`), not per-node env vars
 
-When a new `infra_*` network appears in any compose file, `swarm:init-networks` and `site:reset` pick it up automatically.
+When a new infra stack is added, give it an `NN_` prefix and it's automatically included in deploy and teardown order.
 
 ## Configurable Defaults
 

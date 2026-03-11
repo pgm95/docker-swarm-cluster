@@ -21,11 +21,12 @@ The project uses a layered tooling approach: **mise** for task orchestration, **
 
 | Script | Function | Used by |
 |--------|----------|---------|
-| `compose-config.sh` | `compose_config <file> [args...]` — concatenates shared anchors with compose file | `swarm:deploy`, `swarm:validate` |
+| `compose-config.sh` | `compose_config <file> [args...]` — concatenates shared anchors, sets `--project-name` (strips `NN_` prefix) | `swarm:deploy`, `swarm:validate` |
 | `content-hash.sh` | `compute_content_hash <dir>` — 12-char SHA-256 of build context | `swarm:deploy`, `swarm:validate` |
 | `deploy-convergence.sh` | `wait_for_convergence()`, `check_replica_health()` — stack convergence and health | `swarm:deploy` |
 | `deploy-secrets.sh` | `validate_required_secrets()`, `create_versioned_secrets()`, `validate_config_files()` | `swarm:deploy` |
 | `find-secret-files.sh` | `find_secret_files()` — discover SOPS-managed files | `sops:encrypt`, `sops:status` |
+| `resolve-stack.sh` | `stack_name()` strips `NN_` folder prefix, `find_stacks()` ordered directory discovery | `swarm:deploy`, `swarm:remove`, `swarm:status`, `site:deploy-infra`, `site:deploy-apps`, `site:reset` |
 | `resolve-networks.sh` | `get_infra_networks()`, `is_internal_network()` — dynamic overlay network discovery from compose files | `swarm:init-networks`, `site:reset` |
 | `resolve-nodes.sh` | `get_swarm_nodes()`, `get_service_node()`, `ssh_node()`, `ssh_node_stdin()` — dynamic node discovery from swarm API | `swarm:validate`, `swarm:cleanup`, `registry:auth`, `site:reset` |
 | `sops-decrypt.sh` | `sops_decrypt <file>` — decrypt SOPS file, output key=value lines | `sops-export.sh`, `swarm:deploy` |
@@ -89,7 +90,7 @@ mise processes base config `[env]` BEFORE profile `[env]`. This means:
 2. **Centralized anchors**: All `x-logging`, `x-place-*`, `x-deploy*`, `x-resources-*` anchors in `stacks/_shared/anchors.yml`, concatenated via `compose_config()`
 3. **Single validation task**: `swarm:validate` is the single source of truth, called by both mise and pre-commit
 4. **Versioned secrets**: Immutable Swarm secrets with timestamp suffix enable zero-downtime rotation
-5. **Mise orchestration over bash loops**: `site:deploy-infra` uses `run = [{ task }]` for independent sequential invocations; bash loops reserved for imperative flow (`.nodeploy` filtering, soft-failure collection)
+5. **Dynamic stack discovery**: Both `site:deploy-infra` and `site:deploy-apps` use bash loops with `find_stacks()` for auto-discovery. Infra order is encoded in `NN_` folder prefixes; `stack_name()` strips the prefix for Swarm
 6. **Sourced functions over task decomposition**: Deploy phases that share env vars (secrets, `DEPLOY_VERSION`, `OCI_TAG_*`) stay in one process via sourced function libraries. Mise task references run in separate processes and can't share env.
 7. **Discovery over duplication**: Overlay networks discovered from compose files (`resolve-networks.sh`), swarm nodes discovered from API (`resolve-nodes.sh`). No parallel hardcoded lists to maintain.
 8. **Configuration via task-level `env`**: Operational knobs (timeouts, network flags) are task-level `env` defaults, not hardcoded in scripts. Overridable via environment.

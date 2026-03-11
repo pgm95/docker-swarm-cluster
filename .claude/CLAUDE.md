@@ -16,6 +16,7 @@ Docker Swarm homelab infrastructure with centralized management.
 | `stacks/<namespace>/<stack>/configs.yml` | Docker config definitions (versioned) |
 | `stacks/_shared/anchors.yml` | Centralized YAML anchors (logging, placement, deploy, resources) |
 | `.mise/tasks/scripts/compose-config.sh` | `compose_config()` — preprocesses compose files with shared anchors |
+| `.mise/tasks/scripts/resolve-stack.sh` | `stack_name()` strips `NN_` folder prefix, `find_stacks()` ordered directory discovery |
 | `.mise/tasks/scripts/deploy-secrets.sh` | Versioned secret validation and creation |
 | `.mise/tasks/scripts/deploy-convergence.sh` | Stack convergence waiting and replica health checks |
 | `.mise/tasks/scripts/resolve-networks.sh` | Dynamic overlay network discovery from compose files |
@@ -44,7 +45,7 @@ Dev/prod separation uses mise's native `MISE_ENV` profile system. Dev is the def
 | --------- | ------- | ------ |
 | `_shared` | Centralized YAML anchors | (anchors.yml) |
 | `apps` | User-facing applications | forwarder, homepage, immich, jellyfin, mealie, pinchflat, portainer, quantum, servarr, stirling, syncthing, tools |
-| `infra` | Core infrastructure | socket, postgres, backup, registry, accounts, gateway-internal, gateway-external, metrics |
+| `infra` | Core infrastructure | `NN_` prefixed for deploy order: socket, postgres, backup, gateway-internal, gateway-external, metrics, registry, accounts |
 
 ## Swarm Patterns
 
@@ -78,7 +79,7 @@ Node count is environment-specific. Labels drive placement — hostnames are irr
 
 **Backups:** The `infra/backup` stack provides automated encrypted pg_dump backups of all Postgres databases via borgmatic + BorgBackup. Dumps use `name: all` for auto-discovery, borg handles deduplication and encryption (`repokey-blake2`). Restores require postgres superuser credentials passed via CLI flags at restore time.
 
-**Initialization:** `site:deploy-infra` automatically runs `swarm:init-networks` via `depends` before deploying stacks. For manual use: `mise run swarm:init-networks`. Overlay networks are discovered dynamically from `infra_*: external: true` declarations in compose files — adding a network to any infra stack automatically includes it in creation and teardown.
+**Initialization:** `site:deploy-infra` automatically runs `swarm:init-networks` via `depends` before deploying stacks. Infra stacks are discovered dynamically via `find_stacks()` and deployed in folder-name order (`NN_` prefix). Overlay networks are discovered dynamically from `infra_*: external: true` declarations in compose files — adding a network to any infra stack automatically includes it in creation and teardown.
 
 **Volume ownership:** Services needing non-root file access use entrypoint wrappers (Docker Config init scripts) that chown volume dirs and drop privileges before exec'ing the target binary. Debian-based images use `setpriv`; Alpine-based images (BusyBox) use `su` with a dynamically created passwd entry. This runs inside the container on the correct node — no external pre-creation needed.
 

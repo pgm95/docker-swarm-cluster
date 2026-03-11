@@ -6,30 +6,19 @@ Core infrastructure stacks that support the cluster.
 
 | Stack | Purpose | Placement | Primary Network |
 |-------|---------|-----------|-----------------|
-| [socket](socket/) | Socket-proxy for Docker API | Manager + `*place-vm` | `infra_socket` |
-| [postgres](postgres/) | Central PostgreSQL database | `*place-storage` | `infra_postgres` |
-| [backup](backup/) | Borgmatic pg_dump backups (BorgBackup) | `*place-storage` | `infra_postgres` |
-| [gateway-internal](gateway-internal/) | Internal Traefik (*.DOMAIN_PRIVATE) | `*place-vm` | `infra_gw-internal` |
-| [gateway-external](gateway-external/) | External Traefik + CrowdSec (*.DOMAIN_PUBLIC) | `*place-cloud` | `infra_gw-external`, `infra_postgres` |
-| [metrics](metrics/) | Prometheus, VictoriaMetrics, Grafana, Uptime Kuma | `*place-vm` | `infra_metrics`, `infra_postgres` |
-| [registry](registry/) | Docker image hosting | `*place-vm` | `infra_gw-internal` |
-| [accounts](accounts/) | Authentication (Authelia + LLDAP) | `*place-vm` | `infra_postgres` |
+| [socket](00_socket/) | Socket-proxy for Docker API | Manager + `*place-vm` | `infra_socket` |
+| [postgres](10_postgres/) | Central PostgreSQL database | `*place-storage` | `infra_postgres` |
+| [backup](20_backup/) | Borgmatic pg_dump backups (BorgBackup) | `*place-storage` | `infra_postgres` |
+| [gateway-internal](30_gateway-internal/) | Internal Traefik (*.DOMAIN_PRIVATE) | `*place-vm` | `infra_gw-internal` |
+| [gateway-external](31_gateway-external/) | External Traefik + CrowdSec (*.DOMAIN_PUBLIC) | `*place-cloud` | `infra_gw-external`, `infra_postgres` |
+| [metrics](40_metrics/) | Prometheus, VictoriaMetrics, Grafana, Uptime Kuma | `*place-vm` | `infra_metrics`, `infra_postgres` |
+| [registry](50_registry/) | Docker image hosting | `*place-vm` | `infra_gw-internal` |
+| [accounts](60_accounts/) | Authentication (Authelia + LLDAP) | `*place-vm` | `infra_postgres` |
 
 ## Deploy Order
 
-All overlay networks are pre-created by `swarm:init-networks` (runs automatically via `site:deploy-infra`).
-
-```text
-0. swarm:init-networks  # Auto-run by site:deploy-infra
-1. socket
-2. postgres
-3. backup
-4. gateway-internal
-5. gateway-external
-6. metrics
-7. registry
-8. accounts
-```
+Overlay networks are pre-created by `swarm:init-networks` (runs automatically via `site:deploy-infra`).
+Deploy order is determined by the `NN_` folder prefix — `site:deploy-infra` discovers and sorts automatically.
 
 ## Network Topology
 

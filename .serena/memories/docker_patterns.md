@@ -13,21 +13,10 @@ mise run site:deploy-apps      # Apps only (requires infra)
 mise run site:reset            # Full teardown (stacks + secrets + configs + networks)
 ```
 
-Infra stack deployment order (hardcoded in site tasks):
-
-```text
-1. infra/socket
-2. infra/postgres
-3. infra/backup
-4. infra/gateway-internal
-5. infra/gateway-external
-6. infra/metrics
-7. infra/registry
-8. infra/accounts
-```
+Infra stack deployment order is determined by `NN_` folder prefix (e.g., `00_socket`, `10_postgres`). Both `site:deploy-infra` and `site:reset` discover stacks dynamically via `find_stacks()` from `resolve-stack.sh`. The `stack_name()` helper strips the prefix so Swarm names remain clean (e.g., `socket`, `postgres`).
 
 `site:deploy-infra` auto-calls `swarm:init-networks`.
-`site:reset` removes stacks in reverse order, then purges all versioned secrets/configs and removes overlay networks.
+`site:reset` discovers stacks in reverse order via `find_stacks --reverse`, then purges all versioned secrets/configs and removes overlay networks.
 
 ## Manual Pre-Deployment Tasks
 
@@ -92,7 +81,7 @@ Docker Swarm doesn't support `include` or centralized anchors natively. The work
 compose_config <stack>/compose.yml | sed '/^name:/d; s/published: "N"/published: N/' | docker stack deploy -c -
 ```
 
-`compose_config()` (`.mise/tasks/scripts/compose-config.sh`) concatenates `stacks/_shared/anchors.yml` with the stack's compose file, then runs `docker compose --project-directory <stack-dir> -f <merged> config`.
+`compose_config()` (`.mise/tasks/scripts/compose-config.sh`) concatenates `stacks/_shared/anchors.yml` with the stack's compose file, then runs `docker compose --project-directory <stack-dir> --project-name <stripped-name> -f <merged> config`. The `--project-name` uses the folder basename with `NN_` prefix stripped, ensuring default network names match the Swarm stack name (e.g., `accounts_default` not `60_accounts_default`).
 
 Transformations:
 
@@ -137,8 +126,8 @@ Services needing non-root file access use entrypoint wrappers instead of `user:`
 
 | Service | Stack | Base | Owner Env Var | Priv Drop | Target |
 |---------|-------|------|---------------|-----------|--------|
-| registry | infra/registry | Alpine | `REGISTRY_OWNER` | `su` | `/entrypoint.sh` (hardcoded CMD) |
-| victoriametrics | infra/metrics | Alpine | `VM_OWNER` | `su` | `/victoria-metrics-prod "$@"` |
+| registry | infra/50_registry | Alpine | `REGISTRY_OWNER` | `su` | `/entrypoint.sh` (hardcoded CMD) |
+| victoriametrics | infra/40_metrics | Alpine | `VM_OWNER` | `su` | `/victoria-metrics-prod "$@"` |
 | quantum | apps/quantum | Alpine | `QUANTUM_OWNER` | `su` | `./filebrowser "$@"` |
 | jellyfin | apps/jellyfin | Debian | `JELLYFIN_OWNER` | `setpriv` | `/jellyfin/jellyfin "$@"` |
 | pinchflat | apps/pinchflat | Debian | `PINCHFLAT_OWNER` | `setpriv` | `/app/bin/docker_start "$@"` |

@@ -66,7 +66,7 @@ Jellyfin and Home Assistant are also accessible via the external gateway at thei
 ## Files
 
 ```text
-stacks/infra/gateway-internal/
+stacks/infra/30_gateway-internal/
 ├── compose.yml              # Stack definition
 ├── configs.yml              # Docker Config definitions (versioned)
 ├── secrets.yml              # Swarm secret definitions (versioned)
