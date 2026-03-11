@@ -16,7 +16,7 @@ docker service ls --format "{{.Name}}\t{{.Replicas}}"
 {% endraw %}'''
 ```
 
-Needed for: Docker `--format`, bash `${#array[@]}`, `${var//pattern/replace}`. The `#}` in `${#array[@]}` is parsed as a Tera comment end tag, causing cryptic parse errors (`expected a comment end`).
+Needed for: Docker `--format`, bash `${#array[@]}`, `${var//pattern/replace}`. The `#}` in `${#array[@]}` is parsed as a Tera comment end tag.
 
 Moving Go template strings into sourced `.sh` scripts avoids Tera entirely — sourced files are read at bash runtime, not at Tera template time.
 
@@ -36,47 +36,35 @@ arg "[name]" help="Optional" default="value"
 
 `{{config_root}}`, `{{env.VAR}}` work in `dir` field only. Use `${VAR}` inside `run` scripts.
 
-## Portability
-
-Prefer pure bash over sed for in-place edits:
-
-```bash
-content=$(<file); content="${content//old/new}"; printf '%s' "$content" > file
-```
-
 ## Orchestration vs Shell
 
-Mise task references (`run = [{ task = "..." }]`) run in separate processes — env exports don't carry between them. Choose the right tool:
+Mise task references (`run = [{ task = "..." }]`) run in separate processes — env exports don't carry between them.
 
 | Pattern | Use When |
 |---------|----------|
-| `run = [{ task = "...", args = [...] }]` | Independent sequential steps, no shared state between them |
-| Bash loop with `mise run` | Imperative flow needed: conditional skipping, soft-failure collection, summary reporting |
+| `run = [{ task = "...", args = [...] }]` | Independent sequential steps, no shared state |
+| Bash loop with `mise run` | Imperative flow: conditional skipping, soft-failure collection, summary reporting |
 | Sourced function libraries | Phases that share runtime env vars (secrets, computed tags, deploy versions) |
 
-**Key constraint**: `swarm:deploy` phases share env vars (`DEPLOY_VERSION`, secrets, `OCI_TAG_*`), so they must stay in one shell process via sourced functions. `site:deploy-infra` and `site:deploy-apps` both use bash loops with `find_stacks()` for dynamic stack discovery.
+**Key constraint**: `swarm:deploy` phases share env vars (`DEPLOY_VERSION`, secrets, `OCI_TAG_*`), so they must stay in one shell process via sourced functions.
 
 ## Discovery over Duplication
 
 Derive operational data from the source of truth instead of maintaining parallel lists:
 
-- **Infra stack order**: determined by `NN_` folder prefix (`resolve-stack.sh`), discovered via `find_stacks()`, not hardcoded in tasks
-- **Stack names**: derived by `stack_name()` which strips the `NN_` prefix — Swarm never sees the prefix
-- **Overlay networks**: discovered from `infra_*: external: true` declarations in compose files (`resolve-networks.sh`), not hardcoded in tasks
-- **Swarm nodes**: discovered from `docker node inspect` (`resolve-nodes.sh`), not per-node env vars
-
-When a new infra stack is added, give it an `NN_` prefix and it's automatically included in deploy and teardown order.
+- **Infra stack order**: `NN_` folder prefix, discovered via `find_stacks()`
+- **Stack names**: `stack_name()` strips the `NN_` prefix
+- **Overlay networks**: discovered from `infra_*: external: true` in compose files
+- **Swarm nodes**: discovered from `docker node inspect`
 
 ## Configurable Defaults
 
-Use task-level `env` for operational knobs. This makes them visible in task definitions and overridable via environment without editing code:
+Use task-level `env` for operational knobs:
 
 ```toml
 ["swarm:deploy"]
 env.CONVERGE_TIMEOUT = "180"
 ```
-
-Script references `${CONVERGE_TIMEOUT}`, not a hardcoded `180`. Security-critical flags (like which networks get `--internal`) also use task-level `env` — the value is explicit and auditable in the task definition.
 
 ## Safety Gates
 
@@ -87,14 +75,14 @@ Destructive tasks use mise's `confirm` property:
 confirm = "This will remove ALL stacks, secrets, configs, and networks. Continue?"
 ```
 
-Use `confirm` for operations that are hard to reverse and affect shared state. Don't use it for routine operations like `swarm:cleanup` that only remove stale/unused resources.
+Use for hard-to-reverse operations affecting shared state. Don't use for routine operations like `swarm:cleanup`.
 
 ## Organization
 
 - **Hidden helpers**: `hide = true` for internal tasks (e.g., `swarm:validate`, `swarm:init-networks`)
-- **Shared function libraries**: Reusable bash functions in `.mise/tasks/scripts/`. Tasks source only what they need. Sourced scripts run in-process and can `export` vars; separate tasks run in subshells and cannot. Function libraries contain no hardcoded configuration — they read from env vars set by their calling tasks.
-- **Task files**: `tasks/swarm.toml` (stack operations + `registry:auth`), `tasks/site.toml` (cluster-wide operations), `tasks/sops.toml` (encryption)
-- **`.nodeploy` opt-out**: A `.nodeploy` file in a stack root opts it out of `site:deploy-apps`. Stack remains validated and deployable via manual `swarm:deploy`.
+- **Shared function libraries**: `.mise/tasks/scripts/`. Tasks source only what they need. Scripts contain no hardcoded configuration.
+- **Task files**: `tasks/swarm.toml` (stack operations + `registry:auth`), `tasks/site.toml` (cluster-wide), `tasks/sops.toml` (encryption)
+- **`.nodeploy` opt-out**: File in stack root opts it out of `site:deploy-apps`
 
 ## Deploy Versioning
 

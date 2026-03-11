@@ -1,10 +1,6 @@
 # Accounts Stack
 
-Authentication and identity management services.
-
-## Purpose
-
-Provides centralized authentication (Authelia), identity directory (LLDAP), and WebFinger discovery for the entire cluster. Other services integrate via OIDC or forward auth.
+Authentication and identity management.
 
 ## Services
 
@@ -19,45 +15,44 @@ Provides centralized authentication (Authelia), identity directory (LLDAP), and 
 
 ## Convergence
 
-All services start concurrently — Swarm has no `depends_on`. Services that need unready dependencies crash and retry via the deploy restart policy (`max_attempts: 3`, `window: 120s`). Typical first-deploy convergence:
+All services start concurrently — Swarm has no `depends_on`. Services crash and retry via
+deploy restart policy (`max_attempts: 3`, `window: 120s`). Typical first-deploy order:
 
-1. **redis** starts immediately (no external deps)
-2. **init-db** polls postgres, provisions databases within seconds
-3. **lldap** crashes once (database not yet provisioned), succeeds on retry
-4. **authelia** crashes once or twice (redis/lldap/postgres not ready), succeeds on retry
-5. **init-ldap** polls lldap, seeds bind users once it responds
-6. **webfinger** starts once lldap is reachable
-
-## Prerequisites
-
-- `infra/postgres` deployed (provides `infra_postgres` overlay)
-- `infra/gateway-external` deployed (provides `infra_gw-external`)
-- `infra/gateway-internal` deployed (provides `infra_gw-internal`)
-- `infra/registry` deployed (for WebFinger image)
+1. **redis** — starts immediately
+2. **init-db** — polls postgres, provisions databases
+3. **lldap** — crashes once (DB not ready), succeeds on retry
+4. **authelia** — crashes once/twice (redis/lldap/postgres), succeeds on retry
+5. **init-ldap** — polls lldap, seeds bind users
+6. **webfinger** — starts once lldap is reachable
 
 ## Init Sidecars
 
-### init-db (Postgres provisioning)
+### init-db (Postgres)
 
-Connects to `infra/postgres` as the provisioner role and idempotently creates application-specific roles and databases. Passwords come from `secrets.env` via compose interpolation — single source of truth, no duplication with the postgres stack.
+Connects as provisioner role, idempotently creates `authelia` and `lldap` roles and databases.
+Passwords from `secrets.env` — single source of truth, no duplication with the postgres stack.
 
-1. Waits for Postgres via `pg_isready`
-2. Creates roles (`authelia`, `lldap`) with passwords from env vars
-3. Creates databases owned by their respective roles
-4. Sleeps indefinitely (keeps Swarm convergence at 1/1)
+### init-ldap (LDAP)
 
-### init-ldap (LDAP bootstrapping)
-
-On fresh deployments, LLDAP starts with only the admin user. Authelia and WebFinger need dedicated bind users, creating a chicken-and-egg failure. The `init-ldap` sidecar solves this:
-
-1. Generates user config JSON from compose-interpolated env vars
-2. Polls LLDAP's HTTP API until ready
-3. Creates bind users via GraphQL API and sets passwords via `lldap_set_password`
-4. Sleeps indefinitely (keeps Swarm convergence at 1/1)
-
-Both sidecars are fully idempotent — safe to re-run on every deploy.
+Seeds bind users needed by Authelia and WebFinger using LLDAP's built-in `/app/bootstrap.sh`.
+Generates user config JSON from compose env vars at runtime, writes to `/tmp/bootstrap/user-configs`
+(`USER_CONFIGS_DIR` env var). Creates users via GraphQL API, sets passwords via `lldap_set_password`
+(OPAQUE protocol). Fully idempotent — skips existing users, updates changed, re-syncs passwords
+on every deploy.
 
 | Bind User | Group | Consumer |
 |-----------|-------|----------|
-| `AUTHELIA_LDAP_BIND_USER` | `lldap_password_manager` | Authelia (needs password reset access) |
+| `AUTHELIA_LDAP_BIND_USER` | `lldap_password_manager` | Authelia (password reset access) |
 | `CARPAL_LDAP_BIND_USER` | `lldap_strict_readonly` | WebFinger (read-only queries) |
+
+## WebFinger Custom Image
+
+Custom build in `build/webfinger/` — `swarm:deploy` auto-builds with content-hash tags.
+
+The Dockerfile copies `entrypoint.sh` into the image and fixes `/etc/carpal` permissions for
+non-root (UID 1000). At startup, the entrypoint reads config templates from `/config/` (Docker
+Configs), expands environment variables via sed, writes processed files to `/etc/carpal/`, then
+starts carpal. Runs as non-root (`user: ${GLOBAL_NONROOT_DOCKER}`).
+
+Required env vars from `secrets.env`: `CARPAL_LDAP_BIND_USER`, `CARPAL_LDAP_BIND_PASS`.
+Required from `GLOBAL_SECRETS`: `GLOBAL_LDAP_BASE_DN`, `GLOBAL_OIDC_URL`.
