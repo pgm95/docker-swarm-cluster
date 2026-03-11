@@ -11,23 +11,35 @@ depends_post = ["swarm:status"]
 alias = "infra"
 description = "Deploy infrastructure stacks in order"
 depends = ["swarm:init-networks"]
-run = [
-  "mise run swarm:deploy stacks/infra/socket",
-  "mise run swarm:deploy stacks/infra/postgres",
-  "mise run swarm:deploy stacks/infra/backup",
-  "mise run swarm:deploy stacks/infra/gateway-internal",
-  "mise run swarm:deploy stacks/infra/gateway-external",
-  "mise run swarm:deploy stacks/infra/metrics",
-  "mise run swarm:deploy stacks/infra/registry",
-  "mise run swarm:deploy stacks/infra/accounts",
-]
+run = '''{% raw %}
+#!/usr/bin/env bash
+source .mise/tasks/scripts/resolve-stack.sh
+mapfile -t STACKS < <(find_stacks stacks/infra)
+failed=()
+echo "=== Infra Deploy ==="
+echo "Stacks: ${#STACKS[@]}"
+echo ""
+for stack in "${STACKS[@]}"; do
+    echo "━━━ $(basename "${stack}") ━━━"
+    if ! mise run swarm:deploy "${stack}"; then
+        echo "FAILED: $(basename "${stack}")"
+        failed+=("$(basename "${stack}")")
+    fi
+    echo ""
+done
+summary="deployed $(( ${#STACKS[@]} - ${#failed[@]} ))"
+[[ ${#failed[@]} -gt 0 ]] && summary+=", failed ${#failed[@]}: ${failed[*]}"
+echo "=== Infra deploy complete (${summary}) ==="
+[[ ${#failed[@]} -eq 0 ]]
+{% endraw %}'''
 
 ["site:deploy-apps"]
 alias = "apps"
 description = "Deploy all application stacks"
 run = '''{% raw %}
 #!/usr/bin/env bash
-mapfile -t STACKS < <(find stacks/apps -mindepth 1 -maxdepth 1 -type d | sort)
+source .mise/tasks/scripts/resolve-stack.sh
+mapfile -t STACKS < <(find_stacks stacks/apps)
 failed=()
 skipped=0
 echo "=== Apps Deploy ==="
@@ -63,19 +75,11 @@ confirm = "This will remove ALL stacks, secrets, configs, and networks. Continue
 depends_post = ["swarm:cleanup"]
 run = '''{% raw %}
 #!/usr/bin/env bash
+source .mise/tasks/scripts/resolve-stack.sh
 source .mise/tasks/scripts/resolve-networks.sh
-INFRA_STACKS=(
-    stacks/infra/accounts
-    stacks/infra/registry
-    stacks/infra/metrics
-    stacks/infra/gateway-external
-    stacks/infra/gateway-internal
-    stacks/infra/backup
-    stacks/infra/postgres
-    stacks/infra/socket
-)
+mapfile -t INFRA_STACKS < <(find_stacks stacks/infra --reverse)
 echo "--- Removing app stacks ---"
-for stack in $(find stacks/apps -mindepth 1 -maxdepth 1 -type d | sort); do
+for stack in $(find_stacks stacks/apps); do
     mise run swarm:remove "${stack}"
 done
 echo ""

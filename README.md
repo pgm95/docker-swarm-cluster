@@ -290,10 +290,10 @@ Dev and prod are separated using mise's `MISE_ENV` profile system. Dev is the de
 
 ```bash
 # Dev (default)
-mise run swarm:deploy stacks/infra/socket
+mise run swarm:deploy stacks/infra/00_socket
 
 # Prod (explicit)
-MISE_ENV=prod mise run swarm:deploy stacks/infra/socket
+MISE_ENV=prod mise run swarm:deploy stacks/infra/00_socket
 ```
 
 Each profile provides:
@@ -618,13 +618,13 @@ configs:
 
 ### 5. Add to deployment order (infra only)
 
-App stacks are auto-discovered. Infra stacks must be added to the ordered list in
-`site:deploy-infra` (`.mise/tasks/site.toml`).
+App stacks are auto-discovered. Infra stacks are auto-discovered and deployed in folder-name
+order — prefix folders with `NN_` to control sequencing (e.g., `00_socket`, `10_postgres`).
 
 ### 6. If the stack needs Postgres
 
 Add an `init-db` sidecar service that connects as the provisioner role and idempotently
-creates the stack's database role and database. See `stacks/infra/accounts/compose.yml` for
+creates the stack's database role and database. See `stacks/infra/60_accounts/compose.yml` for
 the pattern.
 
 ### 7. Validate

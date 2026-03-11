@@ -41,5 +41,5 @@ If per-consumer granularity becomes required: deploy sidecar socket-proxy instan
 ## Deployment
 
 ```bash
-mise run swarm:deploy stacks/infra/socket
+mise run swarm:deploy stacks/infra/00_socket
 ```

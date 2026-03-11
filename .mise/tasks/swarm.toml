@@ -13,11 +13,12 @@ source .mise/tasks/scripts/sops-export.sh
 source .mise/tasks/scripts/compose-config.sh
 source .mise/tasks/scripts/deploy-secrets.sh
 source .mise/tasks/scripts/deploy-convergence.sh
+source .mise/tasks/scripts/resolve-stack.sh
 STACK_PATH="${usage_path}"
 STACK_FILE="${STACK_PATH}/compose.yml"
 [[ -f "${STACK_FILE}" ]] || { echo "Error: ${STACK_FILE} not found"; exit 1; }
 [[ -f "${SOPS_AGE_KEY_FILE:-}" ]] || { echo "Error: SOPS_AGE_KEY_FILE not found: ${SOPS_AGE_KEY_FILE:-unset}"; exit 1; }
-STACK_NAME=$(basename "${STACK_PATH}")
+STACK_NAME=$(stack_name "${STACK_PATH}")
 
 # --- Versioned secrets & configs ---
 if grep -qE 'DEPLOY_VERSION' "${STACK_PATH}"/*.yml 2>/dev/null; then
@@ -174,7 +175,8 @@ env.DRAIN_TIMEOUT = "60"
 env.DRAIN_INTERVAL = "3"
 run = '''{% raw %}
 #!/usr/bin/env bash
-STACK_NAME=$(basename "${usage_path}")
+source .mise/tasks/scripts/resolve-stack.sh
+STACK_NAME=$(stack_name "${usage_path}")
 if ! docker stack ls --format '{{.Name}}' | grep -qx "${STACK_NAME}"; then
     echo "Not deployed: ${STACK_NAME}"
     exit 0
@@ -198,6 +200,7 @@ alias = "status"
 description = "Show cluster nodes and health status of all deployed stacks"
 run = '''{% raw %}
 #!/usr/bin/env bash
+source .mise/tasks/scripts/resolve-stack.sh
 
 # --- Nodes ---
 printf "%-18s %-12s %-14s %-10s %s\n" "NODE" "ROLE" "STATUS" "ENGINE" "LABELS"
@@ -212,9 +215,8 @@ echo ""
 # --- Stacks ---
 deployed=$(docker stack ls --format '{{.Name}}' 2>/dev/null)
 mapfile -t STACKS < <(
-    for dir in $(find stacks/infra -mindepth 1 -maxdepth 1 -type d | sort) \
-               $(find stacks/apps -mindepth 1 -maxdepth 1 -type d | sort); do
-        basename "${dir}"
+    for dir in $(find_stacks stacks/infra) $(find_stacks stacks/apps); do
+        stack_name "${dir}"
     done
 )
 total=0; healthy=0; unhealthy=0

@@ -8,10 +8,11 @@ SHARED_ANCHORS="stacks/_shared/anchors.yml"
 compose_config() {
     local stack_file="$1"
     shift
-    local stack_dir
+    local stack_dir stack_name
     stack_dir=$(dirname "$stack_file")
+    stack_name=$(basename "$stack_dir" | sed 's/^[0-9]\{2\}_//')
 
-    docker compose --project-directory "$stack_dir" \
+    docker compose --project-directory "$stack_dir" --project-name "$stack_name" \
         -f <(cat "$SHARED_ANCHORS" "$stack_file") \
         config "$@"
 }
