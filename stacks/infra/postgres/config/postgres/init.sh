@@ -7,6 +7,7 @@ psql -v ON_ERROR_STOP=1 --username postgres <<-EOSQL
         IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${PROVISIONER_DB_USER}') THEN
             EXECUTE format('CREATE ROLE %I LOGIN CREATEDB CREATEROLE PASSWORD %L', '${PROVISIONER_DB_USER}', '${PROVISIONER_DB_PASSWORD}');
             EXECUTE format('GRANT pg_maintain TO %I WITH ADMIN OPTION', '${PROVISIONER_DB_USER}');
+            EXECUTE format('GRANT pg_read_all_data TO %I WITH ADMIN OPTION', '${PROVISIONER_DB_USER}');
         END IF;
     END
     \$\$;

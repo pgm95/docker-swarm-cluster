@@ -204,6 +204,7 @@ Docker Configs. Service routing uses Swarm provider labels under `deploy.labels`
 |-------|----------|------|
 | `infra/socket` | socket-proxy | Read-only Docker API proxy for all consumers |
 | `infra/postgres` | postgres | Central PostgreSQL 17 instance |
+| `infra/backup` | borgmatic, init-db | Automated encrypted pg_dump backups (BorgBackup) |
 | `infra/gateway-internal` | traefik | Internal reverse proxy + TLS termination |
 | `infra/gateway-external` | traefik, crowdsec, init-db | Public reverse proxy + WAF |
 | `infra/metrics` | prometheus, victoria-metrics, grafana, uptime-kuma, init-db | Monitoring + dashboards + status |
@@ -446,11 +447,12 @@ Infra stacks are order-sensitive (encoded in `site:deploy-infra`):
 ```text
 1. socket          # Docker API proxy, needed by gateways
 2. postgres        # Database, needed by accounts and gateways
-3. gateway-internal
-4. gateway-external
-5. metrics
-6. registry
-7. accounts        # SSO + LDAP, sidecars bootstrap DB and LDAP users
+3. backup          # Borgmatic pg_dump backups of all databases
+4. gateway-internal
+5. gateway-external
+6. metrics
+7. registry
+8. accounts        # SSO + LDAP, sidecars bootstrap DB and LDAP users
 ```
 
 App stacks deploy after infra, in alphabetical order. `site:deploy` runs both in sequence.

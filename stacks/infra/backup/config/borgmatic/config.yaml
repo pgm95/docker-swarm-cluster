@@ -1,0 +1,18 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/borgmatic-collective/borgmatic/refs/heads/main/borgmatic/config/schema.yaml
+
+repositories:
+  - path: /mnt/borg-repository
+    label: local
+
+postgresql_databases:
+  - name: all
+    hostname: postgres
+    port: 5432
+    format: custom
+    compression: none
+
+keep_daily: 7
+keep_weekly: 4
+keep_monthly: 6
+
+compression: zstd,3

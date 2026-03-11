@@ -8,6 +8,7 @@ Core infrastructure stacks that support the cluster.
 |-------|---------|-----------|-----------------|
 | [socket](socket/) | Socket-proxy for Docker API | Manager + `*place-vm` | `infra_socket` |
 | [postgres](postgres/) | Central PostgreSQL database | `*place-storage` | `infra_postgres` |
+| [backup](backup/) | Borgmatic pg_dump backups (BorgBackup) | `*place-storage` | `infra_postgres` |
 | [gateway-internal](gateway-internal/) | Internal Traefik (*.DOMAIN_PRIVATE) | `*place-vm` | `infra_gw-internal` |
 | [gateway-external](gateway-external/) | External Traefik + CrowdSec (*.DOMAIN_PUBLIC) | `*place-cloud` | `infra_gw-external`, `infra_postgres` |
 | [metrics](metrics/) | Prometheus, VictoriaMetrics, Grafana, Uptime Kuma | `*place-vm` | `infra_metrics`, `infra_postgres` |
@@ -22,11 +23,12 @@ All overlay networks are pre-created by `swarm:init-networks` (runs automaticall
 0. swarm:init-networks  # Auto-run by site:deploy-infra
 1. socket
 2. postgres
-3. gateway-internal
-4. gateway-external
-5. metrics
-6. registry
-7. accounts
+3. backup
+4. gateway-internal
+5. gateway-external
+6. metrics
+7. registry
+8. accounts
 ```
 
 ## Network Topology
