@@ -8,6 +8,7 @@ run = [{ task = "site:deploy-apps" }]
 depends_post = ["swarm:status"]
 
 ["site:deploy-infra"]
+alias = "infra"
 description = "Deploy infrastructure stacks in order"
 depends = ["swarm:init-networks"]
 run = [
@@ -22,6 +23,7 @@ run = [
 ]
 
 ["site:deploy-apps"]
+alias = "apps"
 description = "Deploy all application stacks"
 run = '''{% raw %}
 #!/usr/bin/env bash

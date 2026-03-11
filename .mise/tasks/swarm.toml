@@ -194,6 +194,7 @@ fi
 {% endraw %}'''
 
 ["swarm:status"]
+alias = "status"
 description = "Show cluster nodes and health status of all deployed stacks"
 run = '''{% raw %}
 #!/usr/bin/env bash
