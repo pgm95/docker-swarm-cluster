@@ -216,6 +216,40 @@ When `start-first` + `FailureAction: rollback` triggers and the rollback target 
 
 **Fix**: `chown -R "${OWNER}" "${dir}" 2>/dev/null || true` to tolerate read-only mounts.
 
+## Borgmatic Backup Stack — Deployment Findings
+
+### Borg Version Mismatch (RESOLVED)
+
+**Symptom**: `borgmatic repo-create --encryption repokey-aes-ocb` failed with `invalid choice: 'repokey-aes-ocb'`.
+
+**Root cause**: The `ghcr.io/borgmatic-collective/borgmatic:2` image tag refers to borgmatic 2.x, NOT Borg 2.x. The image pins `borgbackup==1.4.3` (Borg 1.x) in its `requirements.txt`. `repokey-aes-ocb` is a Borg 2.x-only encryption mode. Borg 2.x support is [pending upstream](https://github.com/borgmatic-collective/docker-borgmatic/issues/132) with no ETA.
+
+**Fix**: Changed to `repokey-blake2` (best available in Borg 1.x).
+
+**Impact of `|| true`**: The init script's `|| true` let the container continue despite the failure — s6-overlay started, cron was scheduled, but no borg repo existed. Backups would have failed silently on cron trigger.
+
+### Borgmatic Port Matching Bug (WORKAROUND)
+
+**Symptom**: `borgmatic restore --archive latest --data-source backup_test` failed with `Cannot restore data source dump backup_test missing from archive`, despite the dump being present in the archive metadata.
+
+**Root cause**: Bug in borgmatic 2.1.3 `restore.py:get_dumps_to_restore()` — calls `dumps_match()` without passing `default_port`. Config specifies `port: 5432` explicitly, so archive dumps are tagged with `port: 5432`. CLI request has `port: None`. Without the default port hint, `None != 5432` fails the match. The `default_port` logic in `dumps_match()` is dead code in this path.
+
+**Workaround**: Pass `--original-port 5432` on single-database restore commands. Does NOT affect `--data-source all` (bypasses matching entirely).
+
+**Verified**: Direct Python test in the container confirmed `dumps_match(requested, archive, default_port=5432)` returns `True`, but `dumps_match(requested, archive)` returns `False`.
+
+### Restore Requires Superuser (BY DESIGN)
+
+**Symptom**: `borgmatic restore --archive latest --data-source all` failed with `must be owner of table oauth2_refresh_token_session`.
+
+**Root cause**: The backup role has `pg_read_all_data` (read-only). `pg_restore --clean` issues DDL (DROP/CREATE/ALTER) which requires object ownership or superuser. No PostgreSQL predefined role grants "DDL on all objects" — object ownership is fundamentally per-role.
+
+**Fix**: borgmatic's `--username` and `--password` CLI flags override restore credentials. Pass postgres superuser at restore time — no superuser password stored in the backup stack.
+
+```sh
+borgmatic restore --archive latest --username postgres --password <pass>
+```
+
 ## DNS Setup
 
 | Domain | Provider | Resolution |

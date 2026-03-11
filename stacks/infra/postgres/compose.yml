@@ -7,7 +7,8 @@ include:
 services:
   postgres:
     image: postgres:17
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 60s
     environment:
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password

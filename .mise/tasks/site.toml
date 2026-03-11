@@ -13,6 +13,7 @@ depends = ["swarm:init-networks"]
 run = [
   "mise run swarm:deploy stacks/infra/socket",
   "mise run swarm:deploy stacks/infra/postgres",
+  "mise run swarm:deploy stacks/infra/backup",
   "mise run swarm:deploy stacks/infra/gateway-internal",
   "mise run swarm:deploy stacks/infra/gateway-external",
   "mise run swarm:deploy stacks/infra/metrics",
@@ -67,6 +68,7 @@ INFRA_STACKS=(
     stacks/infra/metrics
     stacks/infra/gateway-external
     stacks/infra/gateway-internal
+    stacks/infra/backup
     stacks/infra/postgres
     stacks/infra/socket
 )

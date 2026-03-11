@@ -1,0 +1,77 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+include:
+  - secrets.yml
+  - configs.yml
+
+services:
+  borgmatic:
+    image: ghcr.io/borgmatic-collective/borgmatic:2
+    entrypoint: ["/bin/sh", "/etc/borgmatic.d/init.sh"]
+    logging: *logging
+    stop_grace_period: 60s
+    environment:
+      - TZ=${GLOBAL_TZ}
+      - PGHOST=postgres
+      - PGPORT=5432
+      - PGUSER=${BACKUP_DB_USER}
+      - PGPASSWORD=${BACKUP_DB_PASSWORD}
+      - FILE__BORG_PASSPHRASE=/run/secrets/borg_passphrase
+    secrets:
+      - borg_passphrase
+    configs:
+      - source: borgmatic_config
+        target: /etc/borgmatic.d/config.yaml
+      - source: borgmatic_crontab
+        target: /etc/borgmatic.d/crontab.txt
+      - source: borgmatic_init
+        target: /etc/borgmatic.d/init.sh
+    volumes:
+      - borgmatic-repo:/mnt/borg-repository
+      - borgmatic-state:/root/.local/state/borgmatic
+      - borg-config:/root/.config/borg
+      - borg-cache:/root/.cache/borg
+    networks:
+      - infra_postgres
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      <<: [*place-storage, *deploy-stop-first]
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-small
+
+  init-db:
+    image: postgres:17-alpine
+    entrypoint: ["/bin/sh", "/init-db-entrypoint.sh"]
+    logging: *logging
+    stop_grace_period: 30s
+    environment:
+      - PROVISIONER_USER=${GLOBAL_POSTGRES_PROVISIONER_USER}
+      - PROVISIONER_PASSWORD=${GLOBAL_POSTGRES_PROVISIONER_PASSWORD}
+      - BACKUP_DB_USER=${BACKUP_DB_USER}
+      - BACKUP_DB_PASSWORD=${BACKUP_DB_PASSWORD}
+    configs:
+      - source: init_db_entrypoint
+        target: /init-db-entrypoint.sh
+    networks:
+      - infra_postgres
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      <<: [*place-vm, *deploy]
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-tiny
+
+volumes:
+  borgmatic-repo:
+  borgmatic-state:
+  borg-config:
+  borg-cache:
+
+networks:
+  infra_postgres:
+    external: true

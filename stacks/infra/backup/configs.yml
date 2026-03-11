@@ -1,0 +1,13 @@
+configs:
+  borgmatic_config:
+    name: borgmatic_config_${DEPLOY_VERSION}
+    file: ./config/borgmatic/config.yaml
+  borgmatic_crontab:
+    name: borgmatic_crontab_${DEPLOY_VERSION}
+    file: ./config/borgmatic/crontab.txt
+  borgmatic_init:
+    name: borgmatic_init_${DEPLOY_VERSION}
+    file: ./config/borgmatic/init.sh
+  init_db_entrypoint:
+    name: backup_init_db_${DEPLOY_VERSION}
+    file: ./config/bootstrap/init-db.sh

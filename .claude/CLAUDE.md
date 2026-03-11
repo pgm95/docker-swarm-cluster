@@ -44,7 +44,7 @@ Dev/prod separation uses mise's native `MISE_ENV` profile system. Dev is the def
 | --------- | ------- | ------ |
 | `_shared` | Centralized YAML anchors | (anchors.yml) |
 | `apps` | User-facing applications | forwarder, homepage, immich, jellyfin, mealie, pinchflat, portainer, quantum, servarr, stirling, syncthing, tools |
-| `infra` | Core infrastructure | socket, postgres, registry, accounts, gateway-internal, gateway-external, metrics |
+| `infra` | Core infrastructure | socket, postgres, backup, registry, accounts, gateway-internal, gateway-external, metrics |
 
 ## Swarm Patterns
 
@@ -75,6 +75,8 @@ Node count is environment-specific. Labels drive placement — hostnames are irr
 **Shared secrets:** Versioned secrets are per-deploy (`<name>_<sha>_<ts>`). Secrets needed by multiple stacks stay in `GLOBAL_SECRETS`, auto-injected as env vars by base config `_.file`. Environment-specific secrets (domains, OIDC, LDAP base DN) live in `PROJECT_SECRETS_DIR/{env}.yaml`, auto-injected by profile `_.file`. All SOPS-encrypted secrets files are centralized in `PROJECT_SECRETS_DIR`. Non-sensitive shared config lives in mise base `[env]`, env-specific non-secrets in mise profile `[env]`.
 
 ## Data Patterns
+
+**Backups:** The `infra/backup` stack provides automated encrypted pg_dump backups of all Postgres databases via borgmatic + BorgBackup. Dumps use `name: all` for auto-discovery, borg handles deduplication and encryption (`repokey-blake2`). Restores require postgres superuser credentials passed via CLI flags at restore time.
 
 **Initialization:** `site:deploy-infra` automatically runs `swarm:init-networks` via `depends` before deploying stacks. For manual use: `mise run swarm:init-networks`. Overlay networks are discovered dynamically from `infra_*: external: true` declarations in compose files — adding a network to any infra stack automatically includes it in creation and teardown.
 

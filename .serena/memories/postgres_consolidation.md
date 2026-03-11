@@ -173,7 +173,7 @@ The sidecar init script is delivered as a Docker Config. Uses `psql` from a ligh
 
 A dedicated role that all consumer sidecars authenticate as. Not superuser — scoped to database and role administration only.
 
-**Privileges:** `CREATEDB`, `CREATEROLE`, `LOGIN`. Can create databases and roles, set passwords, grant ownership. Cannot read app data, modify schemas, or bypass row-level security. Each created database is owned by the app's role, not the provisioner — the provisioner loses access after handoff.
+**Privileges:** `CREATEDB`, `CREATEROLE`, `LOGIN`, `pg_maintain WITH ADMIN OPTION`, `pg_read_all_data WITH ADMIN OPTION`. Can create databases and roles, set passwords, grant ownership. The `pg_read_all_data` admin grant enables delegating read-all access to the backup role for borgmatic pg_dump backups. Cannot read app data, modify schemas, or bypass row-level security. Each created database is owned by the app's role, not the provisioner — the provisioner loses access after handoff.
 
 **Credential delivery:** Username and password stored in `GLOBAL_SECRETS` (SOPS-encrypted shared secrets). Auto-injected as env vars to all stacks via mise base config `_.file`. Sidecars access them through compose interpolation like any other global secret. Neither the username nor the password is hardcoded in any script — both come from env vars.
 

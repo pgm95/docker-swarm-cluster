@@ -18,11 +18,12 @@ Infra stack deployment order (hardcoded in site tasks):
 ```text
 1. infra/socket
 2. infra/postgres
-3. infra/gateway-internal
-4. infra/gateway-external
-5. infra/metrics
-6. infra/registry
-7. infra/accounts
+3. infra/backup
+4. infra/gateway-internal
+5. infra/gateway-external
+6. infra/metrics
+7. infra/registry
+8. infra/accounts
 ```
 
 `site:deploy-infra` auto-calls `swarm:init-networks`.
