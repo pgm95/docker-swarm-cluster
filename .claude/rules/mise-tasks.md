@@ -16,7 +16,7 @@ docker service ls --format "{{.Name}}\t{{.Replicas}}"
 {% endraw %}'''
 ```
 
-Needed for: Docker `--format`, bash `${#array[@]}`, `${var//pattern/replace}`.
+Needed for: Docker `--format`, bash `${#array[@]}`, `${var//pattern/replace}`. The `#}` in `${#array[@]}` is parsed as a Tera comment end tag, causing cryptic parse errors (`expected a comment end`).
 
 Moving Go template strings into sourced `.sh` scripts avoids Tera entirely — sourced files are read at bash runtime, not at Tera template time.
 
