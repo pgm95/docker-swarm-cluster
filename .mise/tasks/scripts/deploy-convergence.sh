@@ -16,10 +16,13 @@ wait_for_convergence() {
             continue
         fi
         local all_healthy=true
-        while IFS=$'\t' read -r _ replicas; do
+        while IFS=$'\t' read -r name replicas; do
             local current="${replicas%%/*}"
             local desired="${replicas##*/}"
             if [[ "${current}" -lt "${desired}" ]]; then
+                if _is_task_complete "${name}"; then
+                    continue
+                fi
                 all_healthy=false
                 break
             fi
@@ -30,6 +33,15 @@ wait_for_convergence() {
     echo "WARNING: Timeout waiting for convergence after ${timeout}s"
 }
 
+# Check if a service's most recent task completed successfully (exit 0).
+# Used to recognize init sidecars that finished their work.
+_is_task_complete() {
+    local svc="$1"
+    local state
+    state="$(docker service ps "${svc}" --format '{{.CurrentState}}' --filter desired-state=shutdown 2>/dev/null | head -1)"
+    [[ "${state}" == Complete* ]]
+}
+
 check_replica_health() {
     local stack_name="$1"
     local unhealthy=0
@@ -38,6 +50,9 @@ check_replica_health() {
         local current="${replicas%%/*}"
         local desired="${replicas##*/}"
         if [[ "${current}" -lt "${desired}" ]]; then
+            if _is_task_complete "${name}"; then
+                continue
+            fi
             echo "UNHEALTHY: ${name} ${replicas}"
             ((unhealthy++))
         fi

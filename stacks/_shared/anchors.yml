@@ -38,6 +38,24 @@ x-deploy-stop-first: &deploy-stop-first
     failure_action: rollback
     order: stop-first
 
+# For init sidecars (run-once provisioning that exits cleanly)
+x-deploy-init: &deploy-init
+  restart_policy:
+    condition: on-failure
+    delay: 5s
+    max_attempts: 3
+    window: 120s
+  update_config:
+    parallelism: 1
+    delay: 10s
+    failure_action: continue
+    monitor: 0s
+    order: stop-first
+  rollback_config:
+    parallelism: 1
+    delay: 10s
+    order: stop-first
+
 # --- Placement (node targeting only) ---
 
 x-place-onprem: &place-onprem

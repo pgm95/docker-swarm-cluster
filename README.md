@@ -178,6 +178,12 @@ scripts) that chown and drop privileges — `setpriv` on Debian, `su` on Alpine.
   Services that validate external dependencies at startup stall if those aren't ready. Common
   during initial `site:deploy`. Fix: `docker service update --force`.
 
+- **Init sidecars show `0/1` replicas.** Init services use `*deploy-init` anchor and
+  exit after provisioning. `docker service ls` shows `0/1` — this is correct, not a
+  failure. The deploy pipeline and `swarm:status` recognize completed tasks. `docker
+  service update --force` (without `--detach`) misreports this as a task failure; use
+  `--detach` for manual re-runs.
+
 ### LXC Nodes
 
 Unprivileged LXC containers cannot use IPVS (Docker Swarm's default VIP load balancing).
@@ -230,6 +236,7 @@ auto-create). `swarm:validate` warns but does not block.
 |-------|--------|
 | [`infra/backup`](stacks/infra/20_backup/README.md) | Restore procedures, borgmatic limitations |
 | [`infra/gateway-external`](stacks/infra/31_gateway-external/README.md) | CrowdSec, geoblock, middleware chain |
+| [`infra/metrics`](stacks/infra/40_metrics/README.md) | Scraping global services, Swarm SD, node exporter limitations, recording rules |
 | [`infra/logging`](stacks/infra/42_logging/README.md) | Socket-proxy sidecar pattern, Alloy reconnection, Loki storage |
 | [`infra/accounts`](stacks/infra/60_accounts/README.md) | Convergence behavior, init sidecars, WebFinger build |
 | [`apps/jellyfin`](stacks/apps/jellyfin/README.md) | GPU passthrough, custom Mesa drivers, codec support |

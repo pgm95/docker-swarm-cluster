@@ -27,4 +27,3 @@ psql -v ON_ERROR_STOP=1 <<-EOSQL
 EOSQL
 
 echo "Backup role provisioning complete."
-exec sleep infinity

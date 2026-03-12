@@ -32,4 +32,3 @@ psql -v ON_ERROR_STOP=1 -d crowdsec <<-EOSQL
 EOSQL
 
 echo "Database provisioning complete."
-exec sleep infinity

@@ -211,7 +211,7 @@ services:
     healthcheck:
       test: ["NONE"]
     deploy:
-      <<: [*place-cloud, *deploy]
+      <<: [*place-cloud, *deploy-init]
       mode: replicated
       replicas: 1
       resources:
