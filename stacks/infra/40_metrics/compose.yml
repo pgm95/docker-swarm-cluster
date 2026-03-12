@@ -7,7 +7,8 @@ include:
 services:
   prometheus:
     image: prom/prometheus:v3.9.1
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -52,7 +53,8 @@ services:
   victoriametrics:
     image: victoriametrics/victoria-metrics:v1.135.0
     entrypoint: ["/bin/sh", "/init.sh"]
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     command:
       - "--storageDataPath=/storage"
@@ -84,11 +86,13 @@ services:
 
   grafana:
     image: grafana/grafana:12.4.0
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     environment:
       DOMAIN_PRIVATE: ${DOMAIN_PRIVATE}
       OIDC_URL: ${GLOBAL_OIDC_URL}
+      GLOBAL_LDAP_ADMIN_GROUP: ${GLOBAL_LDAP_ADMIN_GROUP}
     secrets:
       - grafana_oidc_client
       - grafana_oidc_secret
@@ -132,7 +136,8 @@ services:
 
   uptime-kuma:
     image: louislam/uptime-kuma:2-slim-rootless
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     networks:
       - infra_metrics
@@ -169,7 +174,8 @@ services:
   init-db:
     image: postgres:17-alpine
     entrypoint: ["/bin/sh", "/init-db-entrypoint.sh"]
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     environment:
       PROVISIONER_USER: ${GLOBAL_POSTGRES_PROVISIONER_USER}

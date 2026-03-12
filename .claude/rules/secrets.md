@@ -27,6 +27,19 @@ Versioned secrets cannot be shared across stacks — each `swarm:deploy` generat
 
 Shared credentials (SMTP, registry, LDAP) stay in `GLOBAL_SECRETS`, auto-injected as env vars by mise `_.file` SOPS integration. No manual decryption needed in tasks.
 
+## Global-to-Versioned Remapping
+
+`GLOBAL_SECRETS` vars are normally consumed as env vars (compose interpolation). To deliver them as versioned Docker secrets instead, remap via the `name:` field in `secrets.yml`:
+
+```yaml
+# secrets.yml — compose alias stays stack-local, name points at the global var
+lldap_ldap_user_pass:
+    name: global_password_${DEPLOY_VERSION}
+    external: true
+```
+
+The deploy task already creates versioned secrets from every `GLOBAL_SECRETS` entry. The `name:` indirection lets a stack-specific compose alias mount a global value at `/run/secrets/<alias>` without duplicating it in `secrets.env`.
+
 ## Secret Modes
 
 | Mode | Trigger | Delivery |

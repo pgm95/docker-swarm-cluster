@@ -1,7 +1,21 @@
 #!/bin/sh
 set -e
 
-mkdir -p /tmp/bootstrap/user-configs
+mkdir -p /tmp/bootstrap/user-configs /tmp/bootstrap/group-configs
+
+cat > /tmp/bootstrap/group-configs/app_admin.json <<EOF
+{"name": "${GLOBAL_LDAP_ADMIN_GROUP}"}
+EOF
+
+cat > /tmp/bootstrap/user-configs/admin.json <<EOF
+{
+  "id": "${LLDAP_ADMIN_USERNAME}",
+  "email": "${LLDAP_ADMIN_USERNAME}@${DOMAIN_PUBLIC}",
+  "displayName": "${LLDAP_ADMIN_USERNAME}",
+  "password_file": "/run/secrets/lldap_ldap_user_pass",
+  "groups": ["${GLOBAL_LDAP_ADMIN_GROUP}", "lldap_password_manager"]
+}
+EOF
 
 cat > /tmp/bootstrap/user-configs/authelia_bind.json <<EOF
 {
