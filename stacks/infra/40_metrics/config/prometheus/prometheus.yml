@@ -49,9 +49,41 @@ scrape_configs:
 
   # Alloy metrics (logging stack, global — one instance per node)
   - job_name: alloy
-    static_configs:
-      - targets:
-        - alloy:12345
+    dockerswarm_sd_configs:
+      - host: http://socket-proxy:2375
+        role: tasks
+        port: 12345
+    relabel_configs:
+      - source_labels: [__meta_dockerswarm_service_name]
+        regex: logging_alloy
+        action: keep
+      - source_labels: [__meta_dockerswarm_task_desired_state]
+        regex: running
+        action: keep
+      - source_labels: [__meta_dockerswarm_network_name]
+        regex: infra_metrics
+        action: keep
+      - source_labels: [__meta_dockerswarm_node_hostname]
+        target_label: instance
+
+  # Node Exporter metrics (metrics stack, global — one instance per node)
+  - job_name: node
+    dockerswarm_sd_configs:
+      - host: http://socket-proxy:2375
+        role: tasks
+        port: 9100
+    relabel_configs:
+      - source_labels: [__meta_dockerswarm_service_name]
+        regex: metrics_node-exporter
+        action: keep
+      - source_labels: [__meta_dockerswarm_task_desired_state]
+        regex: running
+        action: keep
+      - source_labels: [__meta_dockerswarm_network_name]
+        regex: infra_metrics
+        action: keep
+      - source_labels: [__meta_dockerswarm_node_hostname]
+        target_label: instance
 
   # Registry metrics (infra/registry)
   - job_name: registry

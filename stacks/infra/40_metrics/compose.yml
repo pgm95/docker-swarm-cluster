@@ -24,6 +24,7 @@ services:
     networks:
       - infra_metrics
       - infra_gw-internal
+      - infra_socket
     volumes:
       - prometheus-data:/prometheus
     healthcheck:
@@ -51,6 +52,38 @@ services:
         - "homepage.description=Metrics Collection"
         - "homepage.widget.type=prometheus"
         - "homepage.widget.url=https://prometheus.${DOMAIN_PRIVATE}"
+
+  node-exporter:
+    image: prom/node-exporter:v1.10.2
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+      - "--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|var/lib/docker/.+)($|/)"
+      - "--collector.filesystem.fs-types-exclude=^(tmpfs|overlay|nsfs|tracefs|cgroup2?)$"
+      - "--no-collector.hwmon"
+      - "--no-collector.bcache"
+      - "--no-collector.infiniband"
+    networks:
+      - infra_metrics
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    healthcheck:
+      test: ["CMD", "/bin/wget", "-q", "--spider", "http://localhost:9100/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      <<: *deploy
+      mode: global
+      resources:
+        <<: *resources-tiny
 
   victoriametrics:
     image: victoriametrics/victoria-metrics:v1.135.0
@@ -126,6 +159,8 @@ services:
         target: /var/lib/grafana/dashboards/uptime-kuma.json
       - source: grafana_dashboard_registry
         target: /var/lib/grafana/dashboards/docker-registry.json
+      - source: grafana_dashboard_node_exporter
+        target: /var/lib/grafana/dashboards/node-exporter.json
     networks:
       - infra_metrics
       - infra_gw-internal
@@ -139,7 +174,7 @@ services:
       retries: 5
       start_period: 30s
     deploy:
-      <<: [*place-vm, *deploy]
+      <<: [*place-vm, *deploy-stop-first]
       mode: replicated
       replicas: 1
       resources:

@@ -22,8 +22,9 @@ All nodes over Tailscale (100.88.0.x). Docker Engine 29.2.1.
 - Geoblock: Auto-bootstrap, country filtering active
 - Registry: docker login end-to-end through Traefik TLS
 - Full metrics stack (Prometheus, VictoriaMetrics, Grafana with OIDC, Uptime Kuma)
-- Prometheus scraping 8 targets: both Traefiks, CrowdSec, Loki, Alloy, Registry, Syncthing, self
-- 9 Grafana dashboards provisioned via Docker Configs (5 CrowdSec, Traefik, Syncthing, Borgmatic logs, Uptime Kuma)
+- Prometheus scraping 10 targets: both Traefiks, CrowdSec, Loki, Alloy (3x global), Node Exporter (3x global), Registry, Syncthing, self
+- Global services (node-exporter, alloy) use `dockerswarm_sd_configs` for per-task discovery with hostname-based `instance` labels
+- 10 Grafana dashboards provisioned via Docker Configs (5 CrowdSec, Traefik, Syncthing, Borgmatic logs, Uptime Kuma, Node Exporter)
 - LDAP admin group (`app_admin`) bootstrapped, mapped to Grafana Admin and Mealie admin via OIDC
 - LLDAP + Authelia OIDC chain: Traefik-external to TLS to geoblock to CrowdSec to Authelia
 - Borgmatic backup and restore tested end-to-end
@@ -93,3 +94,11 @@ CrowdSec's Prometheus metrics default to `127.0.0.1:6060` — unreachable over D
 ### Registry Prometheus Metrics
 
 Registry v3 has a debug server (`:5001`) enabled by default for healthchecks. Prometheus metrics require `REGISTRY_HTTP_DEBUG_PROMETHEUS_ENABLED=true`. The debug address must bind to `0.0.0.0:5001` (not localhost) for overlay access — set via `REGISTRY_HTTP_DEBUG_ADDR`.
+
+### Grafana Bleve Index Lock (stop-first Required)
+
+Grafana 12.x uses a bleve search index in the data volume. With `start-first`, the new task crashes with "index is locked by another process" because both old and new tasks try to hold the lock simultaneously. Grafana must use `*deploy-stop-first`.
+
+### Prometheus dockerswarm_sd_configs — Port Fallback
+
+When tasks have no published ports (overlay-only services), `dockerswarm_sd_configs` sets `__address__` to the task's overlay IP + the `port` parameter from the SD config. Verified in Prometheus source (`discovery/moby/tasks.go`). Tasks on multiple networks generate one target per network — filter with `__meta_dockerswarm_network_name` to avoid duplicates.

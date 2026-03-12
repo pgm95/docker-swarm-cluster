@@ -4,6 +4,7 @@
 *.log
 *.old
 *.local
+*.local.*
 .archive/
 .stversions
 *_LOCALDEV*
