@@ -1,0 +1,100 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+include:
+  - configs.yml
+
+services:
+  loki:
+    image: grafana/loki:3.6.7
+    logging: *logging
+    stop_grace_period: 60s
+    command:
+      - "-config.file=/etc/loki/loki.yml"
+    configs:
+      - source: loki_config
+        target: /etc/loki/loki.yml
+    networks:
+      - infra_metrics
+    volumes:
+      - loki-data:/loki
+    healthcheck:
+      test: ["CMD", "/usr/bin/loki", "-health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      <<: [*place-storage, *deploy-stop-first]
+      mode: replicated
+      replicas: 1
+      endpoint_mode: dnsrr
+      resources:
+        <<: *resources-large
+
+  alloy:
+    image: grafana/alloy:v1.14.0
+    entrypoint: ["/bin/sh", "/etc/alloy/entrypoint.sh"]
+    logging: *logging
+    stop_grace_period: 30s
+    configs:
+      - source: alloy_config
+        target: /etc/alloy/config.alloy
+      - source: alloy_entrypoint
+        target: /etc/alloy/entrypoint.sh
+    networks:
+      - infra_metrics
+    volumes:
+      - alloy-proxy:/alloy-proxy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/12345' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      <<: *deploy
+      mode: global
+      resources:
+        <<: *resources-small
+
+  alloy-socket-proxy:
+    image: wollomatic/socket-proxy:1.11.4
+    user: "0:0"
+    logging: *logging
+    stop_grace_period: 30s
+    command:
+      - "-proxysocketendpoint"
+      - "/alloy-proxy/docker.sock"
+      - "-proxysocketendpointfilemode"
+      - "0660"
+      - "-socketpath"
+      - "/var/run/docker.sock"
+      - "-allowhealthcheck"
+      - "-allowGET"
+      - "(/v\\d+\\.\\d+/(containers|events|networks|version|info).*|/_ping)"
+      - "-allowHEAD"
+      - "/_ping"
+      - "-loglevel"
+      - "WARN"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy-proxy:/alloy-proxy
+    healthcheck:
+      test: ["CMD", "/healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 2
+      start_period: 5s
+    deploy:
+      <<: *deploy-stop-first
+      mode: global
+      resources:
+        <<: *resources-tiny
+
+volumes:
+  loki-data:
+  alloy-proxy:
+
+networks:
+  infra_metrics:
+    external: true

@@ -24,6 +24,7 @@ All nodes over Tailscale (100.88.0.x). Docker Engine 29.2.1.
 - Full metrics stack (Prometheus, VictoriaMetrics, Grafana with OIDC, Uptime Kuma)
 - LLDAP + Authelia OIDC chain: Traefik-external to TLS to geoblock to CrowdSec to Authelia
 - Borgmatic backup and restore tested end-to-end
+- Centralized logging: Loki + Alloy (global) + wollomatic socket-proxy sidecar, all 20 stacks ingested
 
 ## Key Lessons
 
@@ -62,3 +63,14 @@ Root cause of IPVS failure on unprivileged LXC: `ip_vs_rr` kernel module not loa
 ### Registry Auth — Node Login
 
 All nodes must resolve `DOMAIN_PRIVATE` to reach the private registry. Configure Tailscale DNS or split DNS for cloud nodes. `registry:auth` runs `docker login` on all swarm nodes using credentials from `GLOBAL_SECRETS`.
+
+### Logging Stack Deployment - Issues Encountered
+
+1. Alloy image tag is `v1.14.0` (with `v` prefix), not `1.14.0`
+2. wollomatic defaults to non-root — needs `user: "0:0"` for docker.sock access
+3. Loki 3.6+ is distroless — no shell for CMD-SHELL healthchecks. Use `loki -health`
+4. Alloy (Ubuntu) has no wget/curl — healthcheck via `bash </dev/tcp/localhost/12345`
+5. wollomatic has bundled `/healthcheck` binary — works with `["CMD", "/healthcheck"]`
+6. Docker `/_ping` endpoint has no version prefix. Wollomatic socket-proxy allowlist must include it explicitly or Docker SDK clients log repeated warnings.
+7. Unix socket connect needs write permission — alloy-proxy volume must NOT be `:ro`
+8. Initial log backlog hit ingestion rate limits — bumped to 16MB/s global, 10MB/s per-stream

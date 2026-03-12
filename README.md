@@ -230,5 +230,6 @@ auto-create). `swarm:validate` warns but does not block.
 |-------|--------|
 | [`infra/backup`](stacks/infra/20_backup/README.md) | Restore procedures, borgmatic limitations |
 | [`infra/gateway-external`](stacks/infra/31_gateway-external/README.md) | CrowdSec, geoblock, middleware chain |
+| [`infra/logging`](stacks/infra/42_logging/README.md) | Socket-proxy sidecar pattern, Alloy reconnection, Loki storage |
 | [`infra/accounts`](stacks/infra/60_accounts/README.md) | Convergence behavior, init sidecars, WebFinger build |
 | [`apps/jellyfin`](stacks/apps/jellyfin/README.md) | GPU passthrough, custom Mesa drivers, codec support |
