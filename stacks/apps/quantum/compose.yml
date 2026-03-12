@@ -9,7 +9,8 @@ services:
   quantum:
     image: gtstef/filebrowser:latest
     entrypoint: ["/bin/sh", "/init.sh"]
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     environment:
       - QUANTUM_OWNER=${GLOBAL_NONROOT_DOCKER}

@@ -7,7 +7,8 @@ services:
   jellyfin:
     image: ${GLOBAL_SWARM_OCI_REGISTRY}/jellyfin/jellyfin:${OCI_TAG_JELLYFIN}
     entrypoint: ["/bin/sh", "/init.sh"]
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     environment:
       - JELLYFIN_OWNER=${GLOBAL_NONROOT_DOCKER}

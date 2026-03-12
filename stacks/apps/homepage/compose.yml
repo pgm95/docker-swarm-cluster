@@ -7,7 +7,8 @@ services:
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
     user: ${GLOBAL_NONROOT_DOCKER}
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     environment:
       - HOMEPAGE_ALLOWED_HOSTS=home.${DOMAIN_PRIVATE}

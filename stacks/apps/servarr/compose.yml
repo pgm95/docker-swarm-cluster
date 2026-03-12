@@ -5,7 +5,8 @@
 services:
   radarr:
     image: linuxserver/radarr:latest
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     environment:
       - PUID=${GLOBAL_NONROOT_PUID}
@@ -34,7 +35,8 @@ services:
 
   sonarr:
     image: linuxserver/sonarr:latest
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     environment:
       - PUID=${GLOBAL_NONROOT_PUID}
@@ -63,7 +65,8 @@ services:
 
   prowlarr:
     image: linuxserver/prowlarr:latest
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     environment:
       - PUID=${GLOBAL_NONROOT_PUID}
@@ -92,7 +95,8 @@ services:
 
   flaresolverr:
     image: flaresolverr/flaresolverr:latest
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     environment:
       - LOG_LEVEL=info

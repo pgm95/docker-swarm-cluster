@@ -8,7 +8,8 @@ services:
   forwarder:
     image: ${GLOBAL_SWARM_OCI_REGISTRY}/forwarder/forwarder:${OCI_TAG_FORWARDER}
     read_only: true
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     environment:
       # Secret file references

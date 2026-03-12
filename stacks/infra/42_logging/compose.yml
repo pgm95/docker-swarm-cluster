@@ -6,7 +6,8 @@ include:
 services:
   loki:
     image: grafana/loki:3.6.7
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 60s
     command:
       - "-config.file=/etc/loki/loki.yml"
@@ -34,7 +35,8 @@ services:
   alloy:
     image: grafana/alloy:v1.14.0
     entrypoint: ["/bin/sh", "/etc/alloy/entrypoint.sh"]
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     configs:
       - source: alloy_config
@@ -60,7 +62,8 @@ services:
   alloy-socket-proxy:
     image: wollomatic/socket-proxy:1.11.4
     user: "0:0"
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     command:
       - "-proxysocketendpoint"

@@ -7,7 +7,8 @@ include:
 services:
   traefik-internal:
     image: traefik:v3.6 # Consider hardened dhi.io/traefik:3
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     command:
       # Global

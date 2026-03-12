@@ -5,7 +5,8 @@
 services:
   portainer:
     image: portainer/portainer-ce:sts
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     command: -H tcp://socket-proxy:2375
     networks:
