@@ -22,6 +22,9 @@ All nodes over Tailscale (100.88.0.x). Docker Engine 29.2.1.
 - Geoblock: Auto-bootstrap, country filtering active
 - Registry: docker login end-to-end through Traefik TLS
 - Full metrics stack (Prometheus, VictoriaMetrics, Grafana with OIDC, Uptime Kuma)
+- Prometheus scraping 8 targets: both Traefiks, CrowdSec, Loki, Alloy, Registry, Syncthing, self
+- 9 Grafana dashboards provisioned via Docker Configs (5 CrowdSec, Traefik, Syncthing, Borgmatic logs, Uptime Kuma)
+- LDAP admin group (`app_admin`) bootstrapped, mapped to Grafana Admin and Mealie admin via OIDC
 - LLDAP + Authelia OIDC chain: Traefik-external to TLS to geoblock to CrowdSec to Authelia
 - Borgmatic backup and restore tested end-to-end
 - Centralized logging: Loki + Alloy (global) + wollomatic socket-proxy sidecar, all 20 stacks ingested
@@ -74,3 +77,19 @@ All nodes must resolve `DOMAIN_PRIVATE` to reach the private registry. Configure
 6. Docker `/_ping` endpoint has no version prefix. Wollomatic socket-proxy allowlist must include it explicitly or Docker SDK clients log repeated warnings.
 7. Unix socket connect needs write permission — alloy-proxy volume must NOT be `:ro`
 8. Initial log backlog hit ingestion rate limits — bumped to 16MB/s global, 10MB/s per-stream
+
+### Grafana Datasource UID Migration
+
+Adding explicit `uid` to provisioned datasources that already exist with auto-generated UIDs causes `Datasource provisioning error: data source not found`. Fix: add a one-time `deleteDatasources` block to `datasource.yml` to remove old entries before re-provisioning with new UIDs. Remove the block after successful deploy.
+
+### CrowdSec Prometheus Bind Address
+
+CrowdSec's Prometheus metrics default to `127.0.0.1:6060` — unreachable over Docker overlay networks. Must add `prometheus.listen_addr: 0.0.0.0` in `config.yaml` for cross-stack scraping.
+
+### Syncthing API Key via Env Var
+
+`STGUIAPIKEY` is a runtime CLI override (`--gui-apikey`), not a config file setting. It does NOT affect `syncthing generate` — only takes effect when `syncthing serve` runs. Set it as a compose env var for deterministic API key control. The `/metrics` endpoint requires the same API key via `X-API-Key` header or Bearer token.
+
+### Registry Prometheus Metrics
+
+Registry v3 has a debug server (`:5001`) enabled by default for healthchecks. Prometheus metrics require `REGISTRY_HTTP_DEBUG_PROMETHEUS_ENABLED=true`. The debug address must bind to `0.0.0.0:5001` (not localhost) for overlay access — set via `REGISTRY_HTTP_DEBUG_ADDR`.
