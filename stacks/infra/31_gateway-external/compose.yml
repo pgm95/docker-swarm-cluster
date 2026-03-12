@@ -7,7 +7,8 @@ include:
 services:
   traefik-external:
     image: traefik:v3.6 # Consider hardened dhi.io/traefik:3
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     entrypoint: ["/bin/sh", "/geoblock-entrypoint.sh"]
     command:
@@ -134,7 +135,8 @@ services:
 
   crowdsec:
     image: crowdsecurity/crowdsec:v1.7.6
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     environment:
       - USE_TLS=false
@@ -194,7 +196,8 @@ services:
   init-db:
     image: postgres:17-alpine
     entrypoint: ["/bin/sh", "/init-db-entrypoint.sh"]
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     environment:
       - PROVISIONER_USER=${GLOBAL_POSTGRES_PROVISIONER_USER}

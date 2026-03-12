@@ -3,7 +3,8 @@
 services:
   it-tools:
     image: corentinth/it-tools:latest
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     networks:
       - infra_gw-internal
@@ -25,7 +26,8 @@ services:
 
   cyberchef:
     image: ghcr.io/gchq/cyberchef:latest
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     networks:
       - infra_gw-internal

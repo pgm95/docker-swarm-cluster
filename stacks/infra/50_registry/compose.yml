@@ -11,7 +11,8 @@ services:
   registry:
     image: registry:3
     entrypoint: ["/bin/sh", "/init.sh"]
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     environment:
       REGISTRY_OWNER: ${GLOBAL_NONROOT_DOCKER}

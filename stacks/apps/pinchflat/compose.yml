@@ -7,7 +7,8 @@ services:
   pinchflat:
     image: keglin/pinchflat:latest
     entrypoint: ["/bin/sh", "/init.sh"]
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     environment:
       - PINCHFLAT_OWNER=${GLOBAL_NONROOT_DOCKER}

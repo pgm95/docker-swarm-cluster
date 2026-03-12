@@ -3,7 +3,8 @@
 services:
   stirling-pdf:
     image: stirlingtools/stirling-pdf:latest-fat
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     environment:
       # Core settings

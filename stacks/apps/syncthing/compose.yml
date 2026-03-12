@@ -5,7 +5,8 @@
 services:
   syncthing:
     image: syncthing/syncthing:latest
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     environment:
       - PUID=${GLOBAL_NONROOT_PUID}

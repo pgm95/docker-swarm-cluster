@@ -8,7 +8,8 @@ services:
   borgmatic:
     image: ghcr.io/borgmatic-collective/borgmatic:2
     entrypoint: ["/bin/sh", "/etc/borgmatic.d/init.sh"]
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 60s
     environment:
       - TZ=${GLOBAL_TZ}
@@ -45,7 +46,8 @@ services:
   init-db:
     image: postgres:17-alpine
     entrypoint: ["/bin/sh", "/init-db-entrypoint.sh"]
-    logging: *logging
+    logging:
+      <<: *logging
     stop_grace_period: 30s
     environment:
       - PROVISIONER_USER=${GLOBAL_POSTGRES_PROVISIONER_USER}
