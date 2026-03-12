@@ -99,6 +99,18 @@ Registry v3 has a debug server (`:5001`) enabled by default for healthchecks. Pr
 
 Grafana 12.x uses a bleve search index in the data volume. With `start-first`, the new task crashes with "index is locked by another process" because both old and new tasks try to hold the lock simultaneously. Grafana must use `*deploy-stop-first`.
 
+### Init Sidecar Lifecycle (`*deploy-init`)
+
+Init sidecars (init-db, init-ldap) use `*deploy-init` anchor and exit after provisioning instead of `sleep infinity`. Key behaviors tested:
+
+- `condition: on-failure` — exit 0 stops cleanly, exit 1 retries up to `max_attempts`
+- `failure_action: continue` — sidecar failure doesn't rollback the stack's other services
+- `monitor: 0s` — prevents Swarm from misinterpreting a quick exit 0 as a failed update
+- `docker service ls` shows `0/1` for completed init services — this is correct
+- `docker service update --force` (without `--detach`) falsely reports "Detected task failure" because its built-in progress tracker expects tasks to stay running. Use `--detach` for manual re-runs
+- Convergence checker (`deploy-convergence.sh`) and `swarm:status` recognize `Complete` tasks via `_is_task_complete()` — checks if the latest task state starts with "Complete"
+- When dependency is down (e.g., Postgres scaled to 0), init task stays `Running` in the wait loop and recovers automatically when the dependency returns
+
 ### Prometheus dockerswarm_sd_configs — Port Fallback
 
 When tasks have no published ports (overlay-only services), `dockerswarm_sd_configs` sets `__address__` to the task's overlay IP + the `port` parameter from the SD config. Verified in Prometheus source (`discovery/moby/tasks.go`). Tasks on multiple networks generate one target per network — filter with `__meta_dockerswarm_network_name` to avoid duplicates.

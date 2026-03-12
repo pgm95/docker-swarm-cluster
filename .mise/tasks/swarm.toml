@@ -237,7 +237,10 @@ for stack in "${STACKS[@]}"; do
         current="${replicas%%/*}"
         desired="${replicas##*/}"
         if [[ "${current}" -lt "${desired}" ]]; then
-            stack_healthy=false
+            latest_state="$(docker service ps "${name}" --format '{{.CurrentState}}' --filter desired-state=shutdown 2>/dev/null | head -1)"
+            if [[ "${latest_state}" != Complete* ]]; then
+                stack_healthy=false
+            fi
         fi
         services+="${short_name}(${replicas}) "
     done < <(docker stack services "${stack}" --format '{{.Name}}\t{{.Replicas}}' 2>/dev/null)

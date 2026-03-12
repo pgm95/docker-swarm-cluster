@@ -39,4 +39,4 @@ EOF
 
 /app/bootstrap.sh
 
-exec sleep infinity
+echo "LDAP bootstrap complete."

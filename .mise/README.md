@@ -89,7 +89,7 @@ Infra stacks deploy in `NN_` folder-prefix order (auto-discovered by `find_stack
 
 ### Init Sidecars
 
-Stacks needing external resources use `init-` prefixed sidecar services. These run idempotent setup (DB roles, LDAP users), then `exec sleep infinity` for Swarm convergence. Provisioner credentials come from `GLOBAL_SECRETS`.
+Stacks needing external resources use `init-` prefixed sidecar services. These run idempotent setup (DB roles, LDAP users) and exit cleanly. The `*deploy-init` anchor (`condition: on-failure`, `failure_action: continue`, `monitor: 0s`) lets Swarm treat exit 0 as "done" without restart loops or false rollbacks. Provisioner credentials come from `GLOBAL_SECRETS`.
 
 ## Task Reference
 

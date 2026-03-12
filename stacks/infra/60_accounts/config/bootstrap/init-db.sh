@@ -38,4 +38,3 @@ psql -v ON_ERROR_STOP=1 <<-EOSQL
 EOSQL
 
 echo "Database provisioning complete."
-exec sleep infinity

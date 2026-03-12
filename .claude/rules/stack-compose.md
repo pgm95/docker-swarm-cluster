@@ -31,6 +31,7 @@ Each service makes two choices — WHERE (placement) and HOW (behavior):
 deploy:
   <<: [*place-vm, *deploy]           # normal service on VM
   <<: [*place-storage, *deploy-stop-first]  # database on storage node
+  <<: [*place-vm, *deploy-init]      # init sidecar on VM
 ```
 
 **Placement anchors:**
@@ -51,8 +52,11 @@ Use node labels for placement, never hardcoded node names.
 |--------|-------------|----------|
 | `*deploy` | `start-first` | Default — zero-downtime rolling updates |
 | `*deploy-stop-first` | `stop-first` | Host-mode ports, databases, exclusive-access volumes |
+| `*deploy-init` | `stop-first` | Init sidecars that exit after provisioning |
 
 `*deploy-stop-first` inherits restart + rollback from `*deploy` via `<<:`, only overrides `update_config`.
+
+`*deploy-init` uses `condition: on-failure` (exit 0 = done, exit 1 = retry), `failure_action: continue` (sidecar failure doesn't rollback the stack), and `monitor: 0s` (prevents Swarm from misinterpreting a quick exit as a failed update).
 
 ## Environment Variable Interpolation
 
