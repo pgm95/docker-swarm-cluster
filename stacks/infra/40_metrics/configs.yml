@@ -47,6 +47,9 @@ configs:
   grafana_dashboard_registry:
     name: grafana_dashboard_registry_${DEPLOY_VERSION}
     file: ./config/grafana/dashboards/docker-registry.json
+  grafana_dashboard_node_exporter:
+    name: grafana_dashboard_node_exporter_${DEPLOY_VERSION}
+    file: ./config/grafana/dashboards/node-exporter.json
   init_db_entrypoint:
     name: metrics_init_db_${DEPLOY_VERSION}
     file: ./config/bootstrap/init-db.sh

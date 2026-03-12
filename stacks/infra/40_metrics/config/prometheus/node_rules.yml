@@ -28,31 +28,19 @@
       )
     "record": "instance:node_memory_utilisation:ratio"
   - "expr": |
-      rate(node_vmstat_pgmajfault{job="node"}[1m])
-    "record": "instance:node_vmstat_pgmajfault:rate1m"
-  - "expr": |
-      rate(node_disk_io_time_seconds_total{job="node", device!=""}[1m])
-    "record": "instance_device:node_disk_io_time_seconds:rate1m"
-  - "expr": |
-      rate(node_disk_io_time_weighted_seconds_total{job="node", device!=""}[1m])
-    "record": "instance_device:node_disk_io_time_weighted_seconds:rate1m"
+      1 - (
+        node_filesystem_avail_bytes{job="node", fstype=~"ext4|xfs|btrfs|zfs"}
+      /
+        node_filesystem_size_bytes{job="node", fstype=~"ext4|xfs|btrfs|zfs"}
+      )
+    "record": "instance_mountpoint:node_filesystem_utilisation:ratio"
   - "expr": |
       sum without (device) (
-        rate(node_network_receive_bytes_total{job="node", device!="lo"}[1m])
+        rate(node_network_receive_bytes_total{job="node", device!~"lo|docker.*|veth.*|vx-.*|br-.*"}[1m])
       )
-    "record": "instance:node_network_receive_bytes_excluding_lo:rate1m"
+    "record": "instance:node_network_receive_bytes:rate1m"
   - "expr": |
       sum without (device) (
-        rate(node_network_transmit_bytes_total{job="node", device!="lo"}[1m])
+        rate(node_network_transmit_bytes_total{job="node", device!~"lo|docker.*|veth.*|vx-.*|br-.*"}[1m])
       )
-    "record": "instance:node_network_transmit_bytes_excluding_lo:rate1m"
-  - "expr": |
-      sum without (device) (
-        rate(node_network_receive_drop_total{job="node", device!="lo"}[1m])
-      )
-    "record": "instance:node_network_receive_drop_excluding_lo:rate1m"
-  - "expr": |
-      sum without (device) (
-        rate(node_network_transmit_drop_total{job="node", device!="lo"}[1m])
-      )
-    "record": "instance:node_network_transmit_drop_excluding_lo:rate1m"
+    "record": "instance:node_network_transmit_bytes:rate1m"
