@@ -14,6 +14,39 @@ configs:
   grafana_datasource:
     name: grafana_datasource_${DEPLOY_VERSION}
     file: ./config/grafana/datasource.yml
+  grafana_dashboards_provisioner:
+    name: grafana_dashboards_provisioner_${DEPLOY_VERSION}
+    file: ./config/grafana/dashboards.yml
+  grafana_dashboard_crowdsec_overview:
+    name: grafana_dashboard_crowdsec_overview_${DEPLOY_VERSION}
+    file: ./config/grafana/dashboards/crowdsec-overview.json
+  grafana_dashboard_crowdsec_insight:
+    name: grafana_dashboard_crowdsec_insight_${DEPLOY_VERSION}
+    file: ./config/grafana/dashboards/crowdsec-insight.json
+  grafana_dashboard_crowdsec_lapi:
+    name: grafana_dashboard_crowdsec_lapi_${DEPLOY_VERSION}
+    file: ./config/grafana/dashboards/crowdsec-lapi-metrics.json
+  grafana_dashboard_crowdsec_details:
+    name: grafana_dashboard_crowdsec_details_${DEPLOY_VERSION}
+    file: ./config/grafana/dashboards/crowdsec-details-per-machine.json
+  grafana_dashboard_crowdsec_alerts:
+    name: grafana_dashboard_crowdsec_alerts_${DEPLOY_VERSION}
+    file: ./config/grafana/dashboards/crowdsec-detailed-alerts.json
+  grafana_dashboard_traefik:
+    name: grafana_dashboard_traefik_${DEPLOY_VERSION}
+    file: ./config/grafana/dashboards/traefik-standalone.json
+  grafana_dashboard_syncthing:
+    name: grafana_dashboard_syncthing_${DEPLOY_VERSION}
+    file: ./config/grafana/dashboards/syncthing-metrics.json
+  grafana_dashboard_borgmatic:
+    name: grafana_dashboard_borgmatic_${DEPLOY_VERSION}
+    file: ./config/grafana/dashboards/borgamatic-logs.json
+  grafana_dashboard_uptimekuma:
+    name: grafana_dashboard_uptimekuma_${DEPLOY_VERSION}
+    file: ./config/grafana/dashboards/uptime-kuma.json
+  grafana_dashboard_registry:
+    name: grafana_dashboard_registry_${DEPLOY_VERSION}
+    file: ./config/grafana/dashboards/docker-registry.json
   init_db_entrypoint:
     name: metrics_init_db_${DEPLOY_VERSION}
     file: ./config/bootstrap/init-db.sh

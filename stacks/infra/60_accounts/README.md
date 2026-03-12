@@ -34,16 +34,29 @@ Passwords from `secrets.env` — single source of truth, no duplication with the
 
 ### init-ldap (LDAP)
 
-Seeds bind users needed by Authelia and WebFinger using LLDAP's built-in `/app/bootstrap.sh`.
-Generates user config JSON from compose env vars at runtime, writes to `/tmp/bootstrap/user-configs`
-(`USER_CONFIGS_DIR` env var). Creates users via GraphQL API, sets passwords via `lldap_set_password`
-(OPAQUE protocol). Fully idempotent — skips existing users, updates changed, re-syncs passwords
-on every deploy.
+Seeds groups and users using LLDAP's built-in `/app/bootstrap.sh`. Generates group and user
+config JSON from compose env vars at runtime, writes to `/tmp/bootstrap/group-configs`
+(`GROUP_CONFIGS_DIR`) and `/tmp/bootstrap/user-configs` (`USER_CONFIGS_DIR`). Creates groups
+first, then users via GraphQL API. Sets passwords via `lldap_set_password` (OPAQUE protocol).
+Fully idempotent — skips existing entries, updates changed, re-syncs passwords on every deploy.
 
-| Bind User | Group | Consumer |
-|-----------|-------|----------|
-| `AUTHELIA_LDAP_BIND_USER` | `lldap_password_manager` | Authelia (password reset access) |
-| `CARPAL_LDAP_BIND_USER` | `lldap_strict_readonly` | WebFinger (read-only queries) |
+**Groups created:**
+
+| Group | Source | Purpose |
+|-------|--------|---------|
+| `GLOBAL_LDAP_ADMIN_GROUP` | mise `[env]` | App-level admin role, mapped by OIDC consumers (Grafana, Mealie) |
+
+**Users bootstrapped:**
+
+| User | Groups | Purpose |
+|------|--------|---------|
+| `GLOBAL_USERNAME` (admin) | `GLOBAL_LDAP_ADMIN_GROUP`, `lldap_password_manager` | Primary admin — LLDAP creates the user, bootstrap adds group memberships |
+| `AUTHELIA_LDAP_BIND_USER` | `lldap_password_manager` | Authelia bind user (password reset access) |
+| `CARPAL_LDAP_BIND_USER` | `lldap_strict_readonly` | WebFinger bind user (read-only queries) |
+
+The admin user already exists (created by LLDAP at startup). Bootstrap skips creation and
+syncs group memberships. `lldap_admin` membership is managed by LLDAP itself, not bootstrap —
+the warning about it not being declared in config files is expected.
 
 ## WebFinger Custom Image
 

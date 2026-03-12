@@ -23,6 +23,8 @@ services:
       REGISTRY_AUTH_HTPASSWD_PATH: /run/secrets/registry_htpasswd
       REGISTRY_STORAGE_DELETE_ENABLED: "true"
       REGISTRY_HTTP_SECRET: ${REGISTRY_HTTP_SECRET}
+      REGISTRY_HTTP_DEBUG_ADDR: 0.0.0.0:5001
+      REGISTRY_HTTP_DEBUG_PROMETHEUS_ENABLED: "true"
       REGISTRY_LOG_LEVEL: info
       OTEL_TRACES_EXPORTER: none
     secrets:
@@ -32,6 +34,7 @@ services:
         target: /init.sh
     networks:
       - infra_gw-internal
+      - infra_metrics
     volumes:
       - registry-data:/var/lib/registry
     healthcheck:
@@ -61,4 +64,6 @@ volumes:
 
 networks:
   infra_gw-internal:
+    external: true
+  infra_metrics:
     external: true

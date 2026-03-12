@@ -14,6 +14,11 @@ api:
       - 100.64.0.0/10
     use_forwarded_for_headers: true
 
+prometheus:
+  enabled: true
+  listen_addr: 0.0.0.0
+  listen_port: 6060
+
 db_config:
   log_level: info
   type: pgx

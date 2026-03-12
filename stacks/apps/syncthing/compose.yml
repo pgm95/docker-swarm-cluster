@@ -11,8 +11,10 @@ services:
     environment:
       - PUID=${GLOBAL_NONROOT_PUID}
       - PGID=${GLOBAL_NONROOT_PGID}
+      - STGUIAPIKEY=${SYNCTHING_API_KEY}
     networks:
       - infra_gw-internal
+      - infra_metrics
     ports:
       # Sync protocol - must be host mode for peer discovery
       - target: 22000
@@ -57,4 +59,6 @@ volumes:
 
 networks:
   infra_gw-internal:
+    external: true
+  infra_metrics:
     external: true

@@ -2,17 +2,20 @@ apiVersion: 1
 datasources:
   - name: Prometheus
     type: prometheus
+    uid: prometheus
     url: http://prometheus:9090
     isDefault: true
     access: proxy
     editable: true
   - name: VictoriaMetrics
     type: prometheus
+    uid: victoriametrics
     url: http://victoriametrics:8428
     access: proxy
     editable: true
   - name: Loki
     type: loki
+    uid: loki
     url: http://loki:3100
     access: proxy
     editable: true
