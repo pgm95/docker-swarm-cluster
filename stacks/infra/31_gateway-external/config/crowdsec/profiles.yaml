@@ -7,7 +7,7 @@ decisions:
     duration: 4h
 on_success: break
 notifications:
-  - http_victoria
+  - http_loki
 ---
 name: default_ip_remediation
 filters:
@@ -17,7 +17,7 @@ decisions:
     duration: 4h
 on_success: break
 notifications:
-  - http_victoria
+  - http_loki
 ---
 name: default_range_remediation
 filters:
@@ -27,4 +27,4 @@ decisions:
     duration: 4h
 on_success: break
 notifications:
-  - http_victoria
+  - http_loki

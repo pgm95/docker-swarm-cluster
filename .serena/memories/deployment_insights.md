@@ -21,7 +21,7 @@ All nodes over Tailscale (100.88.0.x). Docker Engine 29.2.1.
 - CrowdSec: Docker stdout acquisition via socket-proxy, bouncer reconnects after startup race
 - Geoblock: Auto-bootstrap, country filtering active
 - Registry: docker login end-to-end through Traefik TLS
-- Full metrics stack (Prometheus, VictoriaMetrics, Grafana with OIDC, Uptime Kuma)
+- Full metrics stack (Prometheus, Grafana with OIDC, Uptime Kuma) — VictoriaMetrics removed, CrowdSec alerts pipeline migrated to Loki
 - Prometheus scraping 10 targets: both Traefiks, CrowdSec, Loki, Alloy (3x global), Node Exporter (3x global), Registry, Syncthing, self
 - Global services (node-exporter, alloy) use `dockerswarm_sd_configs` for per-task discovery with hostname-based `instance` labels
 - 10 Grafana dashboards provisioned via Docker Configs (5 CrowdSec, Traefik, Syncthing, Borgmatic logs, Uptime Kuma, Node Exporter)
@@ -34,11 +34,13 @@ All nodes over Tailscale (100.88.0.x). Docker Engine 29.2.1.
 
 ### Rollback-Paused State Recovery
 
-When `start-first` + `FailureAction: rollback` triggers and the rollback target is also broken, the service enters `rollback_paused` with zero running tasks. `docker service update --force` retries but rolls back to the same broken spec. Only `swarm:remove` + fresh `swarm:deploy` breaks the cycle.
+When `start-first` + `FailureAction: rollback` triggers and the rollback target is also broken, the service enters `rollback_paused` with zero running tasks. `docker service update --force` retries but rolls back to the same broken spec. Only `swarm:remove` + fresh `swarm:deploy` breaks the cycle. Note: this only applies during **updates** — fresh deploys after `swarm:remove` have no old spec to rollback to, so the restart policy handles transient failures without intervention.
 
-### CrowdSec Silent Rollback Race
+### CrowdSec LAPI Race (Resolved)
 
-During initial deploy, `start-first` + `FailureAction: rollback` can silently revert CrowdSec to its old config. Timeline: new task can't connect to Postgres (init-db hasn't provisioned yet), exits cleanly (code 0, state `complete`), Swarm evaluates within the 5s Monitor window, sees failure, auto-rolls back. Old task continues on SQLite — deploy appears successful (1/1 replicas). Fix: `docker service update --force` after init-db converges. One-time issue on initial migration.
+CrowdSec's entrypoint starts LAPI in background, then immediately runs `cscli machines add`. If LAPI isn't ready (Postgres connection pending), `cscli` fails with exit 1. Transient — succeeds on 2nd or 3rd restart attempt. Previously compounded by two issues: (1) `start-first` caused old/new tasks to write simultaneously to `crowdsec-app` volume, corrupting credentials; (2) `failure_action: rollback` triggered rollback cascade instead of letting restart policy retry.
+
+**Fix applied**: `*deploy-stop-first` (exclusive volume access) + `failure_action: continue` (restart policy handles the race). Deployed and verified — CrowdSec converges cleanly.
 
 ### Mealie v3 Healthcheck
 
@@ -110,6 +112,19 @@ Init sidecars (init-db, init-ldap) use `*deploy-init` anchor and exit after prov
 - `docker service update --force` (without `--detach`) falsely reports "Detected task failure" because its built-in progress tracker expects tasks to stay running. Use `--detach` for manual re-runs
 - Convergence checker (`deploy-convergence.sh`) and `swarm:status` recognize `Complete` tasks via `_is_task_complete()` — checks if the latest task state starts with "Complete"
 - When dependency is down (e.g., Postgres scaled to 0), init task stays `Running` in the wait loop and recovers automatically when the dependency returns
+
+### VictoriaMetrics → Loki Migration (CrowdSec Alerts)
+
+Rewrote CrowdSec HTTP notification from VM remote-write to Loki push API with structured metadata. Key LogQL lessons:
+
+- Prometheus `instant` queries → Loki `queryType: "instant"` (not `"range"`). Table/pie/geomap panels can't render range query results.
+- Prometheus subquery `[30d:1m]` has no Loki equivalent. Use `$__range` (tied to Grafana time picker).
+- Structured metadata auto-extracts into metric query labels — use `| keep` to control cardinality.
+- Loki log queries return labels as a JSON blob column. Use Grafana `extractFields` transformation to expand into separate columns for table panels.
+
+### Grafana Security Hardening
+
+Added `[security]` section to `grafana.ini`: `secret_key` from Docker Secret (file reference), `cookie_secure = true`, `cookie_samesite = lax`. Without `secret_key`, Grafana generates a random one per container — sessions invalidate on every redeploy.
 
 ### Prometheus dockerswarm_sd_configs — Port Fallback
 

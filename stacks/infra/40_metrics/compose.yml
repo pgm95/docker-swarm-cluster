@@ -13,6 +13,7 @@ services:
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
       - "--web.enable-lifecycle"
     secrets:
       - syncthing_api_key
@@ -85,40 +86,6 @@ services:
       resources:
         <<: *resources-tiny
 
-  victoriametrics:
-    image: victoriametrics/victoria-metrics:v1.135.0
-    entrypoint: ["/bin/sh", "/init.sh"]
-    logging:
-      <<: *logging
-    stop_grace_period: 30s
-    command:
-      - "--storageDataPath=/storage"
-      - "--httpListenAddr=:8428"
-    environment:
-      VM_OWNER: ${GLOBAL_NONROOT_DOCKER}
-    configs:
-      - source: victoriametrics_init
-        target: /init.sh
-    networks:
-      - infra_metrics
-      - infra_gw-internal
-    volumes:
-      - victoriametrics-data:/storage
-    healthcheck:
-      test: ["NONE"]
-    deploy:
-      <<: [*place-vm, *deploy]
-      mode: replicated
-      replicas: 1
-      resources:
-        <<: *resources-large
-      labels:
-        - "traefik.enable=true"
-        - "traefik.scope.internal=true"
-        - "traefik.http.routers.victoria.rule=Host(`victoria.${DOMAIN_PRIVATE}`)"
-        - "traefik.http.routers.victoria.entrypoints=websecure"
-        - "traefik.http.services.victoria.loadbalancer.server.port=8428"
-
   grafana:
     image: grafana/grafana:12.4.0
     logging:
@@ -132,6 +99,7 @@ services:
       - grafana_oidc_client
       - grafana_oidc_secret
       - grafana_postgres_password
+      - grafana_secret_key
     configs:
       - source: grafana_ini
         target: /etc/grafana/grafana.ini
@@ -256,7 +224,6 @@ services:
 
 volumes:
   prometheus-data:
-  victoriametrics-data:
   grafana-data:
   uptimekuma-data:
 
