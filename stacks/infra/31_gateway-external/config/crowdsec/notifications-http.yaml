@@ -1,16 +1,22 @@
-# Sends decision metrics to VictoriaMetrics
+# Sends decision data to Loki as structured log entries
 type: http
-name: http_victoria
+name: http_loki
 log_level: debug
 
-format: >
+format: |
+  {{- $ts := mul (now | unixEpoch) 1000000000 -}}
+  {"streams":[{"stream":{"job":"crowdsec","instance":"racknerd"},"values":[
+  {{- $first := true -}}
   {{- range $Alert := . -}}
   {{- range .Decisions -}}
-  {"metric":{"__name__":"cs_lapi_decision","instance":"racknerd","country":"{{$Alert.Source.Cn}}","asname":"{{$Alert.Source.AsName}}","asnumber":"{{$Alert.Source.AsNumber}}","latitude":"{{$Alert.Source.Latitude}}","longitude":"{{$Alert.Source.Longitude}}","iprange":"{{$Alert.Source.Range}}","scenario":"{{.Scenario}}","type":"{{.Type}}","duration":"{{.Duration}}","scope":"{{.Scope}}","ip":"{{.Value}}"},"values": [1],"timestamps":[{{now|unixEpoch}}000]}
-  {{- end }}
+  {{- if not $first }},{{ end -}}
+  {{- $first = false -}}
+  ["{{ $ts }}","{{ .Type }} {{ .Value }} {{ .Scenario }} {{ $Alert.Source.Cn }}",{"country":"{{ $Alert.Source.Cn }}","asname":"{{ $Alert.Source.AsName }}","asnumber":"{{ $Alert.Source.AsNumber }}","latitude":"{{ $Alert.Source.Latitude }}","longitude":"{{ $Alert.Source.Longitude }}","iprange":"{{ $Alert.Source.Range }}","scenario":"{{ .Scenario }}","type":"{{ .Type }}","duration":"{{ .Duration }}","scope":"{{ .Scope }}","ip":"{{ .Value }}"}]
   {{- end -}}
+  {{- end -}}
+  ]}]}
 
-url: http://victoriametrics:8428/api/v1/import
+url: http://loki:3100/loki/api/v1/push
 method: POST
 headers:
   Content-Type: application/json
