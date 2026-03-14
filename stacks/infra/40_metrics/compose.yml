@@ -107,28 +107,22 @@ services:
         target: /etc/grafana/provisioning/datasources/datasource.yml
       - source: grafana_dashboards_provisioner
         target: /etc/grafana/provisioning/dashboards/dashboards.yml
-      - source: grafana_dashboard_crowdsec_overview
-        target: /var/lib/grafana/dashboards/crowdsec-overview.json
-      - source: grafana_dashboard_crowdsec_insight
-        target: /var/lib/grafana/dashboards/crowdsec-insight.json
-      - source: grafana_dashboard_crowdsec_lapi
-        target: /var/lib/grafana/dashboards/crowdsec-lapi-metrics.json
-      - source: grafana_dashboard_crowdsec_details
-        target: /var/lib/grafana/dashboards/crowdsec-details-per-machine.json
-      - source: grafana_dashboard_crowdsec_alerts
-        target: /var/lib/grafana/dashboards/crowdsec-detailed-alerts.json
+      - source: grafana_dashboard_crowdsec_prom
+        target: /etc/grafana/dashboards/crowdsec-prom.json
+      - source: grafana_dashboard_crowdsec_loki
+        target: /etc/grafana/dashboards/crowdsec-loki.json
       - source: grafana_dashboard_traefik
-        target: /var/lib/grafana/dashboards/traefik-standalone.json
+        target: /etc/grafana/dashboards/traefik-standalone.json
       - source: grafana_dashboard_syncthing
-        target: /var/lib/grafana/dashboards/syncthing-metrics.json
+        target: /etc/grafana/dashboards/syncthing-metrics.json
       - source: grafana_dashboard_borgmatic
-        target: /var/lib/grafana/dashboards/borgamatic-logs.json
+        target: /etc/grafana/dashboards/borgamatic-logs.json
       - source: grafana_dashboard_uptimekuma
-        target: /var/lib/grafana/dashboards/uptime-kuma.json
+        target: /etc/grafana/dashboards/uptime-kuma.json
       - source: grafana_dashboard_registry
-        target: /var/lib/grafana/dashboards/docker-registry.json
+        target: /etc/grafana/dashboards/docker-registry.json
       - source: grafana_dashboard_node_exporter
-        target: /var/lib/grafana/dashboards/node-exporter.json
+        target: /etc/grafana/dashboards/node-exporter.json
     networks:
       - infra_metrics
       - infra_gw-internal

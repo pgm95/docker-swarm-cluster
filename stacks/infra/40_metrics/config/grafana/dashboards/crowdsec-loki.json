@@ -3170,8 +3170,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Crowdsec Cyber Threat Insights",
-  "uid": "cc93901e-cd55-4492-afd0-3d56e2eab00b",
+  "title": "Crowdsec Live Threat Insights",
+  "uid": "crowdsec-loki",
   "version": 141,
   "weekStart": "",
   "gnetId": null

@@ -45,6 +45,27 @@ Requests pass through (in order):
 - AppSec provides virtual patching
 - Log acquisition reads Traefik logs via local socket-proxy (minimal permissions: CONTAINERS, INFO only)
 - Postgres-backed for persistent decisions across restarts
+- Wrapper entrypoint waits for Postgres overlay DNS before starting (survives `stop-first` redeploys)
+
+### Decision logging
+
+CrowdSec pushes ban decisions directly to Loki — this is separate from the general container log pipeline (Alloy).
+
+```text
+CrowdSec decision
+     │ notifications-http.yaml (Go template)
+     │ HTTP POST to loki:3100/loki/api/v1/push
+     ▼
+   Loki ──► Grafana ("Crowdsec Cyber Threat Insights" dashboard)
+```
+
+The notification plugin (`http_loki`) fires on every ban from all three profiles (appsec, IP, range). Each push includes:
+
+- **Stream labels**: `job=crowdsec`, `instance=<host>`
+- **Structured metadata**: `country`, `ip`, `scenario`, `type`, `duration`, `asname`, `asnumber`, `latitude`, `longitude`, `iprange`, `scope`
+- **Log line**: human-readable summary (`{type} {ip} {scenario} {country}`)
+
+The Grafana dashboard uses LogQL `count_over_time` with `| keep` stages for aggregation panels (summary table, country pie chart, geo map) and raw log queries for the realtime table.
 
 ## Geoblock Bootstrap
 
