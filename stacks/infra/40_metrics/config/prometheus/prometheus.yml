@@ -100,12 +100,16 @@ scrape_configs:
       - targets:
         - syncthing:8384
 
-  # Uptime Kuma metrics (requires API key from Settings > API Keys)
+  # Uptime Kuma metrics
+  # Requires WebUI credentials or API key
+  # Once API key is created, basic_auth login is permanently disabled.
+  # Metrics: monitor_status, monitor_response_time, monitor_cert_days_remaining
   # - job_name: uptime-kuma
   #   scrape_interval: 30s
-  #   metrics_path: "/metrics"
+  #   metrics_path: /metrics
   #   static_configs:
   #     - targets:
   #       - uptime-kuma:3001
   #   basic_auth:
-  #     password: "<api-key-from-ui>"
+  #     username: "" # Leave blank if using API key
+  #     password_file: /run/secrets/uptime_kuma_api_key_or_password
