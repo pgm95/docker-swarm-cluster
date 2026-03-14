@@ -135,6 +135,7 @@ services:
 
   crowdsec:
     image: crowdsecurity/crowdsec:v1.7.6
+    entrypoint: ["/bin/bash", "/crowdsec-entrypoint.sh"]
     logging:
       <<: *logging
     stop_grace_period: 30s
@@ -149,17 +150,16 @@ services:
       - BOUNCER_KEY_TRAEFIK=${BOUNCER_KEY_TRAEFIK}
       - CTI_KEY=${CROWDSEC_CTI_KEY}
       - CROWDSEC_POSTGRES_PASSWORD=${CROWDSEC_POSTGRES_PASSWORD}
-      - CROWDSEC_BYPASS_DB_VOLUME_CHECK=true # No db volume needed with remote Postgres
-      # If rate limited by CrowdSec, set OFFLINE_MODE to true
-      # See: https://github.com/crowdsecurity/crowdsec/issues/4165
-      - OFFLINE_MODE=true
-      - DISABLE_HUB_UPGRADE=true
+      # Uncomment these when redeploying frequently to avoid CAPI rate-limits
+      - NO_HUB_UPGRADE=true
       - DISABLE_ONLINE_API=true
-      # Enrollment only needed on first run, comment out after that
+      # Hub enrollment is only needed once, comment these after first run
       # - ENROLL_KEY=${CROWDSEC_ENROLL_KEY}
       # - ENROLL_TAGS=Swarm Docker Traefik
       # - ENROLL_INSTANCE_NAME=swarm-cluster
     configs:
+      - source: crowdsec_entrypoint
+        target: /crowdsec-entrypoint.sh
       - source: crowdsec_acquis
         target: /etc/crowdsec/acquis.yaml
       - source: crowdsec_profiles
@@ -177,6 +177,7 @@ services:
       - infra_postgres
     volumes:
       - crowdsec-app:/etc/crowdsec
+      - crowdsec-data:/var/lib/crowdsec/data
     healthcheck:
       test: ["CMD", "cscli", "lapi", "status"]
       interval: 10s
@@ -227,6 +228,7 @@ volumes:
   traefik-certs:
   traefik-geoblock:
   crowdsec-app:
+  crowdsec-data:
 
 networks:
   infra_gw-external:
