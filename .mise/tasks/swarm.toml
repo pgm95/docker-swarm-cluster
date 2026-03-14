@@ -366,29 +366,3 @@ while IFS= read -r net; do
     fi
 done < <(get_infra_networks)
 '''
-
-["registry:auth"]
-description = "Login all swarm nodes to the private registry"
-run = '''{% raw %}
-#!/usr/bin/env bash
-source .mise/tasks/scripts/resolve-nodes.sh
-mapfile -t nodes < <(get_swarm_nodes | cut -f1)
-echo "Registry: ${GLOBAL_SWARM_OCI_REGISTRY}"
-echo "Nodes: ${#nodes[@]}"
-echo ""
-failed=0
-for node in "${nodes[@]}"; do
-    if echo "${REGISTRY_PASS}" | ssh_node_stdin "${node}" "docker login -u '${REGISTRY_USER}' --password-stdin '${GLOBAL_SWARM_OCI_REGISTRY}'" 2>/dev/null; then
-        echo "  ${node}: ok"
-    else
-        echo "  ${node}: FAILED"
-        ((failed++))
-    fi
-done
-echo ""
-if [[ ${failed} -gt 0 ]]; then
-    echo "ERROR: ${failed} node(s) failed to authenticate"
-    exit 1
-fi
-echo "All nodes authenticated."
-{% endraw %}'''

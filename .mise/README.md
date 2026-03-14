@@ -91,39 +91,6 @@ Infra stacks deploy in `NN_` folder-prefix order (auto-discovered by `find_stack
 
 Stacks needing external resources use `init-` prefixed sidecar services. These run idempotent setup (DB roles, LDAP users) and exit cleanly. The `*deploy-init` anchor (`condition: on-failure`, `failure_action: continue`, `monitor: 0s`) lets Swarm treat exit 0 as "done" without restart loops or false rollbacks. Provisioner credentials come from `GLOBAL_SECRETS`.
 
-## Task Reference
-
-```text
-# Cluster lifecycle
-mise run site:deploy                          # Deploy everything (infra then apps)
-mise run site:deploy-infra                    # Infra stacks only (ordered)
-mise run site:deploy-apps                     # App stacks only (skips .nodeploy)
-mise run site:reset                           # Teardown: stacks, secrets, configs, networks
-mise run site:reset --volumes                 # Teardown including named volumes
-
-# Single stack
-mise run swarm:deploy stacks/<ns>/<stack>     # Deploy one stack
-mise run swarm:remove stacks/<ns>/<stack>     # Remove one stack
-
-# Operations
-mise run swarm:status                         # Node health + stack replica status
-mise run swarm:cleanup                        # Remove unused secrets/configs, prune containers
-mise run swarm:cleanup --prune-images         # Also prune unused images on all nodes
-
-# Registry
-mise run registry:auth                        # Login all swarm nodes to private registry
-
-# Secrets
-mise run sops:init                            # Generate age key, patch SOPS config
-mise run sops:encrypt                         # Encrypt all plaintext secrets files
-mise run sops:edit <file>                     # Decrypt in editor, re-encrypt on save
-mise run sops:status                          # Show encryption status
-
-# Environment
-mise run env:setup                            # Install tools, configure pre-commit hooks
-mise run validate                             # Run all pre-commit hooks on all files
-```
-
 ## Shared Scripts
 
 Reusable bash function libraries in `.mise/tasks/scripts/`, sourced by tasks:

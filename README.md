@@ -61,9 +61,11 @@ the final `docker stack deploy` goes over SSH to the remote Swarm manager.
 7. **Deploy:**
 
    ```bash
-   mise run registry:auth    # Login nodes to private registry
    mise run site:deploy      # Deploy everything (infra then apps)
    ```
+
+   `site:deploy-infra` automatically runs `registry:auth` after the registry stack deploys,
+   so nodes are authenticated before any stack that uses custom images.
 
    First deploy may require `docker service update --force <service>` for services that start
    before their dependencies converge.

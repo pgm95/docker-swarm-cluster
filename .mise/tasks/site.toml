@@ -24,6 +24,11 @@ for stack in "${STACKS[@]}"; do
     if ! mise run swarm:deploy "${stack}"; then
         echo "FAILED: $(basename "${stack}")"
         failed+=("$(basename "${stack}")")
+    elif [[ "$(stack_name "${stack}")" == "registry" ]]; then
+        sleep 5
+        echo "━━━ registry:auth ━━━"
+        mise run registry:auth || failed+=("registry:auth")
+        echo ""
     fi
     echo ""
 done
@@ -108,4 +113,44 @@ while IFS= read -r net; do
         echo "  skipped: ${net} (not found or in use)"
     fi
 done < <(get_infra_networks)
+{% endraw %}'''
+
+["registry:auth"]
+description = "Login all swarm nodes to the private registry"
+usage = 'flag "--local" help="Also login the local dev machine"'
+hide = true
+run = '''{% raw %}
+#!/usr/bin/env bash
+source .mise/tasks/scripts/resolve-nodes.sh
+mapfile -t nodes < <(get_swarm_nodes | cut -f1)
+echo "Registry: ${GLOBAL_SWARM_OCI_REGISTRY}"
+if [[ "${usage_local}" == "true" ]]; then
+    echo "Targets: $((${#nodes[@]} + 1)) (${#nodes[@]} nodes + local machine)"
+else
+    echo "Targets: ${#nodes[@]} nodes"
+fi
+echo ""
+failed=0
+if [[ "${usage_local}" == "true" ]]; then
+    if echo "${REGISTRY_PASS}" | docker login -u "${REGISTRY_USER}" --password-stdin "${GLOBAL_SWARM_OCI_REGISTRY}" >/dev/null; then
+        echo "  local machine: ok"
+    else
+        echo "  local machine: FAILED"
+        ((failed++))
+    fi
+fi
+for node in "${nodes[@]}"; do
+    if echo "${REGISTRY_PASS}" | ssh_node_stdin "${node}" "docker login -u '${REGISTRY_USER}' --password-stdin '${GLOBAL_SWARM_OCI_REGISTRY}'" >/dev/null; then
+        echo "  ${node}: ok"
+    else
+        echo "  ${node}: FAILED"
+        ((failed++))
+    fi
+done
+echo ""
+if [[ ${failed} -gt 0 ]]; then
+    echo "ERROR: ${failed} target(s) failed to authenticate"
+    exit 1
+fi
+echo "All targets authenticated."
 {% endraw %}'''
