@@ -30,11 +30,18 @@ create_versioned_secrets() {
     [[ -f "${STACK_PATH}/secrets.yml" ]] || return 0
     grep -q 'DEPLOY_VERSION' "${STACK_PATH}/secrets.yml" 2>/dev/null || return 0
 
-    echo "Creating versioned secrets..."
+    # Build set of secret names actually referenced in secrets.yml
+    local -A needed_secrets=()
+    while IFS= read -r name; do
+        [[ -z "${name}" ]] && continue
+        needed_secrets["${name}"]=1
+    done < <(grep 'name:.*DEPLOY_VERSION' "${STACK_PATH}/secrets.yml" 2>/dev/null \
+        | sed 's/.*name: *\([a-z_]*\)_.*/\1/' | sort -u)
+
+    echo "Creating versioned secrets (${#needed_secrets[@]} needed)..."
+    local created=0 skipped=0 filtered=0
     for secret_file in "${STACK_PATH}/secrets.env" "${GLOBAL_SECRETS}"; do
         [[ -f "${secret_file}" ]] || continue
-        echo "  From: ${secret_file}"
-        local created=0 skipped=0
         while IFS= read -r line; do
             local key="${line%%=*}"
             local value="${line#*=}"
@@ -42,7 +49,12 @@ create_versioned_secrets() {
                 key="${key%_B64}"
                 value=$(echo -n "${value}" | base64 -d) || { echo "ERROR: base64-decode failed for ${key}_B64"; return 1; }
             fi
-            local secret_name="${key,,}_${DEPLOY_VERSION}"
+            local lower_key="${key,,}"
+            if [[ -z "${needed_secrets[${lower_key}]:-}" ]]; then
+                ((filtered++))
+                continue
+            fi
+            local secret_name="${lower_key}_${DEPLOY_VERSION}"
             if docker secret inspect "${secret_name}" >/dev/null 2>&1; then
                 ((skipped++))
             elif echo -n "${value}" | docker secret create "${secret_name}" -; then
@@ -53,8 +65,8 @@ create_versioned_secrets() {
                 return 1
             fi
         done < <(sops_decrypt "${secret_file}")
-        echo "    Created: ${created}, Skipped: ${skipped}"
     done
+    echo "    Created: ${created}, Skipped: ${skipped}, Filtered: ${filtered}"
 }
 
 validate_config_files() {
