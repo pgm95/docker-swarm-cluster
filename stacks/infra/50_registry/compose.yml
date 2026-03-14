@@ -54,10 +54,7 @@ services:
       mode: replicated
       replicas: 1
       resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 256M
+        <<: *resources-large
 
 volumes:
   registry-data:

@@ -28,10 +28,7 @@ services:
       mode: replicated
       replicas: 1
       resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 256M
+        <<: *resources-large
 
   sonarr:
     image: linuxserver/sonarr:latest
@@ -58,10 +55,7 @@ services:
       mode: replicated
       replicas: 1
       resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 256M
+        <<: *resources-large
 
   prowlarr:
     image: linuxserver/prowlarr:latest
@@ -88,10 +82,7 @@ services:
       mode: replicated
       replicas: 1
       resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 256M
+        <<: *resources-large
 
   flaresolverr:
     image: flaresolverr/flaresolverr:latest
@@ -110,10 +101,7 @@ services:
       mode: replicated
       replicas: 1
       resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 256M
+        <<: *resources-large
 
 volumes:
   radarr-data:

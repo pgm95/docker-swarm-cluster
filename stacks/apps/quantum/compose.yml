@@ -53,10 +53,7 @@ services:
       mode: replicated
       replicas: 1
       resources:
-        limits:
-          memory: 256M
-        reservations:
-          memory: 128M
+        <<: *resources-medium
 
 volumes:
   quantum-data:

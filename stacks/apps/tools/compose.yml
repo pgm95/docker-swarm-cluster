@@ -19,10 +19,7 @@ services:
       mode: replicated
       replicas: 1
       resources:
-        limits:
-          memory: 256M
-        reservations:
-          memory: 128M
+        <<: *resources-medium
 
   cyberchef:
     image: ghcr.io/gchq/cyberchef:latest
@@ -42,10 +39,7 @@ services:
       mode: replicated
       replicas: 1
       resources:
-        limits:
-          memory: 256M
-        reservations:
-          memory: 128M
+        <<: *resources-medium
 
 networks:
   infra_gw-internal:

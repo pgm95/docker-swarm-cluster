@@ -56,7 +56,4 @@ services:
       mode: replicated
       replicas: 1
       resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 64M
+        <<: *resources-small

@@ -48,10 +48,7 @@ services:
         max_attempts: 3
         window: 120s
       resources:
-        limits:
-          memory: 64M
-        reservations:
-          memory: 32M
+        <<: *resources-tiny
       update_config:
         parallelism: 1
         delay: 10s
