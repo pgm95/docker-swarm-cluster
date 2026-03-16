@@ -70,6 +70,14 @@ services:
       - "--entryPoints.websecure.transport.respondingTimeouts.idleTimeout=90s"
       - "--entryPoints.websecure.proxyProtocol.trustedIPs=10.0.0.0/8,127.0.0.0/16,172.16.0.0/12,100.64.0.0/10"
       - "--entryPoints.websecure.forwardedHeaders.trustedIPs=10.0.0.0/8,127.0.0.0/16,172.16.0.0/12,100.64.0.0/10"
+      # Encoded characters — reject path-encoded reserved chars to prevent split-view attacks
+      - "--entryPoints.websecure.http.encodedCharacters.allowEncodedSlash=false"
+      - "--entryPoints.websecure.http.encodedCharacters.allowEncodedBackSlash=false"
+      - "--entryPoints.websecure.http.encodedCharacters.allowEncodedNullCharacter=false"
+      - "--entryPoints.websecure.http.encodedCharacters.allowEncodedSemicolon=false"
+      - "--entryPoints.websecure.http.encodedCharacters.allowEncodedPercent=false"
+      - "--entryPoints.websecure.http.encodedCharacters.allowEncodedQuestionMark=false"
+      - "--entryPoints.websecure.http.encodedCharacters.allowEncodedHash=false"
     environment:
       - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
       - AUTHELIA_URL=${AUTHELIA_URL}
