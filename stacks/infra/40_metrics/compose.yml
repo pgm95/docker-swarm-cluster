@@ -123,6 +123,8 @@ services:
         target: /etc/grafana/dashboards/docker-registry.json
       - source: grafana_dashboard_node_exporter
         target: /etc/grafana/dashboards/node-exporter.json
+      - source: grafana_dashboard_cadvisor
+        target: /etc/grafana/dashboards/cadvisor-overview.json
     networks:
       - infra_metrics
       - infra_gw-internal
@@ -192,6 +194,70 @@ services:
         - "homepage.widget.type=uptimekuma"
         - "homepage.widget.url=https://status.${DOMAIN_PRIVATE}"
 
+  cadvisor:
+    image: ghcr.io/google/cadvisor:0.56.2
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    command:
+      - "--docker=unix:///cadvisor-proxy/docker.sock"
+      - "--docker_only=true"
+      - "--disable_metrics=referenced_memory,tcp,udp,advtcp,sched,hugetlb,resctrl"
+      - "--housekeeping_interval=15s"
+    networks:
+      - infra_metrics
+    volumes:
+      - cadvisor-proxy:/cadvisor-proxy:ro
+      - /:/rootfs:ro
+      - /sys:/sys:ro
+      - /run/containerd/containerd.sock:/run/containerd/containerd.sock:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      <<: *deploy
+      mode: global
+      resources:
+        <<: *resources-small
+
+  cadvisor-socket-proxy:
+    image: wollomatic/socket-proxy:1.11.4
+    user: "0:0"
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    command:
+      - "-proxysocketendpoint"
+      - "/cadvisor-proxy/docker.sock"
+      - "-proxysocketendpointfilemode"
+      - "0660"
+      - "-socketpath"
+      - "/var/run/docker.sock"
+      - "-allowhealthcheck"
+      - "-allowGET"
+      - "(/v\\d+\\.\\d+/(containers/.*/json|images/json|info|version)|/_ping)"
+      - "-allowHEAD"
+      - "/_ping"
+      - "-loglevel"
+      - "WARN"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - cadvisor-proxy:/cadvisor-proxy
+    healthcheck:
+      test: ["CMD", "/healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 2
+      start_period: 5s
+    deploy:
+      <<: *deploy-stop-first
+      mode: global
+      resources:
+        <<: *resources-tiny
+
   init-db:
     image: postgres:17-alpine
     entrypoint: ["/bin/sh", "/init-db-entrypoint.sh"]
@@ -220,6 +286,7 @@ volumes:
   prometheus-data:
   grafana-data:
   uptimekuma-data:
+  cadvisor-proxy:
 
 networks:
   infra_metrics:

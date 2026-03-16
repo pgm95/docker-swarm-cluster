@@ -100,6 +100,25 @@ scrape_configs:
       - targets:
         - syncthing:8384
 
+  # cAdvisor metrics (metrics stack, global — one instance per node)
+  - job_name: cadvisor
+    dockerswarm_sd_configs:
+      - host: http://socket-proxy:2375
+        role: tasks
+        port: 8080
+    relabel_configs:
+      - source_labels: [__meta_dockerswarm_service_name]
+        regex: metrics_cadvisor
+        action: keep
+      - source_labels: [__meta_dockerswarm_task_desired_state]
+        regex: running
+        action: keep
+      - source_labels: [__meta_dockerswarm_network_name]
+        regex: infra_metrics
+        action: keep
+      - source_labels: [__meta_dockerswarm_node_hostname]
+        target_label: instance
+
   # Uptime Kuma metrics
   # Requires WebUI credentials or API key
   # Once API key is created, basic_auth login is permanently disabled.

@@ -41,6 +41,6 @@ loki.write "loki" {
   }
 
   external_labels = {
-    node = env("HOSTNAME"),
+    node = env("NODE_HOSTNAME"),
   }
 }
