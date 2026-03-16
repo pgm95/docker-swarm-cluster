@@ -85,13 +85,17 @@ sys.exit(1 if unresolved else 0)
 ' "${node_json}"
 }
 
+# SSH options for non-interactive node access. Skips host key prompts so
+# first-time connections to dynamically discovered nodes work unattended.
+SWARM_SSH_OPTS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR)
+
 # SSH to a swarm node. User is configurable via SWARM_SSH_USER (default: root).
 # Uses -n to prevent stdin consumption (safe for all command-arg callers).
 ssh_node() {
     local hostname="$1"
     shift
     local user="${SWARM_SSH_USER:-root}"
-    ssh -n "${user}@${hostname}" "$@"
+    ssh -n "${SWARM_SSH_OPTS[@]}" "${user}@${hostname}" "$@"
 }
 
 # SSH to a swarm node with stdin passthrough (for piping data to remote commands).
@@ -99,5 +103,5 @@ ssh_node_stdin() {
     local hostname="$1"
     shift
     local user="${SWARM_SSH_USER:-root}"
-    ssh "${user}@${hostname}" "$@"
+    ssh "${SWARM_SSH_OPTS[@]}" "${user}@${hostname}" "$@"
 }
