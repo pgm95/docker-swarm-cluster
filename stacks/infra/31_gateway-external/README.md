@@ -67,6 +67,13 @@ The notification plugin (`http_loki`) fires on every ban from all three profiles
 
 The Grafana dashboard uses LogQL `count_over_time` with `| keep` stages for aggregation panels (summary table, country pie chart, geo map) and raw log queries for the realtime table.
 
+### Debugging
+
+Middleware chain failures are silent. If any middleware in the entrypoint's default chain
+fails to initialize (missing database, broken config), Traefik cannot create ANY routers on
+that entrypoint. Symptom: 404 for all routes, not an error page. Check `docker service logs`
+for the actual error.
+
 ## Geoblock Bootstrap
 
 The IP2Location database is required for the geoblock middleware. If missing, the middleware fails and silently breaks all routes (404). The entrypoint wrapper (`config/traefik/entrypoint.sh`) auto-downloads and extracts the DB on first boot using `GEOBLOCK_IP2LOCATION_TOKEN` (env var, not Docker secret). The plugin's `databaseAutoUpdate` handles subsequent refreshes.

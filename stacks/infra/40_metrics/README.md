@@ -14,6 +14,12 @@ Metrics collection, storage, visualization, and uptime monitoring.
 | cadvisor-socket-proxy | Read-only Docker API proxy for cAdvisor | Global |
 | init-db | Provisions Grafana's Postgres database | Replicated (1) |
 
+## First Deploy
+
+Uptime Kuma requires manual setup: navigate to `status.DOMAIN_PRIVATE` to create an admin
+account, add Docker host `tcp://socket-proxy:2375`, create an API key and uncomment the
+Prometheus scrape target in `prometheus.yml`, then redeploy metrics.
+
 ## Scraping Global Services
 
 Replicated services have a single Swarm VIP — `static_configs` with the service DNS name works
