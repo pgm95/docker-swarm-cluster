@@ -48,6 +48,8 @@ services:
       start_period: 30s
     deploy:
       <<: [*place-onprem, *deploy]
+      update_config:
+        order: start-first
       labels:
         - "traefik.enable=true"
         - "traefik.scope.internal=true"

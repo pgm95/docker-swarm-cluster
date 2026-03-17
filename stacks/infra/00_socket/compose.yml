@@ -36,28 +36,17 @@ services:
       timeout: 5s
       retries: 3
     deploy:
-      mode: replicated
-      replicas: 1
+      <<: *deploy
+      update_config:
+        order: start-first
       placement:
         constraints:
           - node.role == manager
           - node.labels.type == vm
-      restart_policy:
-        condition: any
-        delay: 5s
-        max_attempts: 3
-        window: 120s
+      mode: replicated
+      replicas: 1
       resources:
         <<: *resources-tiny
-      update_config:
-        parallelism: 1
-        delay: 10s
-        failure_action: rollback
-        order: start-first
-      rollback_config:
-        parallelism: 1
-        delay: 10s
-        order: stop-first
 
 networks:
   infra_socket:

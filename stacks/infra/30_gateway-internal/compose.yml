@@ -102,7 +102,9 @@ services:
       retries: 3
       start_period: 10s
     deploy:
-      <<: [*place-vm, *deploy-stop-first]
+      <<: [*place-vm, *deploy]
+      update_config:
+        order: stop-first
       labels:
         - "homepage.group=Infrastructure"
         - "homepage.name=Traefik Internal"

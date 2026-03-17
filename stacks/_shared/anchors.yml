@@ -12,7 +12,8 @@ x-logging: &logging
 
 # --- Deploy behavior (restart, update, rollback) ---
 
-# Default: zero-downtime rolling updates
+# Shared restart, update, and rollback config for long-running services.
+# Each service must specify update_config.order (start-first or stop-first).
 x-deploy: &deploy
   restart_policy:
     condition: any
@@ -23,19 +24,9 @@ x-deploy: &deploy
     parallelism: 1
     delay: 10s
     failure_action: rollback
-    order: start-first
   rollback_config:
     parallelism: 1
     delay: 10s
-    order: stop-first
-
-# For host-mode ports, databases, exclusive-access volumes
-x-deploy-stop-first: &deploy-stop-first
-  <<: *deploy
-  update_config:
-    parallelism: 1
-    delay: 10s
-    failure_action: rollback
     order: stop-first
 
 # For init sidecars (run-once provisioning that exits cleanly)

@@ -35,7 +35,9 @@ services:
       retries: 3
       start_period: 10s
     deploy:
-      <<: [*place-vm, *deploy-stop-first]
+      <<: [*place-vm, *deploy]
+      update_config:
+        order: stop-first
       mode: replicated
       replicas: 1
       resources:
@@ -82,6 +84,8 @@ services:
       start_period: 10s
     deploy:
       <<: *deploy
+      update_config:
+        order: start-first
       mode: global
       resources:
         <<: *resources-tiny
@@ -138,7 +142,9 @@ services:
       retries: 5
       start_period: 30s
     deploy:
-      <<: [*place-vm, *deploy-stop-first]
+      <<: [*place-vm, *deploy]
+      update_config:
+        order: stop-first
       mode: replicated
       replicas: 1
       resources:
@@ -175,7 +181,9 @@ services:
       retries: 5
       start_period: 180s
     deploy:
-      <<: [*place-vm, *deploy-stop-first]
+      <<: [*place-vm, *deploy]
+      update_config:
+        order: stop-first
       mode: replicated
       replicas: 1
       resources:
@@ -219,6 +227,8 @@ services:
       start_period: 15s
     deploy:
       <<: *deploy
+      update_config:
+        order: start-first
       mode: global
       resources:
         <<: *resources-small
@@ -253,7 +263,9 @@ services:
       retries: 2
       start_period: 5s
     deploy:
-      <<: *deploy-stop-first
+      <<: *deploy
+      update_config:
+        order: stop-first
       mode: global
       resources:
         <<: *resources-tiny

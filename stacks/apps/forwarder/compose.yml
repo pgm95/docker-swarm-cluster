@@ -53,6 +53,8 @@ services:
       start_period: 60s
     deploy:
       <<: [*place-onprem, *deploy]
+      update_config:
+        order: start-first
       mode: replicated
       replicas: 1
       resources:

@@ -23,6 +23,8 @@ services:
       - /mnt/media:/downloads
     deploy:
       <<: [*place-storage, *deploy]
+      update_config:
+        order: start-first
       labels:
         - "traefik.enable=true"
         - "traefik.scope.internal=true"

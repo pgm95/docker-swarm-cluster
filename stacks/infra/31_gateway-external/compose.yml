@@ -126,7 +126,9 @@ services:
       retries: 3
       start_period: 10s
     deploy:
-      <<: [*place-cloud, *deploy-stop-first]
+      <<: [*place-cloud, *deploy]
+      update_config:
+        order: stop-first
       labels:
         - "crowdsec.enable=true"
         - "homepage.group=Infrastructure"
@@ -190,10 +192,8 @@ services:
       retries: 3
       start_period: 30s
     deploy:
-      <<: [*place-cloud, *deploy-stop-first]
+      <<: [*place-cloud, *deploy]
       update_config:
-        parallelism: 1
-        delay: 10s
         failure_action: continue
         order: stop-first
       mode: replicated

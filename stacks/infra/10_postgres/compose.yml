@@ -32,7 +32,9 @@ services:
       retries: 3
       start_period: 15s
     deploy:
-      <<: [*place-storage, *deploy-stop-first]
+      <<: [*place-storage, *deploy]
+      update_config:
+        order: stop-first
       endpoint_mode: dnsrr
       mode: replicated
       replicas: 1

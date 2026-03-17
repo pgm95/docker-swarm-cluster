@@ -82,7 +82,7 @@ The containerd socket is a direct bind mount — no gRPC-aware socket proxy exis
 
 ## Grafana
 
-Uses `*deploy-stop-first`. Grafana's bleve search index (in `grafana-data` volume) requires
+Uses `stop-first` update order. Grafana's bleve search index (in `grafana-data` volume) requires
 exclusive access — `start-first` starts a new task before stopping the old one, and the new
 task crashes with "index is locked by another process" when both try to hold the lock
 simultaneously.

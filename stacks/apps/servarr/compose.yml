@@ -19,6 +19,8 @@ services:
       - /mnt/servarr:/servarr
     deploy:
       <<: [*place-storage, *deploy]
+      update_config:
+        order: start-first
       labels:
         - "traefik.enable=true"
         - "traefik.scope.internal=true"
@@ -46,6 +48,8 @@ services:
       - /mnt/servarr:/servarr
     deploy:
       <<: [*place-storage, *deploy]
+      update_config:
+        order: start-first
       labels:
         - "traefik.enable=true"
         - "traefik.scope.internal=true"
@@ -73,6 +77,8 @@ services:
       - prowlarr-data:/config
     deploy:
       <<: [*place-storage, *deploy]
+      update_config:
+        order: start-first
       labels:
         - "traefik.enable=true"
         - "traefik.scope.internal=true"
@@ -97,6 +103,8 @@ services:
       - default
     deploy:
       <<: [*place-storage, *deploy]
+      update_config:
+        order: start-first
       endpoint_mode: dnsrr
       mode: replicated
       replicas: 1

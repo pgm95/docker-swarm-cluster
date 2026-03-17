@@ -42,7 +42,9 @@ services:
       retries: 3
       start_period: 60s
     deploy:
-      <<: [*place-gpu, *deploy-stop-first]
+      <<: [*place-gpu, *deploy]
+      update_config:
+        order: stop-first
       labels:
         - "traefik.enable=true"
         - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"

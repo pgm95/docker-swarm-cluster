@@ -20,6 +20,8 @@ services:
       start_period: 5s
     deploy:
       <<: [*place-vm, *deploy]
+      update_config:
+        order: start-first
       mode: replicated
       replicas: 1
       resources:
@@ -61,6 +63,8 @@ services:
       test: ["NONE"]
     deploy:
       <<: [*place-vm, *deploy]
+      update_config:
+        order: start-first
       mode: replicated
       replicas: 1
       resources:
@@ -126,6 +130,8 @@ services:
       start_period: 15s
     deploy:
       <<: [*place-vm, *deploy]
+      update_config:
+        order: start-first
       mode: replicated
       replicas: 1
       resources:
@@ -164,6 +170,8 @@ services:
       test: ["NONE"]
     deploy:
       <<: [*place-vm, *deploy]
+      update_config:
+        order: start-first
       mode: replicated
       replicas: 1
       resources:

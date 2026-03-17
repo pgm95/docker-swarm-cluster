@@ -170,7 +170,7 @@ scripts) that chown and drop privileges — `setpriv` on Debian, `su` on Alpine.
 
 - **`start-first` corrupts exclusive-access volumes.** The default `*deploy` anchor starts a
   new container before stopping the old one. For databases and services with exclusive-access
-  volumes, use `*deploy-stop-first`.
+  volumes, use `update_config.order: stop-first`.
 
 - **`start-first` + rollback can silently revert.** If a new task fails (e.g., dependency not
   ready), Swarm auto-rolls back. Deploy appears successful but runs the old version. Fix:
