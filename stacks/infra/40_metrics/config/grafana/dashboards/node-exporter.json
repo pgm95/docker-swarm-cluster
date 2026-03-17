@@ -1,4 +1,40 @@
 {
+  "title": "Node Exporter",
+  "uid": "node-exporter",
+  "id": null,
+  "version": 1,
+  "schemaVersion": 41,
+  "editable": true,
+  "graphTooltip": 1,
+  "tags": [
+    "node_exporter",
+    "prometheus"
+  ],
+  "links": [
+    {
+      "icon": "external link",
+      "tags": [],
+      "targetBlank": true,
+      "title": "GitHub",
+      "type": "link",
+      "url": "https://github.com/rfmoz/grafana-dashboards"
+    },
+    {
+      "icon": "external link",
+      "tags": [],
+      "targetBlank": true,
+      "title": "Grafana",
+      "type": "link",
+      "url": "https://grafana.com/grafana/dashboards/1860"
+    }
+  ],
+  "refresh": "1m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
   "annotations": {
     "list": [
       {
@@ -21,28 +57,6 @@
       }
     ]
   },
-  "editable": true,
-  "fiscalYearStartMonth": 0,
-  "graphTooltip": 1,
-  "id": null,
-  "links": [
-    {
-      "icon": "external link",
-      "tags": [],
-      "targetBlank": true,
-      "title": "GitHub",
-      "type": "link",
-      "url": "https://github.com/rfmoz/grafana-dashboards"
-    },
-    {
-      "icon": "external link",
-      "tags": [],
-      "targetBlank": true,
-      "title": "Grafana",
-      "type": "link",
-      "url": "https://grafana.com/grafana/dashboards/1860"
-    }
-  ],
   "panels": [
     {
       "collapsed": false,
@@ -13330,11 +13344,6 @@
       "type": "row"
     }
   ],
-  "refresh": "1m",
-  "schemaVersion": 41,
-  "tags": [
-    "linux"
-  ],
   "templating": {
     "list": [
       {
@@ -13393,15 +13402,5 @@
         "type": "query"
       }
     ]
-  },
-  "time": {
-    "from": "now-24h",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "browser",
-  "title": "Node Exporter",
-  "uid": "rYdddlPWk",
-  "version": 99,
-  "weekStart": ""
+  }
 }

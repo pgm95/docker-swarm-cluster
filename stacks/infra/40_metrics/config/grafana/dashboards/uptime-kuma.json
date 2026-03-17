@@ -1,11 +1,29 @@
 {
+  "title": "Uptime Kuma - SLA/Latency/Certs",
+  "uid": "uptime-kuma",
+  "id": null,
+  "version": 1,
+  "schemaVersion": 38,
+  "description": "A dashboard to visualize the metrics from HTTP endpoints in [Uptime Kuma](https://github.com/louislam/uptime-kuma)\r\n\r\nImproved by https://github.com/EliottGoye",
+  "editable": true,
+  "graphTooltip": 0,
+  "tags": [
+    "prometheus"
+  ],
+  "refresh": "",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
   "annotations": {
     "list": [
       {
         "builtIn": 1,
         "datasource": {
-          "type": "prometheus",
-          "uid": "prometheus"
+          "type": "datasource",
+          "uid": "grafana"
         },
         "enable": true,
         "hide": true,
@@ -21,14 +39,6 @@
       }
     ]
   },
-  "description": "A dashboard to visualize the metrics from HTTP endpoints in [Uptime Kuma](https://github.com/louislam/uptime-kuma)\r\n\r\nImproved by https://github.com/EliottGoye",
-  "editable": true,
-  "fiscalYearStartMonth": 0,
-  "gnetId": 18667,
-  "graphTooltip": 0,
-  "id": null,
-  "links": [],
-  "liveNow": false,
   "panels": [
     {
       "datasource": {
@@ -1125,12 +1135,6 @@
       "type": "stat"
     }
   ],
-  "refresh": "",
-  "schemaVersion": 38,
-  "style": "dark",
-  "tags": [
-    "uptime-kuma"
-  ],
   "templating": {
     "list": [
       {
@@ -1178,15 +1182,5 @@
         "type": "query"
       }
     ]
-  },
-  "time": {
-    "from": "now-24h",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "",
-  "title": "Uptime Kuma - SLA/Latency/Certs",
-  "uid": "See9ai7AhphoaY9phai6aewee3chia",
-  "version": 17,
-  "weekStart": ""
+  }
 }

@@ -1,4 +1,22 @@
 {
+  "title": "cAdvisor Overview",
+  "uid": "cadvisor-overview",
+  "id": null,
+  "version": 1,
+  "schemaVersion": 39,
+  "editable": true,
+  "graphTooltip": 1,
+  "tags": [
+    "cadvisor",
+    "prometheus"
+  ],
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
   "annotations": {
     "list": [
       {
@@ -21,11 +39,6 @@
       }
     ]
   },
-  "editable": true,
-  "fiscalYearStartMonth": 0,
-  "graphTooltip": 1,
-  "id": null,
-  "links": [],
   "panels": [
     {
       "collapsed": false,
@@ -1465,62 +1478,7 @@
           "refId": "A"
         }
       ]
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 59
-      },
-      "id": 50,
-      "panels": [],
-      "title": "Logs",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "loki",
-        "uid": "loki"
-      },
-      "gridPos": {
-        "h": 14,
-        "w": 24,
-        "x": 0,
-        "y": 60
-      },
-      "id": 51,
-      "options": {
-        "showTime": true,
-        "showLabels": true,
-        "showCommonLabels": false,
-        "wrapLogMessage": true,
-        "prettifyLogMessage": false,
-        "enableLogDetails": true,
-        "dedupStrategy": "none",
-        "sortOrder": "Descending"
-      },
-      "title": "Container Logs",
-      "type": "logs",
-      "targets": [
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "loki"
-          },
-          "expr": "{service=~\"$service\", node=~\"$node\"}",
-          "refId": "A"
-        }
-      ]
     }
-  ],
-  "refresh": "30s",
-  "schemaVersion": 39,
-  "tags": [
-    "cadvisor",
-    "containers",
-    "docker"
   ],
   "templating": {
     "list": [
@@ -1585,14 +1543,5 @@
         "type": "query"
       }
     ]
-  },
-  "time": {
-    "from": "now-1h",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "",
-  "title": "cAdvisor Overview",
-  "uid": "cadvisor-overview",
-  "version": 1
+  }
 }

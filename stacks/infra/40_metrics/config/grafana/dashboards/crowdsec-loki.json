@@ -1,4 +1,23 @@
 {
+  "title": "Crowdsec Live Threat Insights",
+  "uid": "crowdsec-loki",
+  "id": null,
+  "version": 1,
+  "schemaVersion": 39,
+  "description": "Cyber threat insights with CrowdSec, Loki and Grafana",
+  "editable": true,
+  "graphTooltip": 0,
+  "tags": [
+    "loki"
+  ],
+  "liveNow": true,
+  "refresh": "5m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
   "annotations": {
     "list": [
       {
@@ -11,17 +30,16 @@
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
         "type": "dashboard"
       }
     ]
   },
-  "description": "Cyber threat insights with CrowdSec, Loki and Grafana",
-  "editable": true,
-  "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
-  "id": null,
-  "links": [],
-  "liveNow": false,
   "panels": [
     {
       "datasource": {
@@ -46,1011 +64,1011 @@
               "options": {
                 "AD": {
                   "index": 0,
-                  "text": "🇦🇩 Andorra"
+                  "text": "\ud83c\udde6\ud83c\udde9 Andorra"
                 },
                 "AE": {
                   "index": 1,
-                  "text": "🇦🇪 United Arab Emirates"
+                  "text": "\ud83c\udde6\ud83c\uddea United Arab Emirates"
                 },
                 "AF": {
                   "index": 2,
-                  "text": "🇦🇫 Afghanistan"
+                  "text": "\ud83c\udde6\ud83c\uddeb Afghanistan"
                 },
                 "AG": {
                   "index": 3,
-                  "text": "🇦🇬 Antigua and Barbuda"
+                  "text": "\ud83c\udde6\ud83c\uddec Antigua and Barbuda"
                 },
                 "AI": {
                   "index": 4,
-                  "text": "🇦🇮 Anguilla"
+                  "text": "\ud83c\udde6\ud83c\uddee Anguilla"
                 },
                 "AL": {
                   "index": 5,
-                  "text": "🇦🇱 Albania"
+                  "text": "\ud83c\udde6\ud83c\uddf1 Albania"
                 },
                 "AM": {
                   "index": 6,
-                  "text": "🇦🇲 Armenia"
+                  "text": "\ud83c\udde6\ud83c\uddf2 Armenia"
                 },
                 "AN": {
                   "index": 7,
-                  "text": "🇳🇱 Netherlands Antilles"
+                  "text": "\ud83c\uddf3\ud83c\uddf1 Netherlands Antilles"
                 },
                 "AO": {
                   "index": 8,
-                  "text": "🇦🇴 Angola"
+                  "text": "\ud83c\udde6\ud83c\uddf4 Angola"
                 },
                 "AQ": {
                   "index": 9,
-                  "text": "🇦🇶 Antarctica"
+                  "text": "\ud83c\udde6\ud83c\uddf6 Antarctica"
                 },
                 "AR": {
                   "index": 10,
-                  "text": "🇦🇷 Argentina"
+                  "text": "\ud83c\udde6\ud83c\uddf7 Argentina"
                 },
                 "AS": {
                   "index": 11,
-                  "text": "🇦🇸 American Samoa"
+                  "text": "\ud83c\udde6\ud83c\uddf8 American Samoa"
                 },
                 "AT": {
                   "index": 12,
-                  "text": "🇦🇹 Austria"
+                  "text": "\ud83c\udde6\ud83c\uddf9 Austria"
                 },
                 "AU": {
                   "index": 13,
-                  "text": "🇦🇺 Australia"
+                  "text": "\ud83c\udde6\ud83c\uddfa Australia"
                 },
                 "AW": {
                   "index": 14,
-                  "text": "🇦🇼 Aruba"
+                  "text": "\ud83c\udde6\ud83c\uddfc Aruba"
                 },
                 "AX": {
                   "index": 15,
-                  "text": "🇦🇽 Åland"
+                  "text": "\ud83c\udde6\ud83c\uddfd \u00c5land"
                 },
                 "AZ": {
                   "index": 16,
-                  "text": "🇦🇿 Azerbaijan"
+                  "text": "\ud83c\udde6\ud83c\uddff Azerbaijan"
                 },
                 "BA": {
                   "index": 17,
-                  "text": "🇧🇦 Bosnia and Herzegovina"
+                  "text": "\ud83c\udde7\ud83c\udde6 Bosnia and Herzegovina"
                 },
                 "BB": {
                   "index": 18,
-                  "text": "🇧🇧 Barbados"
+                  "text": "\ud83c\udde7\ud83c\udde7 Barbados"
                 },
                 "BD": {
                   "index": 19,
-                  "text": "🇧🇩 Bangladesh"
+                  "text": "\ud83c\udde7\ud83c\udde9 Bangladesh"
                 },
                 "BE": {
                   "index": 20,
-                  "text": "🇧🇪 Belgium"
+                  "text": "\ud83c\udde7\ud83c\uddea Belgium"
                 },
                 "BF": {
                   "index": 21,
-                  "text": "🇧🇫 Burkina Faso"
+                  "text": "\ud83c\udde7\ud83c\uddeb Burkina Faso"
                 },
                 "BG": {
                   "index": 22,
-                  "text": "🇧🇬 Bulgaria"
+                  "text": "\ud83c\udde7\ud83c\uddec Bulgaria"
                 },
                 "BH": {
                   "index": 23,
-                  "text": "🇧🇭 Bahrain"
+                  "text": "\ud83c\udde7\ud83c\udded Bahrain"
                 },
                 "BI": {
                   "index": 24,
-                  "text": "🇧🇮 Burundi"
+                  "text": "\ud83c\udde7\ud83c\uddee Burundi"
                 },
                 "BJ": {
                   "index": 25,
-                  "text": "🇧🇯 Benin"
+                  "text": "\ud83c\udde7\ud83c\uddef Benin"
                 },
                 "BL": {
                   "index": 26,
-                  "text": "🇧🇱 Saint Barthélemy"
+                  "text": "\ud83c\udde7\ud83c\uddf1 Saint Barth\u00e9lemy"
                 },
                 "BM": {
                   "index": 27,
-                  "text": "🇧🇲 Bermuda"
+                  "text": "\ud83c\udde7\ud83c\uddf2 Bermuda"
                 },
                 "BN": {
                   "index": 28,
-                  "text": "🇧🇳 Brunei"
+                  "text": "\ud83c\udde7\ud83c\uddf3 Brunei"
                 },
                 "BO": {
                   "index": 29,
-                  "text": "🇧🇴 Bolivia"
+                  "text": "\ud83c\udde7\ud83c\uddf4 Bolivia"
                 },
                 "BQ": {
                   "index": 30,
-                  "text": "🇧🇶 Bonaire, Sint Eustatius and Saba"
+                  "text": "\ud83c\udde7\ud83c\uddf6 Bonaire, Sint Eustatius and Saba"
                 },
                 "BR": {
                   "index": 31,
-                  "text": "🇧🇷 Brazil"
+                  "text": "\ud83c\udde7\ud83c\uddf7 Brazil"
                 },
                 "BS": {
                   "index": 32,
-                  "text": "🇧🇸 Bahamas"
+                  "text": "\ud83c\udde7\ud83c\uddf8 Bahamas"
                 },
                 "BT": {
                   "index": 33,
-                  "text": "🇧🇹 Bhutan"
+                  "text": "\ud83c\udde7\ud83c\uddf9 Bhutan"
                 },
                 "BV": {
                   "index": 34,
-                  "text": "🇧🇻 Bouvet Island"
+                  "text": "\ud83c\udde7\ud83c\uddfb Bouvet Island"
                 },
                 "BW": {
                   "index": 35,
-                  "text": "🇧🇼 Botswana"
+                  "text": "\ud83c\udde7\ud83c\uddfc Botswana"
                 },
                 "BY": {
                   "index": 36,
-                  "text": "🇧🇾 Belarus"
+                  "text": "\ud83c\udde7\ud83c\uddfe Belarus"
                 },
                 "BZ": {
                   "index": 37,
-                  "text": "🇧🇿 Belize"
+                  "text": "\ud83c\udde7\ud83c\uddff Belize"
                 },
                 "CA": {
                   "index": 38,
-                  "text": "🇨🇦 Canada"
+                  "text": "\ud83c\udde8\ud83c\udde6 Canada"
                 },
                 "CC": {
                   "index": 39,
-                  "text": "🇨🇨 Cocos (Keeling) Islands"
+                  "text": "\ud83c\udde8\ud83c\udde8 Cocos (Keeling) Islands"
                 },
                 "CD": {
                   "index": 40,
-                  "text": "🇨🇩 Congo (DRC)"
+                  "text": "\ud83c\udde8\ud83c\udde9 Congo (DRC)"
                 },
                 "CF": {
                   "index": 41,
-                  "text": "🇨🇫 Central African Republic"
+                  "text": "\ud83c\udde8\ud83c\uddeb Central African Republic"
                 },
                 "CG": {
                   "index": 42,
-                  "text": "🇨🇬 Congo (Republic)"
+                  "text": "\ud83c\udde8\ud83c\uddec Congo (Republic)"
                 },
                 "CH": {
                   "index": 43,
-                  "text": "🇨🇭 Switzerland"
+                  "text": "\ud83c\udde8\ud83c\udded Switzerland"
                 },
                 "CI": {
                   "index": 44,
-                  "text": "🇨🇮 Côte D'Ivoire"
+                  "text": "\ud83c\udde8\ud83c\uddee C\u00f4te D'Ivoire"
                 },
                 "CK": {
                   "index": 45,
-                  "text": "🇨🇰 Cook Islands"
+                  "text": "\ud83c\udde8\ud83c\uddf0 Cook Islands"
                 },
                 "CL": {
                   "index": 46,
-                  "text": "🇨🇱 Chile"
+                  "text": "\ud83c\udde8\ud83c\uddf1 Chile"
                 },
                 "CM": {
                   "index": 47,
-                  "text": "🇨🇲 Cameroon"
+                  "text": "\ud83c\udde8\ud83c\uddf2 Cameroon"
                 },
                 "CN": {
                   "index": 48,
-                  "text": "🇨🇳 China"
+                  "text": "\ud83c\udde8\ud83c\uddf3 China"
                 },
                 "CO": {
                   "index": 49,
-                  "text": "🇨🇴 Colombia"
+                  "text": "\ud83c\udde8\ud83c\uddf4 Colombia"
                 },
                 "CR": {
                   "index": 50,
-                  "text": "🇨🇷 Costa Rica"
+                  "text": "\ud83c\udde8\ud83c\uddf7 Costa Rica"
                 },
                 "CU": {
                   "index": 51,
-                  "text": "🇨🇺 Cuba"
+                  "text": "\ud83c\udde8\ud83c\uddfa Cuba"
                 },
                 "CV": {
                   "index": 52,
-                  "text": "🇨🇻 Cape Verde"
+                  "text": "\ud83c\udde8\ud83c\uddfb Cape Verde"
                 },
                 "CW": {
                   "index": 53,
-                  "text": "🇨🇼 Curaçao"
+                  "text": "\ud83c\udde8\ud83c\uddfc Cura\u00e7ao"
                 },
                 "CX": {
                   "index": 54,
-                  "text": "🇨🇽 Christmas Island"
+                  "text": "\ud83c\udde8\ud83c\uddfd Christmas Island"
                 },
                 "CY": {
                   "index": 55,
-                  "text": "🇨🇾 Cyprus"
+                  "text": "\ud83c\udde8\ud83c\uddfe Cyprus"
                 },
                 "CZ": {
                   "index": 56,
-                  "text": "🇨🇿 Czech Republic"
+                  "text": "\ud83c\udde8\ud83c\uddff Czech Republic"
                 },
                 "DE": {
                   "index": 57,
-                  "text": "🇩🇪 Germany"
+                  "text": "\ud83c\udde9\ud83c\uddea Germany"
                 },
                 "DJ": {
                   "index": 58,
-                  "text": "🇩🇯 Djibouti"
+                  "text": "\ud83c\udde9\ud83c\uddef Djibouti"
                 },
                 "DK": {
                   "index": 59,
-                  "text": "🇩🇰 Denmark"
+                  "text": "\ud83c\udde9\ud83c\uddf0 Denmark"
                 },
                 "DM": {
                   "index": 60,
-                  "text": "🇩🇲 Dominica"
+                  "text": "\ud83c\udde9\ud83c\uddf2 Dominica"
                 },
                 "DO": {
                   "index": 61,
-                  "text": "🇩🇴 Dominican Republic"
+                  "text": "\ud83c\udde9\ud83c\uddf4 Dominican Republic"
                 },
                 "DZ": {
                   "index": 62,
-                  "text": "🇩🇿 Algeria"
+                  "text": "\ud83c\udde9\ud83c\uddff Algeria"
                 },
                 "EC": {
                   "index": 63,
-                  "text": "🇪🇨 Ecuador"
+                  "text": "\ud83c\uddea\ud83c\udde8 Ecuador"
                 },
                 "EE": {
                   "index": 64,
-                  "text": "🇪🇪 Estonia"
+                  "text": "\ud83c\uddea\ud83c\uddea Estonia"
                 },
                 "EG": {
                   "index": 65,
-                  "text": "🇪🇬 Egypt"
+                  "text": "\ud83c\uddea\ud83c\uddec Egypt"
                 },
                 "EH": {
                   "index": 66,
-                  "text": "🇪🇭 Western Sahara"
+                  "text": "\ud83c\uddea\ud83c\udded Western Sahara"
                 },
                 "ER": {
                   "index": 67,
-                  "text": "🇪🇷 Eritrea"
+                  "text": "\ud83c\uddea\ud83c\uddf7 Eritrea"
                 },
                 "ES": {
                   "index": 68,
-                  "text": "🇪🇸 Spain"
+                  "text": "\ud83c\uddea\ud83c\uddf8 Spain"
                 },
                 "ET": {
                   "index": 69,
-                  "text": "🇪🇹 Ethiopia"
+                  "text": "\ud83c\uddea\ud83c\uddf9 Ethiopia"
                 },
                 "FI": {
                   "index": 70,
-                  "text": "🇫🇮 Finland"
+                  "text": "\ud83c\uddeb\ud83c\uddee Finland"
                 },
                 "FJ": {
                   "index": 71,
-                  "text": "🇫🇯 Fiji"
+                  "text": "\ud83c\uddeb\ud83c\uddef Fiji"
                 },
                 "FK": {
                   "index": 72,
-                  "text": "🇫🇰 Falkland Islands (Malvinas)"
+                  "text": "\ud83c\uddeb\ud83c\uddf0 Falkland Islands (Malvinas)"
                 },
                 "FM": {
                   "index": 73,
-                  "text": "🇫🇲 Micronesia"
+                  "text": "\ud83c\uddeb\ud83c\uddf2 Micronesia"
                 },
                 "FO": {
                   "index": 74,
-                  "text": "🇫🇴 Faroe Islands"
+                  "text": "\ud83c\uddeb\ud83c\uddf4 Faroe Islands"
                 },
                 "FR": {
                   "index": 75,
-                  "text": "🇫🇷 France"
+                  "text": "\ud83c\uddeb\ud83c\uddf7 France"
                 },
                 "GA": {
                   "index": 76,
-                  "text": "🇬🇦 Gabon"
+                  "text": "\ud83c\uddec\ud83c\udde6 Gabon"
                 },
                 "GB": {
                   "index": 77,
-                  "text": "🇬🇧 United Kingdom"
+                  "text": "\ud83c\uddec\ud83c\udde7 United Kingdom"
                 },
                 "GD": {
                   "index": 78,
-                  "text": "🇬🇩 Grenada"
+                  "text": "\ud83c\uddec\ud83c\udde9 Grenada"
                 },
                 "GE": {
                   "index": 79,
-                  "text": "🇬🇪 Georgia"
+                  "text": "\ud83c\uddec\ud83c\uddea Georgia"
                 },
                 "GF": {
                   "index": 80,
-                  "text": "🇬🇫 French Guiana"
+                  "text": "\ud83c\uddec\ud83c\uddeb French Guiana"
                 },
                 "GG": {
                   "index": 81,
-                  "text": "🇬🇬 Guernsey"
+                  "text": "\ud83c\uddec\ud83c\uddec Guernsey"
                 },
                 "GH": {
                   "index": 82,
-                  "text": "🇬🇭 Ghana"
+                  "text": "\ud83c\uddec\ud83c\udded Ghana"
                 },
                 "GI": {
                   "index": 83,
-                  "text": "🇬🇮 Gibraltar"
+                  "text": "\ud83c\uddec\ud83c\uddee Gibraltar"
                 },
                 "GL": {
                   "index": 84,
-                  "text": "🇬🇱 Greenland"
+                  "text": "\ud83c\uddec\ud83c\uddf1 Greenland"
                 },
                 "GM": {
                   "index": 85,
-                  "text": "🇬🇲 Gambia"
+                  "text": "\ud83c\uddec\ud83c\uddf2 Gambia"
                 },
                 "GN": {
                   "index": 86,
-                  "text": "🇬🇳 Guinea"
+                  "text": "\ud83c\uddec\ud83c\uddf3 Guinea"
                 },
                 "GP": {
                   "index": 87,
-                  "text": "🇬🇵 Guadeloupe"
+                  "text": "\ud83c\uddec\ud83c\uddf5 Guadeloupe"
                 },
                 "GQ": {
                   "index": 88,
-                  "text": "🇬🇶 Equatorial Guinea"
+                  "text": "\ud83c\uddec\ud83c\uddf6 Equatorial Guinea"
                 },
                 "GR": {
                   "index": 89,
-                  "text": "🇬🇷 Greece"
+                  "text": "\ud83c\uddec\ud83c\uddf7 Greece"
                 },
                 "GS": {
                   "index": 90,
-                  "text": "🇬🇸 South Georgia"
+                  "text": "\ud83c\uddec\ud83c\uddf8 South Georgia"
                 },
                 "GT": {
                   "index": 91,
-                  "text": "🇬🇹 Guatemala"
+                  "text": "\ud83c\uddec\ud83c\uddf9 Guatemala"
                 },
                 "GU": {
                   "index": 92,
-                  "text": "🇬🇺 Guam"
+                  "text": "\ud83c\uddec\ud83c\uddfa Guam"
                 },
                 "GW": {
                   "index": 93,
-                  "text": "🇬🇼 Guinea-Bissau"
+                  "text": "\ud83c\uddec\ud83c\uddfc Guinea-Bissau"
                 },
                 "GY": {
                   "index": 94,
-                  "text": "🇬🇾 Guyana"
+                  "text": "\ud83c\uddec\ud83c\uddfe Guyana"
                 },
                 "GZ": {
                   "index": 95,
-                  "text": "🇵🇸 Gaza Strip"
+                  "text": "\ud83c\uddf5\ud83c\uddf8 Gaza Strip"
                 },
                 "HK": {
                   "index": 96,
-                  "text": "🇭🇰 Hong Kong"
+                  "text": "\ud83c\udded\ud83c\uddf0 Hong Kong"
                 },
                 "HM": {
                   "index": 97,
-                  "text": "🇭🇲 Heard Island and McDonald Islands"
+                  "text": "\ud83c\udded\ud83c\uddf2 Heard Island and McDonald Islands"
                 },
                 "HN": {
                   "index": 98,
-                  "text": "🇭🇳 Honduras"
+                  "text": "\ud83c\udded\ud83c\uddf3 Honduras"
                 },
                 "HR": {
                   "index": 99,
-                  "text": "🇭🇷 Croatia"
+                  "text": "\ud83c\udded\ud83c\uddf7 Croatia"
                 },
                 "HT": {
                   "index": 100,
-                  "text": "🇭🇹 Haiti"
+                  "text": "\ud83c\udded\ud83c\uddf9 Haiti"
                 },
                 "HU": {
                   "index": 101,
-                  "text": "🇭🇺 Hungary"
+                  "text": "\ud83c\udded\ud83c\uddfa Hungary"
                 },
                 "ID": {
                   "index": 102,
-                  "text": "🇮🇩 Indonesia"
+                  "text": "\ud83c\uddee\ud83c\udde9 Indonesia"
                 },
                 "IE": {
                   "index": 103,
-                  "text": "🇮🇪 Ireland"
+                  "text": "\ud83c\uddee\ud83c\uddea Ireland"
                 },
                 "IL": {
                   "index": 104,
-                  "text": "🇮🇱 Israel"
+                  "text": "\ud83c\uddee\ud83c\uddf1 Israel"
                 },
                 "IM": {
                   "index": 105,
-                  "text": "🇮🇲 Isle of Man"
+                  "text": "\ud83c\uddee\ud83c\uddf2 Isle of Man"
                 },
                 "IN": {
                   "index": 106,
-                  "text": "🇮🇳 India"
+                  "text": "\ud83c\uddee\ud83c\uddf3 India"
                 },
                 "IO": {
                   "index": 107,
-                  "text": "🇮🇴 British Indian Ocean Territory"
+                  "text": "\ud83c\uddee\ud83c\uddf4 British Indian Ocean Territory"
                 },
                 "IQ": {
                   "index": 108,
-                  "text": "🇮🇶 Iraq"
+                  "text": "\ud83c\uddee\ud83c\uddf6 Iraq"
                 },
                 "IR": {
                   "index": 109,
-                  "text": "🇮🇷 Iran"
+                  "text": "\ud83c\uddee\ud83c\uddf7 Iran"
                 },
                 "IS": {
                   "index": 110,
-                  "text": "🇮🇸 Iceland"
+                  "text": "\ud83c\uddee\ud83c\uddf8 Iceland"
                 },
                 "IT": {
                   "index": 111,
-                  "text": "🇮🇹 Italy"
+                  "text": "\ud83c\uddee\ud83c\uddf9 Italy"
                 },
                 "JE": {
                   "index": 112,
-                  "text": "🇯🇪 Jersey"
+                  "text": "\ud83c\uddef\ud83c\uddea Jersey"
                 },
                 "JM": {
                   "index": 113,
-                  "text": "🇯🇲 Jamaica"
+                  "text": "\ud83c\uddef\ud83c\uddf2 Jamaica"
                 },
                 "JO": {
                   "index": 114,
-                  "text": "🇯🇴 Jordan"
+                  "text": "\ud83c\uddef\ud83c\uddf4 Jordan"
                 },
                 "JP": {
                   "index": 115,
-                  "text": "🇯🇵 Japan"
+                  "text": "\ud83c\uddef\ud83c\uddf5 Japan"
                 },
                 "KE": {
                   "index": 116,
-                  "text": "🇰🇪 Kenya"
+                  "text": "\ud83c\uddf0\ud83c\uddea Kenya"
                 },
                 "KG": {
                   "index": 117,
-                  "text": "🇰🇬 Kyrgyzstan"
+                  "text": "\ud83c\uddf0\ud83c\uddec Kyrgyzstan"
                 },
                 "KH": {
                   "index": 118,
-                  "text": "🇰🇭 Cambodia"
+                  "text": "\ud83c\uddf0\ud83c\udded Cambodia"
                 },
                 "KI": {
                   "index": 119,
-                  "text": "🇰🇮 Kiribati"
+                  "text": "\ud83c\uddf0\ud83c\uddee Kiribati"
                 },
                 "KM": {
                   "index": 120,
-                  "text": "🇰🇲 Comoros"
+                  "text": "\ud83c\uddf0\ud83c\uddf2 Comoros"
                 },
                 "KN": {
                   "index": 121,
-                  "text": "🇰🇳 Saint Kitts and Nevis"
+                  "text": "\ud83c\uddf0\ud83c\uddf3 Saint Kitts and Nevis"
                 },
                 "KP": {
                   "index": 122,
-                  "text": "🇰🇵 North Korea"
+                  "text": "\ud83c\uddf0\ud83c\uddf5 North Korea"
                 },
                 "KR": {
                   "index": 123,
-                  "text": "🇰🇷 South Korea"
+                  "text": "\ud83c\uddf0\ud83c\uddf7 South Korea"
                 },
                 "KW": {
                   "index": 124,
-                  "text": "🇰🇼 Kuwait"
+                  "text": "\ud83c\uddf0\ud83c\uddfc Kuwait"
                 },
                 "KY": {
                   "index": 125,
-                  "text": "🇰🇾 Cayman Islands"
+                  "text": "\ud83c\uddf0\ud83c\uddfe Cayman Islands"
                 },
                 "KZ": {
                   "index": 126,
-                  "text": "🇰🇿 Kazakhstan"
+                  "text": "\ud83c\uddf0\ud83c\uddff Kazakhstan"
                 },
                 "LA": {
                   "index": 127,
-                  "text": "🇱🇦 Laos"
+                  "text": "\ud83c\uddf1\ud83c\udde6 Laos"
                 },
                 "LB": {
                   "index": 128,
-                  "text": "🇱🇧 Lebanon"
+                  "text": "\ud83c\uddf1\ud83c\udde7 Lebanon"
                 },
                 "LC": {
                   "index": 129,
-                  "text": "🇱🇨 Saint Lucia"
+                  "text": "\ud83c\uddf1\ud83c\udde8 Saint Lucia"
                 },
                 "LI": {
                   "index": 130,
-                  "text": "🇱🇮 Liechtenstein"
+                  "text": "\ud83c\uddf1\ud83c\uddee Liechtenstein"
                 },
                 "LK": {
                   "index": 131,
-                  "text": "🇱🇰 Sri Lanka"
+                  "text": "\ud83c\uddf1\ud83c\uddf0 Sri Lanka"
                 },
                 "LR": {
                   "index": 132,
-                  "text": "🇱🇷 Liberia"
+                  "text": "\ud83c\uddf1\ud83c\uddf7 Liberia"
                 },
                 "LS": {
                   "index": 133,
-                  "text": "🇱🇸 Lesotho"
+                  "text": "\ud83c\uddf1\ud83c\uddf8 Lesotho"
                 },
                 "LT": {
                   "index": 134,
-                  "text": "🇱🇹 Lithuania"
+                  "text": "\ud83c\uddf1\ud83c\uddf9 Lithuania"
                 },
                 "LU": {
                   "index": 135,
-                  "text": "🇱🇺 Luxembourg"
+                  "text": "\ud83c\uddf1\ud83c\uddfa Luxembourg"
                 },
                 "LV": {
                   "index": 136,
-                  "text": "🇱🇻 Latvia"
+                  "text": "\ud83c\uddf1\ud83c\uddfb Latvia"
                 },
                 "LY": {
                   "index": 137,
-                  "text": "🇱🇾 Libya"
+                  "text": "\ud83c\uddf1\ud83c\uddfe Libya"
                 },
                 "MA": {
                   "index": 138,
-                  "text": "🇲🇦 Morocco"
+                  "text": "\ud83c\uddf2\ud83c\udde6 Morocco"
                 },
                 "MC": {
                   "index": 139,
-                  "text": "🇲🇨 Monaco"
+                  "text": "\ud83c\uddf2\ud83c\udde8 Monaco"
                 },
                 "MD": {
                   "index": 140,
-                  "text": "🇲🇩 Moldova"
+                  "text": "\ud83c\uddf2\ud83c\udde9 Moldova"
                 },
                 "ME": {
                   "index": 141,
-                  "text": "🇲🇪 Montenegro"
+                  "text": "\ud83c\uddf2\ud83c\uddea Montenegro"
                 },
                 "MF": {
                   "index": 142,
-                  "text": "🇲🇫 Saint Martin"
+                  "text": "\ud83c\uddf2\ud83c\uddeb Saint Martin"
                 },
                 "MG": {
                   "index": 143,
-                  "text": "🇲🇬 Madagascar"
+                  "text": "\ud83c\uddf2\ud83c\uddec Madagascar"
                 },
                 "MH": {
                   "index": 144,
-                  "text": "🇲🇭 Marshall Islands"
+                  "text": "\ud83c\uddf2\ud83c\udded Marshall Islands"
                 },
                 "MK": {
                   "index": 145,
-                  "text": "🇲🇰 Macedonia"
+                  "text": "\ud83c\uddf2\ud83c\uddf0 Macedonia"
                 },
                 "ML": {
                   "index": 146,
-                  "text": "🇲🇱 Mali"
+                  "text": "\ud83c\uddf2\ud83c\uddf1 Mali"
                 },
                 "MM": {
                   "index": 147,
-                  "text": "🇲🇲 Myanmar"
+                  "text": "\ud83c\uddf2\ud83c\uddf2 Myanmar"
                 },
                 "MN": {
                   "index": 148,
-                  "text": "🇲🇳 Mongolia"
+                  "text": "\ud83c\uddf2\ud83c\uddf3 Mongolia"
                 },
                 "MO": {
                   "index": 149,
-                  "text": "🇲🇴 Macao"
+                  "text": "\ud83c\uddf2\ud83c\uddf4 Macao"
                 },
                 "MP": {
                   "index": 150,
-                  "text": "🇲🇵 Northern Mariana Islands"
+                  "text": "\ud83c\uddf2\ud83c\uddf5 Northern Mariana Islands"
                 },
                 "MQ": {
                   "index": 151,
-                  "text": "🇲🇶 Martinique"
+                  "text": "\ud83c\uddf2\ud83c\uddf6 Martinique"
                 },
                 "MR": {
                   "index": 152,
-                  "text": "🇲🇷 Mauritania"
+                  "text": "\ud83c\uddf2\ud83c\uddf7 Mauritania"
                 },
                 "MS": {
                   "index": 153,
-                  "text": "🇲🇸 Montserrat"
+                  "text": "\ud83c\uddf2\ud83c\uddf8 Montserrat"
                 },
                 "MT": {
                   "index": 154,
-                  "text": "🇲🇹 Malta"
+                  "text": "\ud83c\uddf2\ud83c\uddf9 Malta"
                 },
                 "MU": {
                   "index": 155,
-                  "text": "🇲🇺 Mauritius"
+                  "text": "\ud83c\uddf2\ud83c\uddfa Mauritius"
                 },
                 "MV": {
                   "index": 156,
-                  "text": "🇲🇻 Maldives"
+                  "text": "\ud83c\uddf2\ud83c\uddfb Maldives"
                 },
                 "MW": {
                   "index": 157,
-                  "text": "🇲🇼 Malawi"
+                  "text": "\ud83c\uddf2\ud83c\uddfc Malawi"
                 },
                 "MX": {
                   "index": 158,
-                  "text": "🇲🇽 Mexico"
+                  "text": "\ud83c\uddf2\ud83c\uddfd Mexico"
                 },
                 "MY": {
                   "index": 159,
-                  "text": "🇲🇾 Malaysia"
+                  "text": "\ud83c\uddf2\ud83c\uddfe Malaysia"
                 },
                 "MZ": {
                   "index": 160,
-                  "text": "🇲🇿 Mozambique"
+                  "text": "\ud83c\uddf2\ud83c\uddff Mozambique"
                 },
                 "NA": {
                   "index": 161,
-                  "text": "🇳🇦 Namibia"
+                  "text": "\ud83c\uddf3\ud83c\udde6 Namibia"
                 },
                 "NC": {
                   "index": 162,
-                  "text": "🇳🇨 New Caledonia"
+                  "text": "\ud83c\uddf3\ud83c\udde8 New Caledonia"
                 },
                 "NE": {
                   "index": 163,
-                  "text": "🇳🇪 Niger"
+                  "text": "\ud83c\uddf3\ud83c\uddea Niger"
                 },
                 "NF": {
                   "index": 164,
-                  "text": "🇳🇫 Norfolk Island"
+                  "text": "\ud83c\uddf3\ud83c\uddeb Norfolk Island"
                 },
                 "NG": {
                   "index": 165,
-                  "text": "🇳🇬 Nigeria"
+                  "text": "\ud83c\uddf3\ud83c\uddec Nigeria"
                 },
                 "NI": {
                   "index": 166,
-                  "text": "🇳🇮 Nicaragua"
+                  "text": "\ud83c\uddf3\ud83c\uddee Nicaragua"
                 },
                 "NL": {
                   "index": 167,
-                  "text": "🇳🇱 Netherlands"
+                  "text": "\ud83c\uddf3\ud83c\uddf1 Netherlands"
                 },
                 "NO": {
                   "index": 168,
-                  "text": "🇳🇴 Norway"
+                  "text": "\ud83c\uddf3\ud83c\uddf4 Norway"
                 },
                 "NP": {
                   "index": 169,
-                  "text": "🇳🇵 Nepal"
+                  "text": "\ud83c\uddf3\ud83c\uddf5 Nepal"
                 },
                 "NR": {
                   "index": 170,
-                  "text": "🇳🇷 Nauru"
+                  "text": "\ud83c\uddf3\ud83c\uddf7 Nauru"
                 },
                 "NU": {
                   "index": 171,
-                  "text": "🇳🇺 Niue"
+                  "text": "\ud83c\uddf3\ud83c\uddfa Niue"
                 },
                 "NZ": {
                   "index": 172,
-                  "text": "🇳🇿 New Zealand"
+                  "text": "\ud83c\uddf3\ud83c\uddff New Zealand"
                 },
                 "OM": {
                   "index": 173,
-                  "text": "🇴🇲 Oman"
+                  "text": "\ud83c\uddf4\ud83c\uddf2 Oman"
                 },
                 "PA": {
                   "index": 174,
-                  "text": "🇵🇦 Panama"
+                  "text": "\ud83c\uddf5\ud83c\udde6 Panama"
                 },
                 "PE": {
                   "index": 175,
-                  "text": "🇵🇪 Peru"
+                  "text": "\ud83c\uddf5\ud83c\uddea Peru"
                 },
                 "PF": {
                   "index": 176,
-                  "text": "🇵🇫 French Polynesia"
+                  "text": "\ud83c\uddf5\ud83c\uddeb French Polynesia"
                 },
                 "PG": {
                   "index": 177,
-                  "text": "🇵🇬 Papua New Guinea"
+                  "text": "\ud83c\uddf5\ud83c\uddec Papua New Guinea"
                 },
                 "PH": {
                   "index": 178,
-                  "text": "🇵🇭 Philippines"
+                  "text": "\ud83c\uddf5\ud83c\udded Philippines"
                 },
                 "PK": {
                   "index": 179,
-                  "text": "🇵🇰 Pakistan"
+                  "text": "\ud83c\uddf5\ud83c\uddf0 Pakistan"
                 },
                 "PL": {
                   "index": 180,
-                  "text": "🇵🇱 Poland"
+                  "text": "\ud83c\uddf5\ud83c\uddf1 Poland"
                 },
                 "PM": {
                   "index": 181,
-                  "text": "🇵🇲 Saint Pierre and Miquelon"
+                  "text": "\ud83c\uddf5\ud83c\uddf2 Saint Pierre and Miquelon"
                 },
                 "PN": {
                   "index": 182,
-                  "text": "🇵🇳 Pitcairn"
+                  "text": "\ud83c\uddf5\ud83c\uddf3 Pitcairn"
                 },
                 "PR": {
                   "index": 183,
-                  "text": "🇵🇷 Puerto Rico"
+                  "text": "\ud83c\uddf5\ud83c\uddf7 Puerto Rico"
                 },
                 "PS": {
                   "index": 184,
-                  "text": "🇵🇸 Palestinian Territory"
+                  "text": "\ud83c\uddf5\ud83c\uddf8 Palestinian Territory"
                 },
                 "PT": {
                   "index": 185,
-                  "text": "🇵🇹 Portugal"
+                  "text": "\ud83c\uddf5\ud83c\uddf9 Portugal"
                 },
                 "PW": {
                   "index": 186,
-                  "text": "🇵🇼 Palau"
+                  "text": "\ud83c\uddf5\ud83c\uddfc Palau"
                 },
                 "PY": {
                   "index": 187,
-                  "text": "🇵🇾 Paraguay"
+                  "text": "\ud83c\uddf5\ud83c\uddfe Paraguay"
                 },
                 "QA": {
                   "index": 188,
-                  "text": "🇶🇦 Qatar"
+                  "text": "\ud83c\uddf6\ud83c\udde6 Qatar"
                 },
                 "RE": {
                   "index": 189,
-                  "text": "🇷🇪 Réunion"
+                  "text": "\ud83c\uddf7\ud83c\uddea R\u00e9union"
                 },
                 "RO": {
                   "index": 190,
-                  "text": "🇷🇴 Romania"
+                  "text": "\ud83c\uddf7\ud83c\uddf4 Romania"
                 },
                 "RS": {
                   "index": 191,
-                  "text": "🇷🇸 Serbia"
+                  "text": "\ud83c\uddf7\ud83c\uddf8 Serbia"
                 },
                 "RU": {
                   "index": 192,
-                  "text": "🇷🇺 Russia"
+                  "text": "\ud83c\uddf7\ud83c\uddfa Russia"
                 },
                 "RW": {
                   "index": 193,
-                  "text": "🇷🇼 Rwanda"
+                  "text": "\ud83c\uddf7\ud83c\uddfc Rwanda"
                 },
                 "SA": {
                   "index": 194,
-                  "text": "🇸🇦 Saudi Arabia"
+                  "text": "\ud83c\uddf8\ud83c\udde6 Saudi Arabia"
                 },
                 "SB": {
                   "index": 195,
-                  "text": "🇸🇧 Solomon Islands"
+                  "text": "\ud83c\uddf8\ud83c\udde7 Solomon Islands"
                 },
                 "SC": {
                   "index": 196,
-                  "text": "🇸🇨 Seychelles"
+                  "text": "\ud83c\uddf8\ud83c\udde8 Seychelles"
                 },
                 "SD": {
                   "index": 197,
-                  "text": "🇸🇩 Sudan"
+                  "text": "\ud83c\uddf8\ud83c\udde9 Sudan"
                 },
                 "SE": {
                   "index": 198,
-                  "text": "🇸🇪 Sweden"
+                  "text": "\ud83c\uddf8\ud83c\uddea Sweden"
                 },
                 "SG": {
                   "index": 199,
-                  "text": "🇸🇬 Singapore"
+                  "text": "\ud83c\uddf8\ud83c\uddec Singapore"
                 },
                 "SH": {
                   "index": 200,
-                  "text": "🇸🇭 Saint Helena"
+                  "text": "\ud83c\uddf8\ud83c\udded Saint Helena"
                 },
                 "SI": {
                   "index": 201,
-                  "text": "🇸🇮 Slovenia"
+                  "text": "\ud83c\uddf8\ud83c\uddee Slovenia"
                 },
                 "SJ": {
                   "index": 202,
-                  "text": "🇸🇯 Svalbard and Jan Mayen"
+                  "text": "\ud83c\uddf8\ud83c\uddef Svalbard and Jan Mayen"
                 },
                 "SK": {
                   "index": 203,
-                  "text": "🇸🇰 Slovakia"
+                  "text": "\ud83c\uddf8\ud83c\uddf0 Slovakia"
                 },
                 "SL": {
                   "index": 204,
-                  "text": "🇸🇱 Sierra Leone"
+                  "text": "\ud83c\uddf8\ud83c\uddf1 Sierra Leone"
                 },
                 "SM": {
                   "index": 205,
-                  "text": "🇸🇲 San Marino"
+                  "text": "\ud83c\uddf8\ud83c\uddf2 San Marino"
                 },
                 "SN": {
                   "index": 206,
-                  "text": "🇸🇳 Senegal"
+                  "text": "\ud83c\uddf8\ud83c\uddf3 Senegal"
                 },
                 "SO": {
                   "index": 207,
-                  "text": "🇸🇴 Somalia"
+                  "text": "\ud83c\uddf8\ud83c\uddf4 Somalia"
                 },
                 "SR": {
                   "index": 208,
-                  "text": "🇸🇷 Suriname"
+                  "text": "\ud83c\uddf8\ud83c\uddf7 Suriname"
                 },
                 "SS": {
                   "index": 209,
-                  "text": "🇸🇸 South Sudan"
+                  "text": "\ud83c\uddf8\ud83c\uddf8 South Sudan"
                 },
                 "ST": {
                   "index": 210,
-                  "text": "🇸🇹 São Tomé and Príncipe"
+                  "text": "\ud83c\uddf8\ud83c\uddf9 S\u00e3o Tom\u00e9 and Pr\u00edncipe"
                 },
                 "SV": {
                   "index": 211,
-                  "text": "🇸🇻 El Salvador"
+                  "text": "\ud83c\uddf8\ud83c\uddfb El Salvador"
                 },
                 "SX": {
                   "index": 212,
-                  "text": "🇸🇽 Sint Maarten"
+                  "text": "\ud83c\uddf8\ud83c\uddfd Sint Maarten"
                 },
                 "SY": {
                   "index": 213,
-                  "text": "🇸🇾 Syria"
+                  "text": "\ud83c\uddf8\ud83c\uddfe Syria"
                 },
                 "SZ": {
                   "index": 214,
-                  "text": "🇸🇿 Swaziland"
+                  "text": "\ud83c\uddf8\ud83c\uddff Swaziland"
                 },
                 "TC": {
                   "index": 215,
-                  "text": "🇹🇨 Turks and Caicos Islands"
+                  "text": "\ud83c\uddf9\ud83c\udde8 Turks and Caicos Islands"
                 },
                 "TD": {
                   "index": 216,
-                  "text": "🇹🇩 Chad"
+                  "text": "\ud83c\uddf9\ud83c\udde9 Chad"
                 },
                 "TF": {
                   "index": 217,
-                  "text": "🇹🇫 French Southern Territories"
+                  "text": "\ud83c\uddf9\ud83c\uddeb French Southern Territories"
                 },
                 "TG": {
                   "index": 218,
-                  "text": "🇹🇬 Togo"
+                  "text": "\ud83c\uddf9\ud83c\uddec Togo"
                 },
                 "TH": {
                   "index": 219,
-                  "text": "🇹🇭 Thailand"
+                  "text": "\ud83c\uddf9\ud83c\udded Thailand"
                 },
                 "TJ": {
                   "index": 220,
-                  "text": "🇹🇯 Tajikistan"
+                  "text": "\ud83c\uddf9\ud83c\uddef Tajikistan"
                 },
                 "TK": {
                   "index": 221,
-                  "text": "🇹🇰 Tokelau"
+                  "text": "\ud83c\uddf9\ud83c\uddf0 Tokelau"
                 },
                 "TL": {
                   "index": 222,
-                  "text": "🇹🇱 Timor-Leste"
+                  "text": "\ud83c\uddf9\ud83c\uddf1 Timor-Leste"
                 },
                 "TM": {
                   "index": 223,
-                  "text": "🇹🇲 Turkmenistan"
+                  "text": "\ud83c\uddf9\ud83c\uddf2 Turkmenistan"
                 },
                 "TN": {
                   "index": 224,
-                  "text": "🇹🇳 Tunisia"
+                  "text": "\ud83c\uddf9\ud83c\uddf3 Tunisia"
                 },
                 "TO": {
                   "index": 225,
-                  "text": "🇹🇴 Tonga"
+                  "text": "\ud83c\uddf9\ud83c\uddf4 Tonga"
                 },
                 "TR": {
                   "index": 226,
-                  "text": "🇹🇷 Turkey"
+                  "text": "\ud83c\uddf9\ud83c\uddf7 Turkey"
                 },
                 "TT": {
                   "index": 227,
-                  "text": "🇹🇹 Trinidad and Tobago"
+                  "text": "\ud83c\uddf9\ud83c\uddf9 Trinidad and Tobago"
                 },
                 "TV": {
                   "index": 228,
-                  "text": "🇹🇻 Tuvalu"
+                  "text": "\ud83c\uddf9\ud83c\uddfb Tuvalu"
                 },
                 "TW": {
                   "index": 229,
-                  "text": "🇹🇼 Taiwan"
+                  "text": "\ud83c\uddf9\ud83c\uddfc Taiwan"
                 },
                 "TZ": {
                   "index": 230,
-                  "text": "🇹🇿 Tanzania"
+                  "text": "\ud83c\uddf9\ud83c\uddff Tanzania"
                 },
                 "UA": {
                   "index": 231,
-                  "text": "🇺🇦 Ukraine"
+                  "text": "\ud83c\uddfa\ud83c\udde6 Ukraine"
                 },
                 "UG": {
                   "index": 232,
-                  "text": "🇺🇬 Uganda"
+                  "text": "\ud83c\uddfa\ud83c\uddec Uganda"
                 },
                 "UM": {
                   "index": 233,
-                  "text": "🇺🇲 U.S. Minor Outlying Islands"
+                  "text": "\ud83c\uddfa\ud83c\uddf2 U.S. Minor Outlying Islands"
                 },
                 "US": {
                   "index": 234,
-                  "text": "🇺🇸 United States"
+                  "text": "\ud83c\uddfa\ud83c\uddf8 United States"
                 },
                 "UY": {
                   "index": 235,
-                  "text": "🇺🇾 Uruguay"
+                  "text": "\ud83c\uddfa\ud83c\uddfe Uruguay"
                 },
                 "UZ": {
                   "index": 236,
-                  "text": "🇺🇿 Uzbekistan"
+                  "text": "\ud83c\uddfa\ud83c\uddff Uzbekistan"
                 },
                 "VA": {
                   "index": 237,
-                  "text": "🇻🇦 Vatican City"
+                  "text": "\ud83c\uddfb\ud83c\udde6 Vatican City"
                 },
                 "VC": {
                   "index": 238,
-                  "text": "🇻🇨 Saint Vincent and The Grenadines"
+                  "text": "\ud83c\uddfb\ud83c\udde8 Saint Vincent and The Grenadines"
                 },
                 "VE": {
                   "index": 239,
-                  "text": "🇻🇪 Venezuela"
+                  "text": "\ud83c\uddfb\ud83c\uddea Venezuela"
                 },
                 "VG": {
                   "index": 240,
-                  "text": "🇻🇬 British Virgin Islands"
+                  "text": "\ud83c\uddfb\ud83c\uddec British Virgin Islands"
                 },
                 "VI": {
                   "index": 241,
-                  "text": "🇻🇮 U.S. Virgin Islands"
+                  "text": "\ud83c\uddfb\ud83c\uddee U.S. Virgin Islands"
                 },
                 "VN": {
                   "index": 242,
-                  "text": "🇻🇳 Vietnam"
+                  "text": "\ud83c\uddfb\ud83c\uddf3 Vietnam"
                 },
                 "VU": {
                   "index": 243,
-                  "text": "🇻🇺 Vanuatu"
+                  "text": "\ud83c\uddfb\ud83c\uddfa Vanuatu"
                 },
                 "WF": {
                   "index": 244,
-                  "text": "🇼🇫 Wallis and Futuna"
+                  "text": "\ud83c\uddfc\ud83c\uddeb Wallis and Futuna"
                 },
                 "WS": {
                   "index": 245,
-                  "text": "🇼🇸 Samoa"
+                  "text": "\ud83c\uddfc\ud83c\uddf8 Samoa"
                 },
                 "XK": {
                   "index": 246,
-                  "text": "🇽🇰 Kosovo"
+                  "text": "\ud83c\uddfd\ud83c\uddf0 Kosovo"
                 },
                 "YE": {
                   "index": 247,
-                  "text": "🇾🇪 Yemen"
+                  "text": "\ud83c\uddfe\ud83c\uddea Yemen"
                 },
                 "YT": {
                   "index": 248,
-                  "text": "🇾🇹 Mayotte"
+                  "text": "\ud83c\uddfe\ud83c\uddf9 Mayotte"
                 },
                 "ZA": {
                   "index": 249,
-                  "text": "🇿🇦 South Africa"
+                  "text": "\ud83c\uddff\ud83c\udde6 South Africa"
                 },
                 "ZM": {
                   "index": 250,
-                  "text": "🇿🇲 Zambia"
+                  "text": "\ud83c\uddff\ud83c\uddf2 Zambia"
                 },
                 "ZW": {
                   "index": 251,
-                  "text": "🇿🇼 Zimbabwe"
+                  "text": "\ud83c\uddff\ud83c\uddfc Zimbabwe"
                 }
               },
               "type": "value"
@@ -1234,7 +1252,7 @@
                   },
                   {
                     "targetBlank": true,
-                    "title": "Сensys",
+                    "title": "\u0421ensys",
                     "url": "https://search.censys.io/search?resource=hosts&q=${__value.text}"
                   },
                   {
@@ -1283,7 +1301,7 @@
                   },
                   {
                     "targetBlank": true,
-                    "title": "Сensys",
+                    "title": "\u0421ensys",
                     "url": "https://search.censys.io/hosts/${__value.text}"
                   },
                   {
@@ -1726,1011 +1744,1011 @@
               "options": {
                 "AD": {
                   "index": 0,
-                  "text": "🇦🇩 Andorra"
+                  "text": "\ud83c\udde6\ud83c\udde9 Andorra"
                 },
                 "AE": {
                   "index": 1,
-                  "text": "🇦🇪 United Arab Emirates"
+                  "text": "\ud83c\udde6\ud83c\uddea United Arab Emirates"
                 },
                 "AF": {
                   "index": 2,
-                  "text": "🇦🇫 Afghanistan"
+                  "text": "\ud83c\udde6\ud83c\uddeb Afghanistan"
                 },
                 "AG": {
                   "index": 3,
-                  "text": "🇦🇬 Antigua and Barbuda"
+                  "text": "\ud83c\udde6\ud83c\uddec Antigua and Barbuda"
                 },
                 "AI": {
                   "index": 4,
-                  "text": "🇦🇮 Anguilla"
+                  "text": "\ud83c\udde6\ud83c\uddee Anguilla"
                 },
                 "AL": {
                   "index": 5,
-                  "text": "🇦🇱 Albania"
+                  "text": "\ud83c\udde6\ud83c\uddf1 Albania"
                 },
                 "AM": {
                   "index": 6,
-                  "text": "🇦🇲 Armenia"
+                  "text": "\ud83c\udde6\ud83c\uddf2 Armenia"
                 },
                 "AN": {
                   "index": 7,
-                  "text": "🇳🇱 Netherlands Antilles"
+                  "text": "\ud83c\uddf3\ud83c\uddf1 Netherlands Antilles"
                 },
                 "AO": {
                   "index": 8,
-                  "text": "🇦🇴 Angola"
+                  "text": "\ud83c\udde6\ud83c\uddf4 Angola"
                 },
                 "AQ": {
                   "index": 9,
-                  "text": "🇦🇶 Antarctica"
+                  "text": "\ud83c\udde6\ud83c\uddf6 Antarctica"
                 },
                 "AR": {
                   "index": 10,
-                  "text": "🇦🇷 Argentina"
+                  "text": "\ud83c\udde6\ud83c\uddf7 Argentina"
                 },
                 "AS": {
                   "index": 11,
-                  "text": "🇦🇸 American Samoa"
+                  "text": "\ud83c\udde6\ud83c\uddf8 American Samoa"
                 },
                 "AT": {
                   "index": 12,
-                  "text": "🇦🇹 Austria"
+                  "text": "\ud83c\udde6\ud83c\uddf9 Austria"
                 },
                 "AU": {
                   "index": 13,
-                  "text": "🇦🇺 Australia"
+                  "text": "\ud83c\udde6\ud83c\uddfa Australia"
                 },
                 "AW": {
                   "index": 14,
-                  "text": "🇦🇼 Aruba"
+                  "text": "\ud83c\udde6\ud83c\uddfc Aruba"
                 },
                 "AX": {
                   "index": 15,
-                  "text": "🇦🇽 Åland"
+                  "text": "\ud83c\udde6\ud83c\uddfd \u00c5land"
                 },
                 "AZ": {
                   "index": 16,
-                  "text": "🇦🇿 Azerbaijan"
+                  "text": "\ud83c\udde6\ud83c\uddff Azerbaijan"
                 },
                 "BA": {
                   "index": 17,
-                  "text": "🇧🇦 Bosnia and Herzegovina"
+                  "text": "\ud83c\udde7\ud83c\udde6 Bosnia and Herzegovina"
                 },
                 "BB": {
                   "index": 18,
-                  "text": "🇧🇧 Barbados"
+                  "text": "\ud83c\udde7\ud83c\udde7 Barbados"
                 },
                 "BD": {
                   "index": 19,
-                  "text": "🇧🇩 Bangladesh"
+                  "text": "\ud83c\udde7\ud83c\udde9 Bangladesh"
                 },
                 "BE": {
                   "index": 20,
-                  "text": "🇧🇪 Belgium"
+                  "text": "\ud83c\udde7\ud83c\uddea Belgium"
                 },
                 "BF": {
                   "index": 21,
-                  "text": "🇧🇫 Burkina Faso"
+                  "text": "\ud83c\udde7\ud83c\uddeb Burkina Faso"
                 },
                 "BG": {
                   "index": 22,
-                  "text": "🇧🇬 Bulgaria"
+                  "text": "\ud83c\udde7\ud83c\uddec Bulgaria"
                 },
                 "BH": {
                   "index": 23,
-                  "text": "🇧🇭 Bahrain"
+                  "text": "\ud83c\udde7\ud83c\udded Bahrain"
                 },
                 "BI": {
                   "index": 24,
-                  "text": "🇧🇮 Burundi"
+                  "text": "\ud83c\udde7\ud83c\uddee Burundi"
                 },
                 "BJ": {
                   "index": 25,
-                  "text": "🇧🇯 Benin"
+                  "text": "\ud83c\udde7\ud83c\uddef Benin"
                 },
                 "BL": {
                   "index": 26,
-                  "text": "🇧🇱 Saint Barthélemy"
+                  "text": "\ud83c\udde7\ud83c\uddf1 Saint Barth\u00e9lemy"
                 },
                 "BM": {
                   "index": 27,
-                  "text": "🇧🇲 Bermuda"
+                  "text": "\ud83c\udde7\ud83c\uddf2 Bermuda"
                 },
                 "BN": {
                   "index": 28,
-                  "text": "🇧🇳 Brunei"
+                  "text": "\ud83c\udde7\ud83c\uddf3 Brunei"
                 },
                 "BO": {
                   "index": 29,
-                  "text": "🇧🇴 Bolivia"
+                  "text": "\ud83c\udde7\ud83c\uddf4 Bolivia"
                 },
                 "BQ": {
                   "index": 30,
-                  "text": "🇧🇶 Bonaire, Sint Eustatius and Saba"
+                  "text": "\ud83c\udde7\ud83c\uddf6 Bonaire, Sint Eustatius and Saba"
                 },
                 "BR": {
                   "index": 31,
-                  "text": "🇧🇷 Brazil"
+                  "text": "\ud83c\udde7\ud83c\uddf7 Brazil"
                 },
                 "BS": {
                   "index": 32,
-                  "text": "🇧🇸 Bahamas"
+                  "text": "\ud83c\udde7\ud83c\uddf8 Bahamas"
                 },
                 "BT": {
                   "index": 33,
-                  "text": "🇧🇹 Bhutan"
+                  "text": "\ud83c\udde7\ud83c\uddf9 Bhutan"
                 },
                 "BV": {
                   "index": 34,
-                  "text": "🇧🇻 Bouvet Island"
+                  "text": "\ud83c\udde7\ud83c\uddfb Bouvet Island"
                 },
                 "BW": {
                   "index": 35,
-                  "text": "🇧🇼 Botswana"
+                  "text": "\ud83c\udde7\ud83c\uddfc Botswana"
                 },
                 "BY": {
                   "index": 36,
-                  "text": "🇧🇾 Belarus"
+                  "text": "\ud83c\udde7\ud83c\uddfe Belarus"
                 },
                 "BZ": {
                   "index": 37,
-                  "text": "🇧🇿 Belize"
+                  "text": "\ud83c\udde7\ud83c\uddff Belize"
                 },
                 "CA": {
                   "index": 38,
-                  "text": "🇨🇦 Canada"
+                  "text": "\ud83c\udde8\ud83c\udde6 Canada"
                 },
                 "CC": {
                   "index": 39,
-                  "text": "🇨🇨 Cocos (Keeling) Islands"
+                  "text": "\ud83c\udde8\ud83c\udde8 Cocos (Keeling) Islands"
                 },
                 "CD": {
                   "index": 40,
-                  "text": "🇨🇩 Congo (DRC)"
+                  "text": "\ud83c\udde8\ud83c\udde9 Congo (DRC)"
                 },
                 "CF": {
                   "index": 41,
-                  "text": "🇨🇫 Central African Republic"
+                  "text": "\ud83c\udde8\ud83c\uddeb Central African Republic"
                 },
                 "CG": {
                   "index": 42,
-                  "text": "🇨🇬 Congo (Republic)"
+                  "text": "\ud83c\udde8\ud83c\uddec Congo (Republic)"
                 },
                 "CH": {
                   "index": 43,
-                  "text": "🇨🇭 Switzerland"
+                  "text": "\ud83c\udde8\ud83c\udded Switzerland"
                 },
                 "CI": {
                   "index": 44,
-                  "text": "🇨🇮 Côte D'Ivoire"
+                  "text": "\ud83c\udde8\ud83c\uddee C\u00f4te D'Ivoire"
                 },
                 "CK": {
                   "index": 45,
-                  "text": "🇨🇰 Cook Islands"
+                  "text": "\ud83c\udde8\ud83c\uddf0 Cook Islands"
                 },
                 "CL": {
                   "index": 46,
-                  "text": "🇨🇱 Chile"
+                  "text": "\ud83c\udde8\ud83c\uddf1 Chile"
                 },
                 "CM": {
                   "index": 47,
-                  "text": "🇨🇲 Cameroon"
+                  "text": "\ud83c\udde8\ud83c\uddf2 Cameroon"
                 },
                 "CN": {
                   "index": 48,
-                  "text": "🇨🇳 China"
+                  "text": "\ud83c\udde8\ud83c\uddf3 China"
                 },
                 "CO": {
                   "index": 49,
-                  "text": "🇨🇴 Colombia"
+                  "text": "\ud83c\udde8\ud83c\uddf4 Colombia"
                 },
                 "CR": {
                   "index": 50,
-                  "text": "🇨🇷 Costa Rica"
+                  "text": "\ud83c\udde8\ud83c\uddf7 Costa Rica"
                 },
                 "CU": {
                   "index": 51,
-                  "text": "🇨🇺 Cuba"
+                  "text": "\ud83c\udde8\ud83c\uddfa Cuba"
                 },
                 "CV": {
                   "index": 52,
-                  "text": "🇨🇻 Cape Verde"
+                  "text": "\ud83c\udde8\ud83c\uddfb Cape Verde"
                 },
                 "CW": {
                   "index": 53,
-                  "text": "🇨🇼 Curaçao"
+                  "text": "\ud83c\udde8\ud83c\uddfc Cura\u00e7ao"
                 },
                 "CX": {
                   "index": 54,
-                  "text": "🇨🇽 Christmas Island"
+                  "text": "\ud83c\udde8\ud83c\uddfd Christmas Island"
                 },
                 "CY": {
                   "index": 55,
-                  "text": "🇨🇾 Cyprus"
+                  "text": "\ud83c\udde8\ud83c\uddfe Cyprus"
                 },
                 "CZ": {
                   "index": 56,
-                  "text": "🇨🇿 Czech Republic"
+                  "text": "\ud83c\udde8\ud83c\uddff Czech Republic"
                 },
                 "DE": {
                   "index": 57,
-                  "text": "🇩🇪 Germany"
+                  "text": "\ud83c\udde9\ud83c\uddea Germany"
                 },
                 "DJ": {
                   "index": 58,
-                  "text": "🇩🇯 Djibouti"
+                  "text": "\ud83c\udde9\ud83c\uddef Djibouti"
                 },
                 "DK": {
                   "index": 59,
-                  "text": "🇩🇰 Denmark"
+                  "text": "\ud83c\udde9\ud83c\uddf0 Denmark"
                 },
                 "DM": {
                   "index": 60,
-                  "text": "🇩🇲 Dominica"
+                  "text": "\ud83c\udde9\ud83c\uddf2 Dominica"
                 },
                 "DO": {
                   "index": 61,
-                  "text": "🇩🇴 Dominican Republic"
+                  "text": "\ud83c\udde9\ud83c\uddf4 Dominican Republic"
                 },
                 "DZ": {
                   "index": 62,
-                  "text": "🇩🇿 Algeria"
+                  "text": "\ud83c\udde9\ud83c\uddff Algeria"
                 },
                 "EC": {
                   "index": 63,
-                  "text": "🇪🇨 Ecuador"
+                  "text": "\ud83c\uddea\ud83c\udde8 Ecuador"
                 },
                 "EE": {
                   "index": 64,
-                  "text": "🇪🇪 Estonia"
+                  "text": "\ud83c\uddea\ud83c\uddea Estonia"
                 },
                 "EG": {
                   "index": 65,
-                  "text": "🇪🇬 Egypt"
+                  "text": "\ud83c\uddea\ud83c\uddec Egypt"
                 },
                 "EH": {
                   "index": 66,
-                  "text": "🇪🇭 Western Sahara"
+                  "text": "\ud83c\uddea\ud83c\udded Western Sahara"
                 },
                 "ER": {
                   "index": 67,
-                  "text": "🇪🇷 Eritrea"
+                  "text": "\ud83c\uddea\ud83c\uddf7 Eritrea"
                 },
                 "ES": {
                   "index": 68,
-                  "text": "🇪🇸 Spain"
+                  "text": "\ud83c\uddea\ud83c\uddf8 Spain"
                 },
                 "ET": {
                   "index": 69,
-                  "text": "🇪🇹 Ethiopia"
+                  "text": "\ud83c\uddea\ud83c\uddf9 Ethiopia"
                 },
                 "FI": {
                   "index": 70,
-                  "text": "🇫🇮 Finland"
+                  "text": "\ud83c\uddeb\ud83c\uddee Finland"
                 },
                 "FJ": {
                   "index": 71,
-                  "text": "🇫🇯 Fiji"
+                  "text": "\ud83c\uddeb\ud83c\uddef Fiji"
                 },
                 "FK": {
                   "index": 72,
-                  "text": "🇫🇰 Falkland Islands (Malvinas)"
+                  "text": "\ud83c\uddeb\ud83c\uddf0 Falkland Islands (Malvinas)"
                 },
                 "FM": {
                   "index": 73,
-                  "text": "🇫🇲 Micronesia"
+                  "text": "\ud83c\uddeb\ud83c\uddf2 Micronesia"
                 },
                 "FO": {
                   "index": 74,
-                  "text": "🇫🇴 Faroe Islands"
+                  "text": "\ud83c\uddeb\ud83c\uddf4 Faroe Islands"
                 },
                 "FR": {
                   "index": 75,
-                  "text": "🇫🇷 France"
+                  "text": "\ud83c\uddeb\ud83c\uddf7 France"
                 },
                 "GA": {
                   "index": 76,
-                  "text": "🇬🇦 Gabon"
+                  "text": "\ud83c\uddec\ud83c\udde6 Gabon"
                 },
                 "GB": {
                   "index": 77,
-                  "text": "🇬🇧 United Kingdom"
+                  "text": "\ud83c\uddec\ud83c\udde7 United Kingdom"
                 },
                 "GD": {
                   "index": 78,
-                  "text": "🇬🇩 Grenada"
+                  "text": "\ud83c\uddec\ud83c\udde9 Grenada"
                 },
                 "GE": {
                   "index": 79,
-                  "text": "🇬🇪 Georgia"
+                  "text": "\ud83c\uddec\ud83c\uddea Georgia"
                 },
                 "GF": {
                   "index": 80,
-                  "text": "🇬🇫 French Guiana"
+                  "text": "\ud83c\uddec\ud83c\uddeb French Guiana"
                 },
                 "GG": {
                   "index": 81,
-                  "text": "🇬🇬 Guernsey"
+                  "text": "\ud83c\uddec\ud83c\uddec Guernsey"
                 },
                 "GH": {
                   "index": 82,
-                  "text": "🇬🇭 Ghana"
+                  "text": "\ud83c\uddec\ud83c\udded Ghana"
                 },
                 "GI": {
                   "index": 83,
-                  "text": "🇬🇮 Gibraltar"
+                  "text": "\ud83c\uddec\ud83c\uddee Gibraltar"
                 },
                 "GL": {
                   "index": 84,
-                  "text": "🇬🇱 Greenland"
+                  "text": "\ud83c\uddec\ud83c\uddf1 Greenland"
                 },
                 "GM": {
                   "index": 85,
-                  "text": "🇬🇲 Gambia"
+                  "text": "\ud83c\uddec\ud83c\uddf2 Gambia"
                 },
                 "GN": {
                   "index": 86,
-                  "text": "🇬🇳 Guinea"
+                  "text": "\ud83c\uddec\ud83c\uddf3 Guinea"
                 },
                 "GP": {
                   "index": 87,
-                  "text": "🇬🇵 Guadeloupe"
+                  "text": "\ud83c\uddec\ud83c\uddf5 Guadeloupe"
                 },
                 "GQ": {
                   "index": 88,
-                  "text": "🇬🇶 Equatorial Guinea"
+                  "text": "\ud83c\uddec\ud83c\uddf6 Equatorial Guinea"
                 },
                 "GR": {
                   "index": 89,
-                  "text": "🇬🇷 Greece"
+                  "text": "\ud83c\uddec\ud83c\uddf7 Greece"
                 },
                 "GS": {
                   "index": 90,
-                  "text": "🇬🇸 South Georgia"
+                  "text": "\ud83c\uddec\ud83c\uddf8 South Georgia"
                 },
                 "GT": {
                   "index": 91,
-                  "text": "🇬🇹 Guatemala"
+                  "text": "\ud83c\uddec\ud83c\uddf9 Guatemala"
                 },
                 "GU": {
                   "index": 92,
-                  "text": "🇬🇺 Guam"
+                  "text": "\ud83c\uddec\ud83c\uddfa Guam"
                 },
                 "GW": {
                   "index": 93,
-                  "text": "🇬🇼 Guinea-Bissau"
+                  "text": "\ud83c\uddec\ud83c\uddfc Guinea-Bissau"
                 },
                 "GY": {
                   "index": 94,
-                  "text": "🇬🇾 Guyana"
+                  "text": "\ud83c\uddec\ud83c\uddfe Guyana"
                 },
                 "GZ": {
                   "index": 95,
-                  "text": "🇵🇸 Gaza Strip"
+                  "text": "\ud83c\uddf5\ud83c\uddf8 Gaza Strip"
                 },
                 "HK": {
                   "index": 96,
-                  "text": "🇭🇰 Hong Kong"
+                  "text": "\ud83c\udded\ud83c\uddf0 Hong Kong"
                 },
                 "HM": {
                   "index": 97,
-                  "text": "🇭🇲 Heard Island and McDonald Islands"
+                  "text": "\ud83c\udded\ud83c\uddf2 Heard Island and McDonald Islands"
                 },
                 "HN": {
                   "index": 98,
-                  "text": "🇭🇳 Honduras"
+                  "text": "\ud83c\udded\ud83c\uddf3 Honduras"
                 },
                 "HR": {
                   "index": 99,
-                  "text": "🇭🇷 Croatia"
+                  "text": "\ud83c\udded\ud83c\uddf7 Croatia"
                 },
                 "HT": {
                   "index": 100,
-                  "text": "🇭🇹 Haiti"
+                  "text": "\ud83c\udded\ud83c\uddf9 Haiti"
                 },
                 "HU": {
                   "index": 101,
-                  "text": "🇭🇺 Hungary"
+                  "text": "\ud83c\udded\ud83c\uddfa Hungary"
                 },
                 "ID": {
                   "index": 102,
-                  "text": "🇮🇩 Indonesia"
+                  "text": "\ud83c\uddee\ud83c\udde9 Indonesia"
                 },
                 "IE": {
                   "index": 103,
-                  "text": "🇮🇪 Ireland"
+                  "text": "\ud83c\uddee\ud83c\uddea Ireland"
                 },
                 "IL": {
                   "index": 104,
-                  "text": "🇮🇱 Israel"
+                  "text": "\ud83c\uddee\ud83c\uddf1 Israel"
                 },
                 "IM": {
                   "index": 105,
-                  "text": "🇮🇲 Isle of Man"
+                  "text": "\ud83c\uddee\ud83c\uddf2 Isle of Man"
                 },
                 "IN": {
                   "index": 106,
-                  "text": "🇮🇳 India"
+                  "text": "\ud83c\uddee\ud83c\uddf3 India"
                 },
                 "IO": {
                   "index": 107,
-                  "text": "🇮🇴 British Indian Ocean Territory"
+                  "text": "\ud83c\uddee\ud83c\uddf4 British Indian Ocean Territory"
                 },
                 "IQ": {
                   "index": 108,
-                  "text": "🇮🇶 Iraq"
+                  "text": "\ud83c\uddee\ud83c\uddf6 Iraq"
                 },
                 "IR": {
                   "index": 109,
-                  "text": "🇮🇷 Iran"
+                  "text": "\ud83c\uddee\ud83c\uddf7 Iran"
                 },
                 "IS": {
                   "index": 110,
-                  "text": "🇮🇸 Iceland"
+                  "text": "\ud83c\uddee\ud83c\uddf8 Iceland"
                 },
                 "IT": {
                   "index": 111,
-                  "text": "🇮🇹 Italy"
+                  "text": "\ud83c\uddee\ud83c\uddf9 Italy"
                 },
                 "JE": {
                   "index": 112,
-                  "text": "🇯🇪 Jersey"
+                  "text": "\ud83c\uddef\ud83c\uddea Jersey"
                 },
                 "JM": {
                   "index": 113,
-                  "text": "🇯🇲 Jamaica"
+                  "text": "\ud83c\uddef\ud83c\uddf2 Jamaica"
                 },
                 "JO": {
                   "index": 114,
-                  "text": "🇯🇴 Jordan"
+                  "text": "\ud83c\uddef\ud83c\uddf4 Jordan"
                 },
                 "JP": {
                   "index": 115,
-                  "text": "🇯🇵 Japan"
+                  "text": "\ud83c\uddef\ud83c\uddf5 Japan"
                 },
                 "KE": {
                   "index": 116,
-                  "text": "🇰🇪 Kenya"
+                  "text": "\ud83c\uddf0\ud83c\uddea Kenya"
                 },
                 "KG": {
                   "index": 117,
-                  "text": "🇰🇬 Kyrgyzstan"
+                  "text": "\ud83c\uddf0\ud83c\uddec Kyrgyzstan"
                 },
                 "KH": {
                   "index": 118,
-                  "text": "🇰🇭 Cambodia"
+                  "text": "\ud83c\uddf0\ud83c\udded Cambodia"
                 },
                 "KI": {
                   "index": 119,
-                  "text": "🇰🇮 Kiribati"
+                  "text": "\ud83c\uddf0\ud83c\uddee Kiribati"
                 },
                 "KM": {
                   "index": 120,
-                  "text": "🇰🇲 Comoros"
+                  "text": "\ud83c\uddf0\ud83c\uddf2 Comoros"
                 },
                 "KN": {
                   "index": 121,
-                  "text": "🇰🇳 Saint Kitts and Nevis"
+                  "text": "\ud83c\uddf0\ud83c\uddf3 Saint Kitts and Nevis"
                 },
                 "KP": {
                   "index": 122,
-                  "text": "🇰🇵 North Korea"
+                  "text": "\ud83c\uddf0\ud83c\uddf5 North Korea"
                 },
                 "KR": {
                   "index": 123,
-                  "text": "🇰🇷 South Korea"
+                  "text": "\ud83c\uddf0\ud83c\uddf7 South Korea"
                 },
                 "KW": {
                   "index": 124,
-                  "text": "🇰🇼 Kuwait"
+                  "text": "\ud83c\uddf0\ud83c\uddfc Kuwait"
                 },
                 "KY": {
                   "index": 125,
-                  "text": "🇰🇾 Cayman Islands"
+                  "text": "\ud83c\uddf0\ud83c\uddfe Cayman Islands"
                 },
                 "KZ": {
                   "index": 126,
-                  "text": "🇰🇿 Kazakhstan"
+                  "text": "\ud83c\uddf0\ud83c\uddff Kazakhstan"
                 },
                 "LA": {
                   "index": 127,
-                  "text": "🇱🇦 Laos"
+                  "text": "\ud83c\uddf1\ud83c\udde6 Laos"
                 },
                 "LB": {
                   "index": 128,
-                  "text": "🇱🇧 Lebanon"
+                  "text": "\ud83c\uddf1\ud83c\udde7 Lebanon"
                 },
                 "LC": {
                   "index": 129,
-                  "text": "🇱🇨 Saint Lucia"
+                  "text": "\ud83c\uddf1\ud83c\udde8 Saint Lucia"
                 },
                 "LI": {
                   "index": 130,
-                  "text": "🇱🇮 Liechtenstein"
+                  "text": "\ud83c\uddf1\ud83c\uddee Liechtenstein"
                 },
                 "LK": {
                   "index": 131,
-                  "text": "🇱🇰 Sri Lanka"
+                  "text": "\ud83c\uddf1\ud83c\uddf0 Sri Lanka"
                 },
                 "LR": {
                   "index": 132,
-                  "text": "🇱🇷 Liberia"
+                  "text": "\ud83c\uddf1\ud83c\uddf7 Liberia"
                 },
                 "LS": {
                   "index": 133,
-                  "text": "🇱🇸 Lesotho"
+                  "text": "\ud83c\uddf1\ud83c\uddf8 Lesotho"
                 },
                 "LT": {
                   "index": 134,
-                  "text": "🇱🇹 Lithuania"
+                  "text": "\ud83c\uddf1\ud83c\uddf9 Lithuania"
                 },
                 "LU": {
                   "index": 135,
-                  "text": "🇱🇺 Luxembourg"
+                  "text": "\ud83c\uddf1\ud83c\uddfa Luxembourg"
                 },
                 "LV": {
                   "index": 136,
-                  "text": "🇱🇻 Latvia"
+                  "text": "\ud83c\uddf1\ud83c\uddfb Latvia"
                 },
                 "LY": {
                   "index": 137,
-                  "text": "🇱🇾 Libya"
+                  "text": "\ud83c\uddf1\ud83c\uddfe Libya"
                 },
                 "MA": {
                   "index": 138,
-                  "text": "🇲🇦 Morocco"
+                  "text": "\ud83c\uddf2\ud83c\udde6 Morocco"
                 },
                 "MC": {
                   "index": 139,
-                  "text": "🇲🇨 Monaco"
+                  "text": "\ud83c\uddf2\ud83c\udde8 Monaco"
                 },
                 "MD": {
                   "index": 140,
-                  "text": "🇲🇩 Moldova"
+                  "text": "\ud83c\uddf2\ud83c\udde9 Moldova"
                 },
                 "ME": {
                   "index": 141,
-                  "text": "🇲🇪 Montenegro"
+                  "text": "\ud83c\uddf2\ud83c\uddea Montenegro"
                 },
                 "MF": {
                   "index": 142,
-                  "text": "🇲🇫 Saint Martin"
+                  "text": "\ud83c\uddf2\ud83c\uddeb Saint Martin"
                 },
                 "MG": {
                   "index": 143,
-                  "text": "🇲🇬 Madagascar"
+                  "text": "\ud83c\uddf2\ud83c\uddec Madagascar"
                 },
                 "MH": {
                   "index": 144,
-                  "text": "🇲🇭 Marshall Islands"
+                  "text": "\ud83c\uddf2\ud83c\udded Marshall Islands"
                 },
                 "MK": {
                   "index": 145,
-                  "text": "🇲🇰 Macedonia"
+                  "text": "\ud83c\uddf2\ud83c\uddf0 Macedonia"
                 },
                 "ML": {
                   "index": 146,
-                  "text": "🇲🇱 Mali"
+                  "text": "\ud83c\uddf2\ud83c\uddf1 Mali"
                 },
                 "MM": {
                   "index": 147,
-                  "text": "🇲🇲 Myanmar"
+                  "text": "\ud83c\uddf2\ud83c\uddf2 Myanmar"
                 },
                 "MN": {
                   "index": 148,
-                  "text": "🇲🇳 Mongolia"
+                  "text": "\ud83c\uddf2\ud83c\uddf3 Mongolia"
                 },
                 "MO": {
                   "index": 149,
-                  "text": "🇲🇴 Macao"
+                  "text": "\ud83c\uddf2\ud83c\uddf4 Macao"
                 },
                 "MP": {
                   "index": 150,
-                  "text": "🇲🇵 Northern Mariana Islands"
+                  "text": "\ud83c\uddf2\ud83c\uddf5 Northern Mariana Islands"
                 },
                 "MQ": {
                   "index": 151,
-                  "text": "🇲🇶 Martinique"
+                  "text": "\ud83c\uddf2\ud83c\uddf6 Martinique"
                 },
                 "MR": {
                   "index": 152,
-                  "text": "🇲🇷 Mauritania"
+                  "text": "\ud83c\uddf2\ud83c\uddf7 Mauritania"
                 },
                 "MS": {
                   "index": 153,
-                  "text": "🇲🇸 Montserrat"
+                  "text": "\ud83c\uddf2\ud83c\uddf8 Montserrat"
                 },
                 "MT": {
                   "index": 154,
-                  "text": "🇲🇹 Malta"
+                  "text": "\ud83c\uddf2\ud83c\uddf9 Malta"
                 },
                 "MU": {
                   "index": 155,
-                  "text": "🇲🇺 Mauritius"
+                  "text": "\ud83c\uddf2\ud83c\uddfa Mauritius"
                 },
                 "MV": {
                   "index": 156,
-                  "text": "🇲🇻 Maldives"
+                  "text": "\ud83c\uddf2\ud83c\uddfb Maldives"
                 },
                 "MW": {
                   "index": 157,
-                  "text": "🇲🇼 Malawi"
+                  "text": "\ud83c\uddf2\ud83c\uddfc Malawi"
                 },
                 "MX": {
                   "index": 158,
-                  "text": "🇲🇽 Mexico"
+                  "text": "\ud83c\uddf2\ud83c\uddfd Mexico"
                 },
                 "MY": {
                   "index": 159,
-                  "text": "🇲🇾 Malaysia"
+                  "text": "\ud83c\uddf2\ud83c\uddfe Malaysia"
                 },
                 "MZ": {
                   "index": 160,
-                  "text": "🇲🇿 Mozambique"
+                  "text": "\ud83c\uddf2\ud83c\uddff Mozambique"
                 },
                 "NA": {
                   "index": 161,
-                  "text": "🇳🇦 Namibia"
+                  "text": "\ud83c\uddf3\ud83c\udde6 Namibia"
                 },
                 "NC": {
                   "index": 162,
-                  "text": "🇳🇨 New Caledonia"
+                  "text": "\ud83c\uddf3\ud83c\udde8 New Caledonia"
                 },
                 "NE": {
                   "index": 163,
-                  "text": "🇳🇪 Niger"
+                  "text": "\ud83c\uddf3\ud83c\uddea Niger"
                 },
                 "NF": {
                   "index": 164,
-                  "text": "🇳🇫 Norfolk Island"
+                  "text": "\ud83c\uddf3\ud83c\uddeb Norfolk Island"
                 },
                 "NG": {
                   "index": 165,
-                  "text": "🇳🇬 Nigeria"
+                  "text": "\ud83c\uddf3\ud83c\uddec Nigeria"
                 },
                 "NI": {
                   "index": 166,
-                  "text": "🇳🇮 Nicaragua"
+                  "text": "\ud83c\uddf3\ud83c\uddee Nicaragua"
                 },
                 "NL": {
                   "index": 167,
-                  "text": "🇳🇱 Netherlands"
+                  "text": "\ud83c\uddf3\ud83c\uddf1 Netherlands"
                 },
                 "NO": {
                   "index": 168,
-                  "text": "🇳🇴 Norway"
+                  "text": "\ud83c\uddf3\ud83c\uddf4 Norway"
                 },
                 "NP": {
                   "index": 169,
-                  "text": "🇳🇵 Nepal"
+                  "text": "\ud83c\uddf3\ud83c\uddf5 Nepal"
                 },
                 "NR": {
                   "index": 170,
-                  "text": "🇳🇷 Nauru"
+                  "text": "\ud83c\uddf3\ud83c\uddf7 Nauru"
                 },
                 "NU": {
                   "index": 171,
-                  "text": "🇳🇺 Niue"
+                  "text": "\ud83c\uddf3\ud83c\uddfa Niue"
                 },
                 "NZ": {
                   "index": 172,
-                  "text": "🇳🇿 New Zealand"
+                  "text": "\ud83c\uddf3\ud83c\uddff New Zealand"
                 },
                 "OM": {
                   "index": 173,
-                  "text": "🇴🇲 Oman"
+                  "text": "\ud83c\uddf4\ud83c\uddf2 Oman"
                 },
                 "PA": {
                   "index": 174,
-                  "text": "🇵🇦 Panama"
+                  "text": "\ud83c\uddf5\ud83c\udde6 Panama"
                 },
                 "PE": {
                   "index": 175,
-                  "text": "🇵🇪 Peru"
+                  "text": "\ud83c\uddf5\ud83c\uddea Peru"
                 },
                 "PF": {
                   "index": 176,
-                  "text": "🇵🇫 French Polynesia"
+                  "text": "\ud83c\uddf5\ud83c\uddeb French Polynesia"
                 },
                 "PG": {
                   "index": 177,
-                  "text": "🇵🇬 Papua New Guinea"
+                  "text": "\ud83c\uddf5\ud83c\uddec Papua New Guinea"
                 },
                 "PH": {
                   "index": 178,
-                  "text": "🇵🇭 Philippines"
+                  "text": "\ud83c\uddf5\ud83c\udded Philippines"
                 },
                 "PK": {
                   "index": 179,
-                  "text": "🇵🇰 Pakistan"
+                  "text": "\ud83c\uddf5\ud83c\uddf0 Pakistan"
                 },
                 "PL": {
                   "index": 180,
-                  "text": "🇵🇱 Poland"
+                  "text": "\ud83c\uddf5\ud83c\uddf1 Poland"
                 },
                 "PM": {
                   "index": 181,
-                  "text": "🇵🇲 Saint Pierre and Miquelon"
+                  "text": "\ud83c\uddf5\ud83c\uddf2 Saint Pierre and Miquelon"
                 },
                 "PN": {
                   "index": 182,
-                  "text": "🇵🇳 Pitcairn"
+                  "text": "\ud83c\uddf5\ud83c\uddf3 Pitcairn"
                 },
                 "PR": {
                   "index": 183,
-                  "text": "🇵🇷 Puerto Rico"
+                  "text": "\ud83c\uddf5\ud83c\uddf7 Puerto Rico"
                 },
                 "PS": {
                   "index": 184,
-                  "text": "🇵🇸 Palestinian Territory"
+                  "text": "\ud83c\uddf5\ud83c\uddf8 Palestinian Territory"
                 },
                 "PT": {
                   "index": 185,
-                  "text": "🇵🇹 Portugal"
+                  "text": "\ud83c\uddf5\ud83c\uddf9 Portugal"
                 },
                 "PW": {
                   "index": 186,
-                  "text": "🇵🇼 Palau"
+                  "text": "\ud83c\uddf5\ud83c\uddfc Palau"
                 },
                 "PY": {
                   "index": 187,
-                  "text": "🇵🇾 Paraguay"
+                  "text": "\ud83c\uddf5\ud83c\uddfe Paraguay"
                 },
                 "QA": {
                   "index": 188,
-                  "text": "🇶🇦 Qatar"
+                  "text": "\ud83c\uddf6\ud83c\udde6 Qatar"
                 },
                 "RE": {
                   "index": 189,
-                  "text": "🇷🇪 Réunion"
+                  "text": "\ud83c\uddf7\ud83c\uddea R\u00e9union"
                 },
                 "RO": {
                   "index": 190,
-                  "text": "🇷🇴 Romania"
+                  "text": "\ud83c\uddf7\ud83c\uddf4 Romania"
                 },
                 "RS": {
                   "index": 191,
-                  "text": "🇷🇸 Serbia"
+                  "text": "\ud83c\uddf7\ud83c\uddf8 Serbia"
                 },
                 "RU": {
                   "index": 192,
-                  "text": "🇷🇺 Russia"
+                  "text": "\ud83c\uddf7\ud83c\uddfa Russia"
                 },
                 "RW": {
                   "index": 193,
-                  "text": "🇷🇼 Rwanda"
+                  "text": "\ud83c\uddf7\ud83c\uddfc Rwanda"
                 },
                 "SA": {
                   "index": 194,
-                  "text": "🇸🇦 Saudi Arabia"
+                  "text": "\ud83c\uddf8\ud83c\udde6 Saudi Arabia"
                 },
                 "SB": {
                   "index": 195,
-                  "text": "🇸🇧 Solomon Islands"
+                  "text": "\ud83c\uddf8\ud83c\udde7 Solomon Islands"
                 },
                 "SC": {
                   "index": 196,
-                  "text": "🇸🇨 Seychelles"
+                  "text": "\ud83c\uddf8\ud83c\udde8 Seychelles"
                 },
                 "SD": {
                   "index": 197,
-                  "text": "🇸🇩 Sudan"
+                  "text": "\ud83c\uddf8\ud83c\udde9 Sudan"
                 },
                 "SE": {
                   "index": 198,
-                  "text": "🇸🇪 Sweden"
+                  "text": "\ud83c\uddf8\ud83c\uddea Sweden"
                 },
                 "SG": {
                   "index": 199,
-                  "text": "🇸🇬 Singapore"
+                  "text": "\ud83c\uddf8\ud83c\uddec Singapore"
                 },
                 "SH": {
                   "index": 200,
-                  "text": "🇸🇭 Saint Helena"
+                  "text": "\ud83c\uddf8\ud83c\udded Saint Helena"
                 },
                 "SI": {
                   "index": 201,
-                  "text": "🇸🇮 Slovenia"
+                  "text": "\ud83c\uddf8\ud83c\uddee Slovenia"
                 },
                 "SJ": {
                   "index": 202,
-                  "text": "🇸🇯 Svalbard and Jan Mayen"
+                  "text": "\ud83c\uddf8\ud83c\uddef Svalbard and Jan Mayen"
                 },
                 "SK": {
                   "index": 203,
-                  "text": "🇸🇰 Slovakia"
+                  "text": "\ud83c\uddf8\ud83c\uddf0 Slovakia"
                 },
                 "SL": {
                   "index": 204,
-                  "text": "🇸🇱 Sierra Leone"
+                  "text": "\ud83c\uddf8\ud83c\uddf1 Sierra Leone"
                 },
                 "SM": {
                   "index": 205,
-                  "text": "🇸🇲 San Marino"
+                  "text": "\ud83c\uddf8\ud83c\uddf2 San Marino"
                 },
                 "SN": {
                   "index": 206,
-                  "text": "🇸🇳 Senegal"
+                  "text": "\ud83c\uddf8\ud83c\uddf3 Senegal"
                 },
                 "SO": {
                   "index": 207,
-                  "text": "🇸🇴 Somalia"
+                  "text": "\ud83c\uddf8\ud83c\uddf4 Somalia"
                 },
                 "SR": {
                   "index": 208,
-                  "text": "🇸🇷 Suriname"
+                  "text": "\ud83c\uddf8\ud83c\uddf7 Suriname"
                 },
                 "SS": {
                   "index": 209,
-                  "text": "🇸🇸 South Sudan"
+                  "text": "\ud83c\uddf8\ud83c\uddf8 South Sudan"
                 },
                 "ST": {
                   "index": 210,
-                  "text": "🇸🇹 São Tomé and Príncipe"
+                  "text": "\ud83c\uddf8\ud83c\uddf9 S\u00e3o Tom\u00e9 and Pr\u00edncipe"
                 },
                 "SV": {
                   "index": 211,
-                  "text": "🇸🇻 El Salvador"
+                  "text": "\ud83c\uddf8\ud83c\uddfb El Salvador"
                 },
                 "SX": {
                   "index": 212,
-                  "text": "🇸🇽 Sint Maarten"
+                  "text": "\ud83c\uddf8\ud83c\uddfd Sint Maarten"
                 },
                 "SY": {
                   "index": 213,
-                  "text": "🇸🇾 Syria"
+                  "text": "\ud83c\uddf8\ud83c\uddfe Syria"
                 },
                 "SZ": {
                   "index": 214,
-                  "text": "🇸🇿 Swaziland"
+                  "text": "\ud83c\uddf8\ud83c\uddff Swaziland"
                 },
                 "TC": {
                   "index": 215,
-                  "text": "🇹🇨 Turks and Caicos Islands"
+                  "text": "\ud83c\uddf9\ud83c\udde8 Turks and Caicos Islands"
                 },
                 "TD": {
                   "index": 216,
-                  "text": "🇹🇩 Chad"
+                  "text": "\ud83c\uddf9\ud83c\udde9 Chad"
                 },
                 "TF": {
                   "index": 217,
-                  "text": "🇹🇫 French Southern Territories"
+                  "text": "\ud83c\uddf9\ud83c\uddeb French Southern Territories"
                 },
                 "TG": {
                   "index": 218,
-                  "text": "🇹🇬 Togo"
+                  "text": "\ud83c\uddf9\ud83c\uddec Togo"
                 },
                 "TH": {
                   "index": 219,
-                  "text": "🇹🇭 Thailand"
+                  "text": "\ud83c\uddf9\ud83c\udded Thailand"
                 },
                 "TJ": {
                   "index": 220,
-                  "text": "🇹🇯 Tajikistan"
+                  "text": "\ud83c\uddf9\ud83c\uddef Tajikistan"
                 },
                 "TK": {
                   "index": 221,
-                  "text": "🇹🇰 Tokelau"
+                  "text": "\ud83c\uddf9\ud83c\uddf0 Tokelau"
                 },
                 "TL": {
                   "index": 222,
-                  "text": "🇹🇱 Timor-Leste"
+                  "text": "\ud83c\uddf9\ud83c\uddf1 Timor-Leste"
                 },
                 "TM": {
                   "index": 223,
-                  "text": "🇹🇲 Turkmenistan"
+                  "text": "\ud83c\uddf9\ud83c\uddf2 Turkmenistan"
                 },
                 "TN": {
                   "index": 224,
-                  "text": "🇹🇳 Tunisia"
+                  "text": "\ud83c\uddf9\ud83c\uddf3 Tunisia"
                 },
                 "TO": {
                   "index": 225,
-                  "text": "🇹🇴 Tonga"
+                  "text": "\ud83c\uddf9\ud83c\uddf4 Tonga"
                 },
                 "TR": {
                   "index": 226,
-                  "text": "🇹🇷 Turkey"
+                  "text": "\ud83c\uddf9\ud83c\uddf7 Turkey"
                 },
                 "TT": {
                   "index": 227,
-                  "text": "🇹🇹 Trinidad and Tobago"
+                  "text": "\ud83c\uddf9\ud83c\uddf9 Trinidad and Tobago"
                 },
                 "TV": {
                   "index": 228,
-                  "text": "🇹🇻 Tuvalu"
+                  "text": "\ud83c\uddf9\ud83c\uddfb Tuvalu"
                 },
                 "TW": {
                   "index": 229,
-                  "text": "🇹🇼 Taiwan"
+                  "text": "\ud83c\uddf9\ud83c\uddfc Taiwan"
                 },
                 "TZ": {
                   "index": 230,
-                  "text": "🇹🇿 Tanzania"
+                  "text": "\ud83c\uddf9\ud83c\uddff Tanzania"
                 },
                 "UA": {
                   "index": 231,
-                  "text": "🇺🇦 Ukraine"
+                  "text": "\ud83c\uddfa\ud83c\udde6 Ukraine"
                 },
                 "UG": {
                   "index": 232,
-                  "text": "🇺🇬 Uganda"
+                  "text": "\ud83c\uddfa\ud83c\uddec Uganda"
                 },
                 "UM": {
                   "index": 233,
-                  "text": "🇺🇲 U.S. Minor Outlying Islands"
+                  "text": "\ud83c\uddfa\ud83c\uddf2 U.S. Minor Outlying Islands"
                 },
                 "US": {
                   "index": 234,
-                  "text": "🇺🇸 United States"
+                  "text": "\ud83c\uddfa\ud83c\uddf8 United States"
                 },
                 "UY": {
                   "index": 235,
-                  "text": "🇺🇾 Uruguay"
+                  "text": "\ud83c\uddfa\ud83c\uddfe Uruguay"
                 },
                 "UZ": {
                   "index": 236,
-                  "text": "🇺🇿 Uzbekistan"
+                  "text": "\ud83c\uddfa\ud83c\uddff Uzbekistan"
                 },
                 "VA": {
                   "index": 237,
-                  "text": "🇻🇦 Vatican City"
+                  "text": "\ud83c\uddfb\ud83c\udde6 Vatican City"
                 },
                 "VC": {
                   "index": 238,
-                  "text": "🇻🇨 Saint Vincent and The Grenadines"
+                  "text": "\ud83c\uddfb\ud83c\udde8 Saint Vincent and The Grenadines"
                 },
                 "VE": {
                   "index": 239,
-                  "text": "🇻🇪 Venezuela"
+                  "text": "\ud83c\uddfb\ud83c\uddea Venezuela"
                 },
                 "VG": {
                   "index": 240,
-                  "text": "🇻🇬 British Virgin Islands"
+                  "text": "\ud83c\uddfb\ud83c\uddec British Virgin Islands"
                 },
                 "VI": {
                   "index": 241,
-                  "text": "🇻🇮 U.S. Virgin Islands"
+                  "text": "\ud83c\uddfb\ud83c\uddee U.S. Virgin Islands"
                 },
                 "VN": {
                   "index": 242,
-                  "text": "🇻🇳 Vietnam"
+                  "text": "\ud83c\uddfb\ud83c\uddf3 Vietnam"
                 },
                 "VU": {
                   "index": 243,
-                  "text": "🇻🇺 Vanuatu"
+                  "text": "\ud83c\uddfb\ud83c\uddfa Vanuatu"
                 },
                 "WF": {
                   "index": 244,
-                  "text": "🇼🇫 Wallis and Futuna"
+                  "text": "\ud83c\uddfc\ud83c\uddeb Wallis and Futuna"
                 },
                 "WS": {
                   "index": 245,
-                  "text": "🇼🇸 Samoa"
+                  "text": "\ud83c\uddfc\ud83c\uddf8 Samoa"
                 },
                 "XK": {
                   "index": 246,
-                  "text": "🇽🇰 Kosovo"
+                  "text": "\ud83c\uddfd\ud83c\uddf0 Kosovo"
                 },
                 "YE": {
                   "index": 247,
-                  "text": "🇾🇪 Yemen"
+                  "text": "\ud83c\uddfe\ud83c\uddea Yemen"
                 },
                 "YT": {
                   "index": 248,
-                  "text": "🇾🇹 Mayotte"
+                  "text": "\ud83c\uddfe\ud83c\uddf9 Mayotte"
                 },
                 "ZA": {
                   "index": 249,
-                  "text": "🇿🇦 South Africa"
+                  "text": "\ud83c\uddff\ud83c\udde6 South Africa"
                 },
                 "ZM": {
                   "index": 250,
-                  "text": "🇿🇲 Zambia"
+                  "text": "\ud83c\uddff\ud83c\uddf2 Zambia"
                 },
                 "ZW": {
                   "index": 251,
-                  "text": "🇿🇼 Zimbabwe"
+                  "text": "\ud83c\uddff\ud83c\uddfc Zimbabwe"
                 }
               },
               "type": "value"
@@ -2906,7 +2924,7 @@
                   },
                   {
                     "targetBlank": true,
-                    "title": "Сensys",
+                    "title": "\u0421ensys",
                     "url": "https://search.censys.io/hosts/${__value.text}"
                   },
                   {
@@ -2963,7 +2981,7 @@
                   },
                   {
                     "targetBlank": true,
-                    "title": "Сensys",
+                    "title": "\u0421ensys",
                     "url": "https://search.censys.io/search?resource=hosts&q=${__value.text}"
                   },
                   {
@@ -3122,12 +3140,6 @@
       "type": "table"
     }
   ],
-  "refresh": "5m",
-  "schemaVersion": 39,
-  "tags": [
-    "cyberthreat",
-    "crowdsec"
-  ],
   "templating": {
     "list": [
       {
@@ -3163,16 +3175,5 @@
         "type": "adhoc"
       }
     ]
-  },
-  "time": {
-    "from": "now-24h",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "",
-  "title": "Crowdsec Live Threat Insights",
-  "uid": "crowdsec-loki",
-  "version": 141,
-  "weekStart": "",
-  "gnetId": null
+  }
 }

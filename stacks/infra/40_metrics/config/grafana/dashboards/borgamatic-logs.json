@@ -1,4 +1,22 @@
 {
+  "title": "Borgmatic Logs",
+  "uid": "borgmatic-logs",
+  "id": null,
+  "version": 1,
+  "schemaVersion": 39,
+  "description": "Borgmatic Logs & Stats",
+  "editable": true,
+  "graphTooltip": 0,
+  "tags": [
+    "loki"
+  ],
+  "refresh": "",
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
   "annotations": {
     "list": [
       {
@@ -11,17 +29,16 @@
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
         "type": "dashboard"
       }
     ]
   },
-  "description": "Borgmatic Logs & Stats",
-  "editable": true,
-  "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
-  "id": null,
-  "links": [],
-  "liveNow": false,
   "panels": [
     {
       "datasource": {
@@ -456,12 +473,6 @@
       "type": "logs"
     }
   ],
-  "refresh": "",
-  "schemaVersion": 39,
-  "tags": [
-    "borgmatic",
-    "loki"
-  ],
   "templating": {
     "list": [
       {
@@ -583,16 +594,5 @@
         "type": "query"
       }
     ]
-  },
-  "time": {
-    "from": "now-7d",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "",
-  "title": "Borgmatic Logs",
-  "uid": "a1690890-ad0e-4489-986e-475a0e1cf15e",
-  "version": 21,
-  "weekStart": "",
-  "gnetId": 20736
+  }
 }

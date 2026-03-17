@@ -1,4 +1,22 @@
 {
+  "title": "Traefik Summary",
+  "uid": "traefik-standalone",
+  "id": null,
+  "version": 1,
+  "schemaVersion": 37,
+  "description": "Official dashboard for Standalone Traefik",
+  "editable": true,
+  "graphTooltip": 0,
+  "tags": [
+    "prometheus"
+  ],
+  "refresh": "",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
   "annotations": {
     "list": [
       {
@@ -21,14 +39,6 @@
       }
     ]
   },
-  "description": "Official dashboard for Standalone Traefik",
-  "editable": false,
-  "fiscalYearStartMonth": 0,
-  "gnetId": 17346,
-  "graphTooltip": 0,
-  "id": null,
-  "links": [],
-  "liveNow": false,
   "panels": [
     {
       "collapsed": false,
@@ -1381,10 +1391,6 @@
       "type": "row"
     }
   ],
-  "refresh": false,
-  "schemaVersion": 37,
-  "style": "dark",
-  "tags": [],
   "templating": {
     "list": [
       {
@@ -1513,15 +1519,5 @@
         "type": "query"
       }
     ]
-  },
-  "time": {
-    "from": "now-6h",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "",
-  "title": "Traefik Official Standalone Dashboard",
-  "uid": "n5bu_kv45",
-  "version": 7,
-  "weekStart": ""
+  }
 }
