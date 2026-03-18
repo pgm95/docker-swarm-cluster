@@ -1,10 +1,13 @@
 """Site-wide orchestration — deploy infra/apps, reset."""
 
 import argparse
+import os
 import subprocess
 import sys
+import time
 
 from . import SwarmError
+from ._docker import run as docker_run
 from ._output import error, info, setup
 from ._ssh import ssh_node
 from ._stack import find_stacks, stack_name
@@ -21,7 +24,7 @@ def _mise_run(task: str, *args: str) -> bool:
 def deploy_infra() -> int:
     stacks = find_stacks("stacks/infra")
     failed = []
-    info(f"=== Infra Deploy ===")
+    info("=== Infra Deploy ===")
     info(f"Stacks: {len(stacks)}")
     info("")
 
@@ -31,7 +34,6 @@ def deploy_infra() -> int:
             info(f"FAILED: {stack.name}")
             failed.append(stack.name)
         elif stack_name(stack) == "registry":
-            import time
             time.sleep(5)
             info("━━━ registry:auth ━━━")
             if not _mise_run("registry:auth"):
@@ -51,7 +53,7 @@ def deploy_apps() -> int:
     stacks = find_stacks("stacks/apps")
     failed = []
     skipped = 0
-    info(f"=== Apps Deploy ===")
+    info("=== Apps Deploy ===")
     info(f"Stacks: {len(stacks)}")
     info("")
 
@@ -66,7 +68,6 @@ def deploy_apps() -> int:
         if not _mise_run("swarm:deploy", str(stack)):
             info(f"FAILED: {stack.name}")
             failed.append(stack.name)
-        import time
         time.sleep(5)
         info("")
 
@@ -81,8 +82,6 @@ def deploy_apps() -> int:
 
 
 def reset(volumes: bool = False) -> int:
-    from ._docker import run as docker_run
-
     # Remove app stacks
     info("--- Removing app stacks ---")
     for stack in find_stacks("stacks/apps"):

@@ -1,5 +1,4 @@
 #:schema https://mise.jdx.dev/schema/mise-task.json
-#:tombi schema.strict = false
 
 ["site:deploy"]
 description = "Deploy all stacks"

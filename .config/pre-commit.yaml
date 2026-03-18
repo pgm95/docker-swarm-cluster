@@ -1,7 +1,5 @@
 # yaml-language-server: $schema=https://json.schemastore.org/pre-commit-config.json
 
-exclude: ^(\.old|\.archive|\.claude)/
-
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -44,6 +42,12 @@ repos:
         entry: mise x -- taplo lint
         language: system
         types: [toml]
+
+      - id: ruff
+        name: ruff lint
+        entry: mise x -- ruff check
+        language: system
+        types: [python]
 
       - id: pytest
         name: Run Python tests

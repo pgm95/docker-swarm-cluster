@@ -1,5 +1,4 @@
 #:schema https://mise.jdx.dev/schema/mise.json
-#:tombi schema.strict = false
 
 [env]
 _.file = { path = "{{ env.PROJECT_SECRETS_DIR }}/prod.yaml", redact = true }

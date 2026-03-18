@@ -47,7 +47,7 @@ def registry_auth(local: bool = False) -> int:
     nodes = get_swarm_nodes()
     target_count = len(nodes) + (1 if local else 0)
     info(f"Registry: {registry}")
-    info(f"Targets: {target_count}" + (f" ({len(nodes)} nodes + local machine)" if local else f" nodes"))
+    info(f"Targets: {target_count}" + (f" ({len(nodes)} nodes + local machine)" if local else " nodes"))
     info("")
 
     failed = 0

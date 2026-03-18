@@ -142,7 +142,7 @@ Task logic lives in the `swarm` Python package at `.mise/lib/swarm/`, invoked by
 
 ### Testing
 
-Tests live at `.mise/tests/`, configured via `pyproject.toml`. All Docker/SSH calls are mocked at the subprocess boundary — no live cluster required.
+Tests live at `.mise/tests/`, configured via `.config/pyproject.toml`. All Docker/SSH calls are mocked at the subprocess boundary — no live cluster required.
 
 ```bash
 pytest          # run via mise env
@@ -159,12 +159,16 @@ Pre-commit hooks run on every commit (`.config/pre-commit.yaml`):
 
 | Hook | Scope | Action |
 |------|-------|--------|
-| `compose-validate` | `compose.yml`, `anchors.yml` | Full Swarm compatibility via `swarm:validate` |
-| `pytest` | Always | Python test suite |
-| `check-secrets-encrypted` | `secrets.env`, `.secrets/*.yaml` | Verify SOPS markers present |
-| `yamllint` | YAML (excl `.secrets/`) | Syntax/style |
+| `check-yaml` | YAML (excl `.secrets/`) | Syntax validation |
+| `check-json` | JSON | Syntax validation (Grafana dashboards) |
+| `check-case-conflict` | All files | Case-insensitive filesystem collision detection |
+| `yamllint` | YAML (excl `.secrets/`) | Style linting |
 | `markdownlint-cli2` | Markdown | Documentation linting |
 | `taplo-lint` | TOML | TOML linting |
+| `ruff` | Python | Linting (unused imports, bugs, style) |
+| `pytest` | Always | Python test suite |
+| `check-secrets-encrypted` | `secrets.env`, `.secrets/*.yaml` | Verify SOPS markers present |
+| `compose-validate` | `compose.yml`, `anchors.yml` | Full Swarm compatibility via `swarm:validate` |
 | `gitleaks` | All files | Secret detection |
 
 `compose-validate` runs the full pipeline (anchors + compose config + sed + `docker stack config`) and checks bind mount paths on target nodes.
@@ -172,7 +176,7 @@ Pre-commit hooks run on every commit (`.config/pre-commit.yaml`):
 ## Adding a New Stack
 
 1. Create `stacks/<namespace>/<stack-name>/compose.yml`
-2. Follow compose conventions (see existing stacks or [compose rules](../.claude/rules/stack-compose.md))
+2. Follow compose conventions (see existing stacks as reference)
 3. Add `secrets.env` if needed → `mise run sops:encrypt`
 4. Add `secrets.yml` / `configs.yml` if using versioned secrets/configs
 5. For infra: prefix folder with `NN_` for deploy ordering

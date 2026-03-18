@@ -10,7 +10,7 @@ class TestSSHNode:
     def test_basic_command(self, mock_subprocess):
         mock_subprocess.return_value.stdout = "hello"
         mock_subprocess.return_value.returncode = 0
-        result = ssh_node("swarm-vm", "hostname")
+        ssh_node("swarm-vm", "hostname")
         cmd = mock_subprocess.call_args[0][0]
         assert "ssh" == cmd[0]
         assert "-n" in cmd

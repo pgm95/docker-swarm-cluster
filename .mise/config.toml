@@ -1,5 +1,4 @@
 #:schema https://mise.jdx.dev/schema/mise.json
-#:tombi schema.strict = false
 
 ############################ SETTINGS ############################
 [settings]
@@ -16,6 +15,7 @@ unix_default_inline_shell_args = "bash -c -o errexit -o nounset -o pipefail"
 "aqua:jdx/usage" = "latest"
 "aqua:getsops/sops" = "latest"
 "aqua:tamasfe/taplo" = "latest"
+"aqua:astral-sh/ruff" = "latest"
 "aqua:FiloSottile/age" = "latest"
 "aqua:pre-commit/pre-commit" = "latest"
 
@@ -57,10 +57,12 @@ run = [
 
 [tasks."env:clean"]
 description = " " # Clean up environment and cache
-run = [
-  "mise uninstall --all || true",
-  "find . \\( -name \"*.tmp\" -o -name \"*.log\" -o -name \"__pycache__\" -o -name \"*.pyc\" -o -name \"*.egg-info\" -o -name \".cache\" -o -name \"*_cache\" -o -name \".venv\" \\) -exec rm -rf {} + || true"
-]
+usage = 'flag "--uninstall" help="Also uninstall all mise tools"'
+run = '''
+#!/usr/bin/env bash
+[[ "${usage_uninstall:-}" == "true" ]] && mise uninstall --all
+find . \( -name "*.tmp" -o -name "*.log" -o -name "__pycache__" -o -name "*.pyc" -o -name "*.egg-info" -o -name ".cache" -o -name "*_cache" -o -name ".venv" \) -exec rm -rf {} + || true
+'''
 
 [tasks."validate"]
 description = " " # Run all pre-commit hooks

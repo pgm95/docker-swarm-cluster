@@ -1,5 +1,4 @@
 #:schema https://mise.jdx.dev/schema/mise-task.json
-#:tombi schema.strict = false
 
 ["swarm:deploy"]
 description = "Deploy a stack with automatic secret management"

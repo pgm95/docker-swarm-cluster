@@ -1,5 +1,4 @@
 #:schema https://mise.jdx.dev/schema/mise-task.json
-#:tombi schema.strict = false
 
 ["sops:init"]
 description = "Generate age key and update SOPS_CONFIG"
