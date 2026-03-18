@@ -15,6 +15,7 @@ unix_default_inline_shell_args = "bash -c -o errexit -o nounset -o pipefail"
 "pipx:pytest" = "9.0.2"
 "aqua:jdx/usage" = "latest"
 "aqua:getsops/sops" = "latest"
+"aqua:tamasfe/taplo" = "latest"
 "aqua:FiloSottile/age" = "latest"
 "aqua:pre-commit/pre-commit" = "latest"
 
@@ -22,11 +23,14 @@ unix_default_inline_shell_args = "bash -c -o errexit -o nounset -o pipefail"
 PROJECT_CONFIGS_DIR = "{{config_root}}/.config"
 PROJECT_SECRETS_DIR = "{{config_root}}/.secrets"
 
+PYTHONPATH = "{{config_root}}/.mise/lib"
+PYTEST_ADDOPTS = "-c {{ env.PROJECT_CONFIGS_DIR }}/pyproject.toml --rootdir {{config_root}}"
 YAMLLINT_CONFIG_FILE = "{{ env.PROJECT_CONFIGS_DIR }}/yamllint.yaml"
 SOPS_AGE_KEY_FILE = "{{config_root}}/age.key"
 SOPS_CONFIG = "{{ env.PROJECT_CONFIGS_DIR }}/sops.yaml"
+
 GLOBAL_SECRETS = "{{ env.PROJECT_SECRETS_DIR }}/shared.yaml"
-_.file = { path = "{{ env.PROJECT_SECRETS_DIR }}/shared.yaml", redact = true }
+_.file = { path = "{{ env.GLOBAL_SECRETS }}", redact = true }
 
 GLOBAL_TZ="UTC"
 GLOBAL_TZ_LOCAL="America/New_York"
@@ -34,9 +38,6 @@ GLOBAL_LDAP_ADMIN_GROUP="app_admin"
 GLOBAL_NONROOT_PUID="1000"
 GLOBAL_NONROOT_PGID="1000"
 GLOBAL_NONROOT_DOCKER="{{ env.GLOBAL_NONROOT_PUID }}:{{ env.GLOBAL_NONROOT_PGID }}"
-
-STACKS_DIR = "{{config_root}}/stacks"
-PYTHONPATH = "{{config_root}}/.mise/lib"
 
 ############################ TASKS ############################
 [task_config]
