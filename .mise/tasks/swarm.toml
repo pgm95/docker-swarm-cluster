@@ -8,65 +8,17 @@ env.CONVERGE_TIMEOUT = "180"
 env.CONVERGE_INTERVAL = "2"
 run = '''
 #!/usr/bin/env bash
-source .mise/tasks/scripts/content-hash.sh
-source .mise/tasks/scripts/sops-export.sh
-source .mise/tasks/scripts/compose-config.sh
-source .mise/tasks/scripts/deploy-secrets.sh
-source .mise/tasks/scripts/deploy-convergence.sh
-source .mise/tasks/scripts/resolve-stack.sh
-STACK_PATH="${usage_path}"
-STACK_FILE="${STACK_PATH}/compose.yml"
-[[ -f "${STACK_FILE}" ]] || { echo "Error: ${STACK_FILE} not found"; exit 1; }
-[[ -f "${SOPS_AGE_KEY_FILE:-}" ]] || { echo "Error: SOPS_AGE_KEY_FILE not found: ${SOPS_AGE_KEY_FILE:-unset}"; exit 1; }
-STACK_NAME=$(stack_name "${STACK_PATH}")
-
-# --- Versioned secrets & configs ---
-if grep -qE 'DEPLOY_VERSION' "${STACK_PATH}"/*.yml 2>/dev/null; then
-    DEPLOY_VERSION="$(git rev-parse --short HEAD 2>/dev/null || echo 'local')_$(date +%s)"
-    export DEPLOY_VERSION STACK_PATH
-    echo "Deploy version: ${DEPLOY_VERSION}"
-    sops_export "${STACK_PATH}/secrets.env"
-    validate_required_secrets
-    create_versioned_secrets
-    validate_config_files
-    echo ""
-else
-    echo "Stack uses env vars only"
-    sops_export "${STACK_PATH}/secrets.env"
-fi
-
-# --- Auto-build custom images ---
-for build_dir in "${STACK_PATH}"/build/*/; do
-    [[ -d "${build_dir}" ]] || continue
-    local_service=$(basename "${build_dir}")
-    local_tag=$(compute_content_hash "${build_dir}")
-    local_image="${GLOBAL_SWARM_OCI_REGISTRY}/${STACK_NAME}/${local_service}:${local_tag}"
-    var_name="OCI_TAG_$(echo "${local_service}" | tr '[:lower:]' '[:upper:]')"
-    export "${var_name}=${local_tag}"
-    echo "Image: ${var_name}=${local_tag}"
-    if docker manifest inspect "${local_image}" >/dev/null 2>&1; then
-        echo "  Exists: ${local_image}"
-    else
-        echo "  Building: ${local_image}"
-        docker build -t "${local_image}" "${build_dir}" || { echo "ERROR: Build failed for ${local_image}"; exit 1; }
-        echo "  Pushing: ${local_image}"
-        docker push "${local_image}" || { echo "ERROR: Push failed for ${local_image}"; exit 1; }
-    fi
-    echo ""
-done
-
-# --- Deploy ---
+prepare_out=$(python3 -m swarm.deploy prepare "${usage_path}") || exit 1
+eval "${prepare_out}"
 echo "Deploying: ${STACK_NAME}"
-if ! compose_config "${STACK_FILE}" | sed '/^name:/d; s/published: "\([0-9]*\)"/published: \1/' | docker stack deploy --detach --with-registry-auth -c - "${STACK_NAME}"; then
+if ! python3 -m swarm._compose "${STACK_PATH}/compose.yml" | sed '/^name:/d; s/published: "\([0-9]*\)"/published: \1/' | docker stack deploy --detach --with-registry-auth -c - "${STACK_NAME}"; then
     echo "ERROR: Deploy command failed"
     [[ -n "${DEPLOY_VERSION:-}" ]] && echo "Tip: Run 'mise run swarm:cleanup' to remove orphaned secrets"
     exit 1
 fi
-
-# --- Wait for convergence ---
 echo ""
-wait_for_convergence "${STACK_NAME}"
-check_replica_health "${STACK_NAME}"
+python3 -m swarm.convergence wait "${STACK_NAME}" --timeout "${CONVERGE_TIMEOUT}" --interval "${CONVERGE_INTERVAL}"
+python3 -m swarm.convergence check "${STACK_NAME}"
 echo ""
 docker stack services "${STACK_NAME}"
 if [[ -n "${DEPLOY_VERSION:-}" ]]; then
@@ -78,291 +30,25 @@ fi
 ["swarm:validate"]
 description = "Internal: validate all compose files for Swarm compatibility"
 hide = true
-run = '''{% raw %}
-#!/usr/bin/env bash
-source .mise/tasks/scripts/content-hash.sh
-source .mise/tasks/scripts/compose-config.sh
-source .mise/tasks/scripts/resolve-nodes.sh
-# Export OCI_TAG_* env vars for stacks with build contexts
-for build_dir in stacks/*/build/*/  stacks/*/*/build/*/; do
-    [[ -d "${build_dir}" ]] || continue
-    service=$(basename "${build_dir}")
-    tag=$(compute_content_hash "${build_dir}")
-    var_name="OCI_TAG_$(echo "${service}" | tr '[:lower:]' '[:upper:]')"
-    export "${var_name}=${tag}"
-done
-validate_stack() {
-    compose_config "$1" 2>/dev/null \
-        | sed '/^name:/d; s/published: "\([0-9]*\)"/published: \1/' \
-        | docker stack config -c - > /dev/null 2>&1
-}
-FAILED=0
-while IFS= read -r f; do
-    if validate_stack "$f"; then
-        echo "✓ ${f}"
-    else
-        echo "✗ ${f}"
-        compose_config "$f" 2>&1 | head -5
-        FAILED=1
-    fi
-done < <(find stacks -name "compose.yml" | sort)
-[[ ${FAILED} -eq 0 ]] || exit 1
-# --- Bind mount path checks ---
-echo ""
-echo "=== Bind mount paths ==="
-warnings=0
-for stack_file in $(find stacks -name "compose.yml" | sort); do
-    # Extract bind mounts and target node per service from resolved compose
-    bind_info=$(compose_config "${stack_file}" --format json 2>/dev/null | python3 -c '
-import json, sys
-config = json.load(sys.stdin)
-for svc_name, svc in config.get("services", {}).items():
-    for v in svc.get("volumes", []):
-        if v.get("type") == "bind":
-            src = v["source"]
-            print(f"{svc_name}\t{src}")
-' 2>/dev/null) || continue
-    [[ -z "${bind_info}" ]] && continue
-    # Get service→node mapping for this stack
-    declare -A svc_nodes=()
-    while IFS=$'\t' read -r svc_name node_name; do
-        svc_nodes["${svc_name}"]="${node_name}"
-    done < <(get_service_node "${stack_file}" 2>/dev/null)
-    # Group bind paths by target node
-    declare -A node_paths=()
-    while IFS=$'\t' read -r svc_name bind_path; do
-        node="${svc_nodes[${svc_name}]:-UNKNOWN}"
-        node_paths["${node}"]+="${bind_path}"$'\n'
-    done <<< "${bind_info}"
-    stack_name="$(dirname "${stack_file}")"
-    for node in "${!node_paths[@]}"; do
-        # Deduplicate paths for this node
-        unique_paths=$(echo -n "${node_paths[${node}]}" | sort -u)
-        [[ -z "${unique_paths}" ]] && continue
-        stat_cmd=""
-        while IFS= read -r p; do
-            [[ -z "${p}" ]] && continue
-            stat_cmd+="if [ -e '${p}' ]; then stat -c '%A %U:%G ${p}' '${p}'; else echo 'MISSING ${p}'; fi;"
-        done <<< "${unique_paths}"
-        [[ -z "${stat_cmd}" ]] && continue
-        results=$(ssh_node "${node}" "${stat_cmd}" 2>/dev/null) || {
-            echo "⚠ ${stack_name} → ${node}: unreachable"
-            ((warnings++))
-            continue
-        }
-        echo "${stack_name} (${node}):"
-        while IFS= read -r line; do
-            if [[ "${line}" == MISSING* ]]; then
-                echo "  ⚠ ${line}"
-                ((warnings++))
-            else
-                echo "  ${line}"
-            fi
-        done <<< "${results}"
-    done
-    unset svc_nodes node_paths
-done
-if [[ ${warnings} -gt 0 ]]; then
-    echo ""
-    echo "${warnings} warning(s) — missing bind mount paths."
-fi
-{% endraw %}'''
+run = 'python3 -m swarm.validate'
 
 ["swarm:remove"]
 description = "Remove a deployed stack and wait for services to drain"
 usage = 'arg "<path>" help="Path to stack directory"'
-env.DRAIN_TIMEOUT = "60"
-env.DRAIN_INTERVAL = "3"
-run = '''{% raw %}
-#!/usr/bin/env bash
-source .mise/tasks/scripts/resolve-stack.sh
-STACK_NAME=$(stack_name "${usage_path}")
-if ! docker stack ls --format '{{.Name}}' | grep -qx "${STACK_NAME}"; then
-    echo "Not deployed: ${STACK_NAME}"
-    exit 0
-fi
-echo "Removing: ${STACK_NAME}"
-docker stack rm "${STACK_NAME}"
-echo "Waiting for services to drain..."
-elapsed=0
-while [[ ${elapsed} -lt ${DRAIN_TIMEOUT} ]] && docker stack ps "${STACK_NAME}" >/dev/null 2>&1; do
-    sleep "${DRAIN_INTERVAL}"; ((elapsed += DRAIN_INTERVAL))
-done
-if docker stack ps "${STACK_NAME}" >/dev/null 2>&1; then
-    echo "WARNING: Stack still draining after ${DRAIN_TIMEOUT}s"
-else
-    echo "Removed: ${STACK_NAME}"
-fi
-{% endraw %}'''
+run = 'python3 -m swarm.remove "${usage_path}"'
 
 ["swarm:status"]
 alias = "status"
 description = "Show cluster nodes and health status of all deployed stacks"
-run = '''{% raw %}
-#!/usr/bin/env bash
-source .mise/tasks/scripts/resolve-stack.sh
-
-# --- Nodes ---
-printf "%-18s %-12s %-14s %-10s %s\n" "NODE" "ROLE" "STATUS" "ENGINE" "LABELS"
-printf "%-18s %-12s %-14s %-10s %s\n" "----" "----" "------" "------" "------"
-while IFS=$'\t' read -r hostname status availability role engine; do
-    labels=$(docker node inspect "${hostname}" --format '{{range $k,$v := .Spec.Labels}}{{$k}}={{$v}} {{end}}' 2>/dev/null | sed 's/ $//')
-    [[ -z "${labels}" ]] && labels="-"
-    printf "%-18s %-12s %-14s %-10s %s\n" "${hostname}" "${role}" "${status}/${availability}" "${engine}" "${labels}"
-done < <(docker node ls --format '{{.Hostname}}\t{{.Status}}\t{{.Availability}}\t{{if .ManagerStatus}}{{.ManagerStatus}}{{else}}Worker{{end}}\t{{.EngineVersion}}' 2>/dev/null)
-echo ""
-
-# --- Stacks ---
-deployed=$(docker stack ls --format '{{.Name}}' 2>/dev/null)
-mapfile -t STACKS < <(
-    for dir in $(find_stacks stacks/infra) $(find_stacks stacks/apps); do
-        stack_name "${dir}"
-    done
-)
-total=0; healthy=0; unhealthy=0
-printf "%-20s %-11s %-14s %s\n" "STACK" "STATUS" "NODE" "SERVICES"
-printf "%-20s %-11s %-14s %s\n" "-----" "------" "----" "--------"
-for stack in "${STACKS[@]}"; do
-    if ! echo "${deployed}" | grep -qx "${stack}"; then
-        printf "%-20s %-11s\n" "${stack}" "not deployed"
-        continue
-    fi
-    ((total++))
-    # Collect service replicas
-    services=""
-    stack_healthy=true
-    declare -A svc_nodes=()
-    while IFS=$'\t' read -r name replicas; do
-        short_name="${name#${stack}_}"
-        current="${replicas%%/*}"
-        desired="${replicas##*/}"
-        if [[ "${current}" -lt "${desired}" ]]; then
-            latest_state="$(docker service ps "${name}" --format '{{.CurrentState}}' --filter desired-state=shutdown 2>/dev/null | head -1)"
-            if [[ "${latest_state}" != Complete* ]]; then
-                stack_healthy=false
-            fi
-        fi
-        services+="${short_name}(${replicas}) "
-    done < <(docker stack services "${stack}" --format '{{.Name}}\t{{.Replicas}}' 2>/dev/null)
-    # Collect node placement per service
-    while IFS=$'\t' read -r task_name node; do
-        svc="${task_name%%.*}"
-        short_svc="${svc#${stack}_}"
-        svc_nodes["${short_svc}"]="${node}"
-    done < <(docker stack ps "${stack}" --format '{{.Name}}\t{{.Node}}' --filter "desired-state=running" 2>/dev/null)
-    # Determine display node: single node if all services on same node, else per-service
-    unique_nodes=($(printf '%s\n' "${svc_nodes[@]}" | sort -u))
-    if [[ ${#unique_nodes[@]} -eq 1 ]]; then
-        node_col="${unique_nodes[0]}"
-    elif [[ ${#unique_nodes[@]} -eq 0 ]]; then
-        node_col="-"
-    else
-        node_col="${unique_nodes[*]}"
-    fi
-    unset svc_nodes
-    status_label="healthy"
-    if ! ${stack_healthy}; then
-        status_label="UNHEALTHY"
-    fi
-    printf "%-20s %-11s %-14s %s\n" "${stack}" "${status_label}" "${node_col}" "${services}"
-    if ! ${stack_healthy}; then
-        ((unhealthy++))
-        # Show error details for failing tasks
-        while IFS=$'\t' read -r task_name task_err; do
-            [[ -z "${task_err}" ]] && continue
-            short="${task_name%%.*}"
-            printf "  %-18s %s\n" "${short#${stack}_}" "${task_err}"
-        done < <(docker stack ps "${stack}" --format '{{.Name}}\t{{.Error}}' --filter "desired-state=running" --no-trunc 2>/dev/null)
-    else
-        ((healthy++))
-    fi
-done
-echo ""
-echo "Deployed: ${total} | Healthy: ${healthy} | Unhealthy: ${unhealthy}"
-{% endraw %}'''
+run = 'python3 -m swarm.status'
 
 ["swarm:cleanup"]
 description = "Remove unused versioned secrets, configs, dead containers, and dangling images"
 usage = 'flag "--prune-images" help="Also prune all unused images on every node"'
-run = '''{% raw %}
-#!/usr/bin/env bash
-source .mise/tasks/scripts/resolve-nodes.sh
-removed=0
-cleanup_versioned_items() {
-    local item_type="$1"
-    local count=0
-    while read -r item_name; do
-        [[ -z "${item_name}" ]] && continue
-        if docker "${item_type}" rm "${item_name}" 2>/dev/null; then
-            echo "  - ${item_name}"
-            ((count++))
-        fi
-    done < <(docker "${item_type}" ls --format '{{.Name}}' | grep -E '_[a-f0-9]+_[0-9]+$' || true)
-    echo "  Removed: ${count}"
-    ((removed += count))
-}
-echo "=== Secrets ==="
-cleanup_versioned_items "secret"
-echo ""
-echo "=== Configs ==="
-cleanup_versioned_items "config"
-echo ""
-mapfile -t nodes < <(get_swarm_nodes | cut -f1)
-echo "=== Containers ==="
-for node in "${nodes[@]}"; do
-    pruned=$(ssh_node "${node}" "docker container prune -f" 2>/dev/null)
-    count=$(echo "${pruned}" | grep -c '^[a-f0-9]' || true)
-    echo "  ${node}: ${count}"
-    ((removed += count))
-done
-echo ""
-if [[ "${usage_prune_images}" == "true" ]]; then
-    echo "=== Images ==="
-    for node in "${nodes[@]}"; do
-        pruned=$(ssh_node "${node}" "docker image prune -af" 2>/dev/null)
-        reclaimed=$(echo "${pruned}" | sed -n 's/.*reclaimed space: //p')
-        [[ -z "${reclaimed}" ]] && reclaimed="0B"
-        count=$(echo "${pruned}" | grep -c '^deleted:' || true)
-        echo "  ${node}: ${count} (${reclaimed})"
-        ((removed += count))
-    done
-    echo ""
-fi
-echo "=== Volumes ==="
-for node in "${nodes[@]}"; do
-    pruned=$(ssh_node "${node}" "docker volume prune -f" 2>/dev/null)
-    count=$(echo "${pruned}" | grep -c '^[a-f0-9]' || true)
-    reclaimed=$(echo "${pruned}" | sed -n 's/.*reclaimed space: //p')
-    [[ -z "${reclaimed}" ]] && reclaimed="0B"
-    echo "  ${node}: ${count} (${reclaimed})"
-    ((removed += count))
-done
-echo ""
-if [[ ${removed} -eq 0 ]]; then
-    echo "Nothing to clean up."
-else
-    echo "Cleanup complete."
-fi
-{% endraw %}'''
+run = 'python3 -m swarm.cleanup'
 
 ["swarm:init-networks"]
 description = "Internal: create overlay networks (idempotent)"
 hide = true
 env.SWARM_INTERNAL_NETWORKS = "infra_socket"
-run = '''
-#!/usr/bin/env bash
-source .mise/tasks/scripts/resolve-networks.sh
-while IFS= read -r net; do
-    [[ -z "${net}" ]] && continue
-    local_flags=""
-    is_internal_network "${net}" && local_flags="--internal"
-    if docker network inspect "${net}" >/dev/null 2>&1; then
-        echo "  exists: ${net}"
-    elif docker network create -d overlay --attachable ${local_flags} "${net}" >/dev/null 2>&1; then
-        echo "  created: ${net}"
-    else
-        echo "  FAILED: ${net}"
-        exit 1
-    fi
-done < <(get_infra_networks)
-'''
+run = 'python3 -m swarm.networks init'

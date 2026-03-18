@@ -26,7 +26,7 @@ repos:
         exclude: ^\.secrets/
 
   - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.20.0
+    rev: v0.21.0
     hooks:
       - id: markdownlint-cli2
         args: [--config, .config/.markdownlint-cli2.jsonc, --fix]
@@ -35,6 +35,7 @@ repos:
     rev: v0.9.3
     hooks:
       - id: taplo-lint
+      # - id: taplo-format
 
   - repo: local
     hooks:
@@ -44,6 +45,13 @@ repos:
         entry: mise run swarm:validate
         language: system
         files: ^stacks/(.*/compose\.yml|_shared/anchors\.yml)$
+        pass_filenames: false
+
+      - id: pytest
+        name: Run Python tests
+        entry: mise x -- pytest
+        language: system
+        always_run: true
         pass_filenames: false
 
       - id: check-secrets-encrypted

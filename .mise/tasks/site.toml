@@ -11,146 +11,22 @@ depends_post = ["swarm:status"]
 alias = "infra"
 description = "Deploy infrastructure stacks in order"
 depends = ["swarm:init-networks"]
-run = '''{% raw %}
-#!/usr/bin/env bash
-source .mise/tasks/scripts/resolve-stack.sh
-mapfile -t STACKS < <(find_stacks stacks/infra)
-failed=()
-echo "=== Infra Deploy ==="
-echo "Stacks: ${#STACKS[@]}"
-echo ""
-for stack in "${STACKS[@]}"; do
-    echo "━━━ $(basename "${stack}") ━━━"
-    if ! mise run swarm:deploy "${stack}"; then
-        echo "FAILED: $(basename "${stack}")"
-        failed+=("$(basename "${stack}")")
-    elif [[ "$(stack_name "${stack}")" == "registry" ]]; then
-        sleep 5
-        echo "━━━ registry:auth ━━━"
-        mise run registry:auth || failed+=("registry:auth")
-        echo ""
-    fi
-    echo ""
-done
-summary="deployed $(( ${#STACKS[@]} - ${#failed[@]} ))"
-[[ ${#failed[@]} -gt 0 ]] && summary+=", failed ${#failed[@]}: ${failed[*]}"
-echo "=== Infra deploy complete (${summary}) ==="
-[[ ${#failed[@]} -eq 0 ]]
-{% endraw %}'''
+run = 'python3 -m swarm.site deploy-infra'
 
 ["site:deploy-apps"]
 alias = "apps"
 description = "Deploy all application stacks"
-run = '''{% raw %}
-#!/usr/bin/env bash
-source .mise/tasks/scripts/resolve-stack.sh
-mapfile -t STACKS < <(find_stacks stacks/apps)
-failed=()
-skipped=0
-echo "=== Apps Deploy ==="
-echo "Stacks: ${#STACKS[@]}"
-echo ""
-for stack in "${STACKS[@]}"; do
-    if [[ -f "${stack}/.nodeploy" ]]; then
-        echo "━━━ $(basename "${stack}") ━━━"
-        echo "SKIP (.nodeploy)"
-        ((skipped++))
-        echo ""
-        continue
-    fi
-    echo "━━━ $(basename "${stack}") ━━━"
-    if ! mise run swarm:deploy "${stack}"; then
-        echo "FAILED: $(basename "${stack}")"
-        failed+=("$(basename "${stack}")")
-    fi
-    sleep 5
-    echo ""
-done
-summary="deployed $(( ${#STACKS[@]} - skipped - ${#failed[@]} ))"
-[[ ${skipped} -gt 0 ]] && summary+=", skipped ${skipped}"
-[[ ${#failed[@]} -gt 0 ]] && summary+=", failed ${#failed[@]}: ${failed[*]}"
-echo "=== Apps deploy complete (${summary}) ==="
-[[ ${#failed[@]} -eq 0 ]]
-{% endraw %}'''
+run = 'python3 -m swarm.site deploy-apps'
 
 ["site:reset"]
 description = "Remove all stacks in reverse order"
 usage = 'flag "--volumes" help="Also remove all named volumes from nodes"'
 confirm = "This will remove ALL stacks, secrets, configs, and networks. Continue?"
 depends_post = ["swarm:cleanup"]
-run = '''{% raw %}
-#!/usr/bin/env bash
-source .mise/tasks/scripts/resolve-stack.sh
-source .mise/tasks/scripts/resolve-networks.sh
-mapfile -t INFRA_STACKS < <(find_stacks stacks/infra --reverse)
-echo "--- Removing app stacks ---"
-for stack in $(find_stacks stacks/apps); do
-    mise run swarm:remove "${stack}"
-done
-echo ""
-echo "--- Removing infra stacks ---"
-for stack in "${INFRA_STACKS[@]}"; do
-    mise run swarm:remove "${stack}"
-done
-if [[ "${usage_volumes}" == "true" ]]; then
-    source .mise/tasks/scripts/resolve-nodes.sh
-    echo ""
-    echo "--- Removing volumes ---"
-    mapfile -t nodes < <(get_swarm_nodes | cut -f1)
-    for node in "${nodes[@]}"; do
-        pruned=$(ssh_node "${node}" "docker volume prune -af" 2>/dev/null)
-        count=$(echo "${pruned}" | grep -c '^[a-f0-9]' || true)
-        echo "  ${node}: ${count} removed"
-    done
-fi
-echo ""
-echo "--- Removing overlay networks ---"
-while IFS= read -r net; do
-    [[ -z "${net}" ]] && continue
-    if docker network rm "${net}" >/dev/null 2>&1; then
-        echo "  removed: ${net}"
-    else
-        echo "  skipped: ${net} (not found or in use)"
-    fi
-done < <(get_infra_networks)
-{% endraw %}'''
+run = 'python3 -m swarm.site reset'
 
 ["registry:auth"]
 description = "Login all swarm nodes to the private registry"
 usage = 'flag "--local" help="Also login the local dev machine"'
 hide = true
-run = '''{% raw %}
-#!/usr/bin/env bash
-source .mise/tasks/scripts/resolve-nodes.sh
-mapfile -t nodes < <(get_swarm_nodes | cut -f1)
-echo "Registry: ${GLOBAL_SWARM_OCI_REGISTRY}"
-if [[ "${usage_local}" == "true" ]]; then
-    echo "Targets: $((${#nodes[@]} + 1)) (${#nodes[@]} nodes + local machine)"
-else
-    echo "Targets: ${#nodes[@]} nodes"
-fi
-echo ""
-failed=0
-if [[ "${usage_local}" == "true" ]]; then
-    if echo "${REGISTRY_PASS}" | docker login -u "${REGISTRY_USER}" --password-stdin "${GLOBAL_SWARM_OCI_REGISTRY}" >/dev/null; then
-        echo "  local machine: ok"
-    else
-        echo "  local machine: FAILED"
-        ((failed++))
-    fi
-fi
-for node in "${nodes[@]}"; do
-    if echo "${REGISTRY_PASS}" | ssh_node_stdin "${node}" "docker login -u '${REGISTRY_USER}' --password-stdin '${GLOBAL_SWARM_OCI_REGISTRY}'" >/dev/null; then
-        echo "  ${node}: ok"
-    else
-        echo "  ${node}: FAILED"
-        ((failed++))
-    fi
-done
-echo ""
-if [[ ${failed} -gt 0 ]]; then
-    echo "ERROR: ${failed} target(s) failed to authenticate"
-    exit 1
-fi
-echo "All targets authenticated."
-{% endraw %}'''
+run = 'python3 -m swarm.registry_auth'

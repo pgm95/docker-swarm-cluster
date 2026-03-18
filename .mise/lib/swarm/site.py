@@ -1,0 +1,152 @@
+"""Site-wide orchestration — deploy infra/apps, reset."""
+
+import argparse
+import subprocess
+import sys
+
+from . import SwarmError
+from ._output import error, info, setup
+from ._ssh import ssh_node
+from ._stack import find_stacks, stack_name
+from .networks import get_infra_networks
+from .nodes import get_swarm_nodes
+
+
+def _mise_run(task: str, *args: str) -> bool:
+    """Run a mise task. Returns True on success."""
+    cmd = ["mise", "run", task, *args]
+    return subprocess.run(cmd).returncode == 0
+
+
+def deploy_infra() -> int:
+    stacks = find_stacks("stacks/infra")
+    failed = []
+    info(f"=== Infra Deploy ===")
+    info(f"Stacks: {len(stacks)}")
+    info("")
+
+    for stack in stacks:
+        info(f"━━━ {stack.name} ━━━")
+        if not _mise_run("swarm:deploy", str(stack)):
+            info(f"FAILED: {stack.name}")
+            failed.append(stack.name)
+        elif stack_name(stack) == "registry":
+            import time
+            time.sleep(5)
+            info("━━━ registry:auth ━━━")
+            if not _mise_run("registry:auth"):
+                failed.append("registry:auth")
+            info("")
+        info("")
+
+    deployed = len(stacks) - len(failed)
+    summary = f"deployed {deployed}"
+    if failed:
+        summary += f", failed {len(failed)}: {' '.join(failed)}"
+    info(f"=== Infra deploy complete ({summary}) ===")
+    return 1 if failed else 0
+
+
+def deploy_apps() -> int:
+    stacks = find_stacks("stacks/apps")
+    failed = []
+    skipped = 0
+    info(f"=== Apps Deploy ===")
+    info(f"Stacks: {len(stacks)}")
+    info("")
+
+    for stack in stacks:
+        if (stack / ".nodeploy").exists():
+            info(f"━━━ {stack.name} ━━━")
+            info("SKIP (.nodeploy)")
+            skipped += 1
+            info("")
+            continue
+        info(f"━━━ {stack.name} ━━━")
+        if not _mise_run("swarm:deploy", str(stack)):
+            info(f"FAILED: {stack.name}")
+            failed.append(stack.name)
+        import time
+        time.sleep(5)
+        info("")
+
+    deployed = len(stacks) - skipped - len(failed)
+    summary = f"deployed {deployed}"
+    if skipped:
+        summary += f", skipped {skipped}"
+    if failed:
+        summary += f", failed {len(failed)}: {' '.join(failed)}"
+    info(f"=== Apps deploy complete ({summary}) ===")
+    return 1 if failed else 0
+
+
+def reset(volumes: bool = False) -> int:
+    from ._docker import run as docker_run
+
+    # Remove app stacks
+    info("--- Removing app stacks ---")
+    for stack in find_stacks("stacks/apps"):
+        _mise_run("swarm:remove", str(stack))
+    info("")
+
+    # Remove infra stacks in reverse order
+    info("--- Removing infra stacks ---")
+    for stack in find_stacks("stacks/infra", reverse=True):
+        _mise_run("swarm:remove", str(stack))
+
+    # Optional: remove volumes from all nodes
+    if volumes:
+        info("")
+        info("--- Removing volumes ---")
+        for node in get_swarm_nodes():
+            hostname = node["hostname"]
+            try:
+                out = ssh_node(hostname, "docker volume prune -af", check=False)
+                count = sum(1 for line in out.stdout.splitlines() if line[:1] in "0123456789abcdef")
+                info(f"  {hostname}: {count} removed")
+            except Exception:
+                info(f"  {hostname}: unreachable")
+
+    # Remove overlay networks
+    info("")
+    info("--- Removing overlay networks ---")
+    for net in get_infra_networks():
+        result = docker_run("network", "rm", net, check=False)
+        if result.returncode == 0:
+            info(f"  removed: {net}")
+        else:
+            info(f"  skipped: {net} (not found or in use)")
+
+    return 0
+
+
+def main() -> int:
+    setup()
+    parser = argparse.ArgumentParser(prog="swarm.site")
+    sub = parser.add_subparsers(dest="command")
+
+    sub.add_parser("deploy-infra", help="Deploy infrastructure stacks in order")
+    sub.add_parser("deploy-apps", help="Deploy all application stacks")
+    sub.add_parser("reset", help="Remove all stacks in reverse order")
+
+    args = parser.parse_args()
+    if not args.command:
+        parser.print_help()
+        return 1
+
+    try:
+        if args.command == "deploy-infra":
+            return deploy_infra()
+        elif args.command == "deploy-apps":
+            return deploy_apps()
+        elif args.command == "reset":
+            volumes = os.environ.get("usage_volumes") == "true"
+            return reset(volumes)
+    except SwarmError as e:
+        error(str(e))
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

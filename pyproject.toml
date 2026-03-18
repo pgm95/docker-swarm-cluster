@@ -1,0 +1,3 @@
+[tool.pytest]
+testpaths = [".mise/tests"]
+pythonpath = [".mise/lib"]

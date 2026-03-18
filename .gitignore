@@ -15,8 +15,9 @@
 .envrc
 *.py[codz]
 *$py.class
-*.egg-info/
-__pycache__/
+*.egg-info
+__pycache__
+.pytest_cache
 .python-version
 
 # Sensitive files

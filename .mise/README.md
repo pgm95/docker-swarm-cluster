@@ -2,6 +2,26 @@
 
 Task orchestration, deployment pipeline, and development tooling for swarm-cluster.
 
+## Structure
+
+```text
+.mise/
+  config.toml             # Base env vars, tool versions, task includes
+  config.{dev,prod}.toml  # Per-environment secrets, nodes, domains
+  tasks/                  # Task definitions (TOML) — what to run
+    swarm.toml            #   Stack operations: deploy, remove, status, cleanup, validate
+    site.toml             #   Cluster-wide: deploy-infra, deploy-apps, reset, registry:auth
+    sops.toml             #   Secrets: init, encrypt, edit, status
+  lib/swarm/              # Python package — how tasks work
+    _*.py                 #   Internal: docker CLI, SSH, SOPS, compose, output, stack resolution
+    *.py                  #   User-facing: deploy, convergence, status, validate, cleanup, nodes, etc.
+  tests/                  # Pytest suite (mocked Docker/SSH, no live cluster needed)
+```
+
+Mise tasks are thin TOML definitions that delegate to the `swarm` Python package via `python3 -m swarm.<module>`. The one exception is `swarm:deploy`, which uses a short bash wrapper to `eval` Python's export output and pipe compose config through `sed` into `docker stack deploy`.
+
+The Python package centralizes all Docker CLI and SSH calls through `_docker.py` and `_ssh.py`, making the logic testable without a live cluster. Mise provides the environment (`PYTHONPATH`, SOPS keys, Docker host) and the task interface (`mise run swarm:deploy ...`).
+
 ## Environment Profiles
 
 Dev/prod separation uses mise's `MISE_ENV` profile system. Dev is default (set in `.config/miserc.toml`).
@@ -40,11 +60,11 @@ This is why `GLOBAL_SWARM_OCI_REGISTRY` (uses `DOMAIN_PRIVATE` from SOPS) lives 
 
 ## Compose Preprocessing
 
-Docker Swarm doesn't natively support `include:` or cross-file YAML anchors. `compose_config()` bridges this:
+Docker Swarm doesn't natively support `include:` or cross-file YAML anchors. `compose_config()` in `_compose.py` bridges this:
 
 ```text
 stacks/_shared/anchors.yml + <stack>/compose.yml
-    → cat (concatenate)
+    → concatenate into temp file
     → docker compose --project-directory <stack-dir> --project-name <name> config
     → sed: strip 'name:', fix quoted ports
     → docker stack deploy -c -
@@ -63,14 +83,12 @@ Two sed transforms required because `docker stack deploy` rejects:
 
 `mise run swarm:deploy stacks/<ns>/<stack>` stages:
 
-1. **Secret detection** — scans `*.yml` for `DEPLOY_VERSION` references
-2. **SOPS decryption** — decrypts `secrets.env`, exports variables
-3. **Pre-flight validation** — verifies secrets and config files exist
-4. **Secret/config creation** — versioned Docker secrets/configs (`<name>_<sha>_<ts>`)
-5. **Auto-build** — detects `build/*/`, content-hash tags, builds+pushes if new
-6. **Compose preprocessing** — `compose_config` + sed
-7. **Stack deploy** — `docker stack deploy --detach --with-registry-auth -c -`
-8. **Convergence wait** — polls until replicas running (default 180s, configurable via `CONVERGE_TIMEOUT`)
+1. **Prepare** (`swarm.deploy`) — resolves stack name, detects versioning, decrypts secrets, validates, creates versioned Docker secrets/configs, builds+pushes custom images. Outputs shell exports for the bash wrapper.
+2. **Compose preprocessing** (`swarm._compose`) — anchor concatenation + `docker compose config` + sed transforms
+3. **Stack deploy** — `docker stack deploy --detach --with-registry-auth -c -`
+4. **Convergence wait** (`swarm.convergence`) — polls until replicas running (default 180s, configurable via `CONVERGE_TIMEOUT`)
+
+The prepare step runs as a Python subprocess. Its stdout contains `export KEY=VALUE` statements that the bash wrapper `eval`s, making decrypted secrets and computed values (STACK_NAME, DEPLOY_VERSION, OCI_TAG_*) available for compose interpolation and the deploy command.
 
 ### Custom Image Builds
 
@@ -91,24 +109,49 @@ Infra stacks deploy in `NN_` folder-prefix order (auto-discovered by `find_stack
 
 Stacks needing external resources use `init-` prefixed sidecar services. These run idempotent setup (DB roles, LDAP users) and exit cleanly. The `*deploy-init` anchor (`condition: on-failure`, `failure_action: continue`, `monitor: 0s`) lets Swarm treat exit 0 as "done" without restart loops or false rollbacks. Provisioner credentials come from `GLOBAL_SECRETS`.
 
-## Shared Scripts
+## Python Library
 
-Reusable bash function libraries in `.mise/tasks/scripts/`, sourced by tasks:
+Task logic lives in the `swarm` Python package at `.mise/lib/swarm/`, invoked by mise tasks as `python3 -m swarm.<module>`. `PYTHONPATH` is set in mise `[env]` to `.mise/lib`.
 
-| Script | Key Functions |
-|--------|---------------|
-| `compose-config.sh` | `compose_config()` — anchor concatenation + docker compose config |
-| `content-hash.sh` | `compute_content_hash()` — SHA-256 of build context |
-| `deploy-convergence.sh` | `wait_for_convergence()`, `check_replica_health()` |
-| `deploy-secrets.sh` | `validate_required_secrets()`, `create_versioned_secrets()` |
-| `find-secret-files.sh` | `find_secret_files()` — SOPS-managed file discovery |
-| `resolve-networks.sh` | `get_infra_networks()` — overlay network discovery from compose files |
-| `resolve-nodes.sh` | `get_swarm_nodes()`, `ssh_node()` — node discovery from swarm API |
-| `resolve-stack.sh` | `stack_name()`, `find_stacks()` — stack name/order resolution |
-| `sops-decrypt.sh` | `sops_decrypt()` — SOPS file to key=value lines |
-| `sops-export.sh` | `sops_export()` — decrypt + export as env vars (handles `_B64`) |
+### Internal modules (prefixed `_`)
 
-Scripts are pure function libraries — no hardcoded config. Operational knobs are task-level `env` vars.
+| Module | Purpose |
+|--------|---------|
+| `_compose` | Compose config preprocessing (anchor concatenation + docker compose config) |
+| `_docker` | Docker CLI subprocess wrappers — all docker calls go through here |
+| `_ssh` | SSH execution helpers for remote node commands |
+| `_output` | Logging and output formatting (data to stdout, diagnostics to stderr) |
+| `_sops` | SOPS decryption — calls sops binary, handles `_B64` suffix |
+| `_stack` | Stack name resolution (`NN_` prefix stripping) and directory discovery |
+
+### Public modules (CLI entry points)
+
+| Module | Task | Purpose |
+|--------|------|---------|
+| `deploy` | `swarm:deploy` | Deploy preparation: secrets, builds, env exports |
+| `convergence` | `swarm:deploy` | Post-deploy convergence polling and health checks |
+| `remove` | `swarm:remove` | Stack removal with drain wait |
+| `status` | `swarm:status` | Cluster node and stack health display |
+| `validate` | `swarm:validate` | Compose validation and bind mount path checks |
+| `cleanup` | `swarm:cleanup` | Orphaned secret/config removal, node pruning |
+| `networks` | `swarm:init-networks` | Overlay network discovery and creation |
+| `nodes` | (library) | Swarm node discovery and placement constraint matching |
+| `secrets` | (library) | Secret parsing, validation, and versioned creation |
+| `site` | `site:deploy-infra`, `site:deploy-apps`, `site:reset` | Site-wide orchestration |
+| `registry_auth` | `registry:auth` | Registry login across swarm nodes |
+
+### Testing
+
+Tests live at `.mise/tests/`, configured via `pyproject.toml`. All Docker/SSH calls are mocked at the subprocess boundary — no live cluster required.
+
+```bash
+pytest          # run via mise env
+mise run validate   # includes pytest via pre-commit hook
+```
+
+### Error handling
+
+All modules use a `SwarmError` exception hierarchy (`DockerError`, `SSHError`, `SopsError`, `SecretError`, `ValidationError`). CLI entry points catch `SwarmError` for clean error messages; unexpected exceptions produce full tracebacks.
 
 ## Validation & Pre-commit
 
@@ -117,13 +160,14 @@ Pre-commit hooks run on every commit (`.config/pre-commit.yaml`):
 | Hook | Scope | Action |
 |------|-------|--------|
 | `compose-validate` | `compose.yml`, `anchors.yml` | Full Swarm compatibility via `swarm:validate` |
+| `pytest` | Always | Python test suite |
 | `check-secrets-encrypted` | `secrets.env`, `.secrets/*.yaml` | Verify SOPS markers present |
 | `yamllint` | YAML (excl `.secrets/`) | Syntax/style |
 | `markdownlint-cli2` | Markdown | Documentation linting |
 | `taplo-lint` | TOML | TOML linting |
 | `gitleaks` | All files | Secret detection |
 
-`compose-validate` runs the full pipeline (anchors → compose config → sed → `docker stack config`) and checks bind mount paths on target nodes.
+`compose-validate` runs the full pipeline (anchors + compose config + sed + `docker stack config`) and checks bind mount paths on target nodes.
 
 ## Adding a New Stack
 

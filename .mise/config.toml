@@ -4,13 +4,15 @@
 ############################ SETTINGS ############################
 [settings]
 experimental = true
-sops.age_key_file = "age.key"
 auto_install = false
 python.uv_venv_auto = true
+sops.age_key_file = "age.key"
 unix_default_file_shell_args = "bash -o errexit -o nounset -o pipefail"
 unix_default_inline_shell_args = "bash -c -o errexit -o nounset -o pipefail"
 
 [tools]
+"core:python" = "3.14"
+"pipx:pytest" = "9.0.2"
 "aqua:jdx/usage" = "latest"
 "aqua:getsops/sops" = "latest"
 "aqua:FiloSottile/age" = "latest"
@@ -34,6 +36,7 @@ GLOBAL_NONROOT_PGID="1000"
 GLOBAL_NONROOT_DOCKER="{{ env.GLOBAL_NONROOT_PUID }}:{{ env.GLOBAL_NONROOT_PGID }}"
 
 STACKS_DIR = "{{config_root}}/stacks"
+PYTHONPATH = "{{config_root}}/.mise/lib"
 
 ############################ TASKS ############################
 [task_config]
@@ -55,7 +58,7 @@ run = [
 description = " " # Clean up environment and cache
 run = [
   "mise uninstall --all || true",
-  "find . \\( -name \"*.tmp\" -o -name \"*.log\" -o -name \"__pycache__\" -o -name \"*.pyc\" -o -name \"*.egg-info\" -o -name \".cache\" -o -name \".venv\" \\) -exec rm -rf {} + || true"
+  "find . \\( -name \"*.tmp\" -o -name \"*.log\" -o -name \"__pycache__\" -o -name \"*.pyc\" -o -name \"*.egg-info\" -o -name \".cache\" -o -name \"*_cache\" -o -name \".venv\" \\) -exec rm -rf {} + || true"
 ]
 
 [tasks."validate"]
