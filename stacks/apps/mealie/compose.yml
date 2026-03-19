@@ -2,6 +2,7 @@
 
 include:
   - secrets.yml
+  - configs.yml
 
 services:
   mealie:
@@ -18,7 +19,12 @@ services:
       - API_DOCS=false
       - LOG_LEVEL=warning
       - ALLOW_SIGNUP=false
-      - SQLITE_MIGRATE_JOURNAL_WAL=true
+      - DB_ENGINE=postgres
+      - POSTGRES_USER=mealie
+      - POSTGRES_PASSWORD_FILE=/run/secrets/mealie_postgres_password
+      - POSTGRES_SERVER=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=mealie
       - BASE_URL=https://recipes.${DOMAIN_PUBLIC}
       # OIDC Configuration
       - OIDC_AUTH_ENABLED=true
@@ -46,9 +52,11 @@ services:
     secrets:
       - oidc_client_secret_mealie
       - mealie_openai_api_key
+      - mealie_postgres_password
       - smtp_pass
     networks:
       - infra_gw-external
+      - infra_postgres
     volumes:
       - mealie-data:/app/data
     healthcheck:
@@ -84,9 +92,35 @@ services:
         reservations:
           memory: 512M
 
+  init-db:
+    image: postgres:17-alpine
+    entrypoint: ["/bin/sh", "/init-db-entrypoint.sh"]
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    environment:
+      - PROVISIONER_USER=${GLOBAL_POSTGRES_PROVISIONER_USER}
+      - PROVISIONER_PASSWORD=${GLOBAL_POSTGRES_PROVISIONER_PASSWORD}
+      - MEALIE_DB_PASSWORD=${MEALIE_POSTGRES_PASSWORD}
+    configs:
+      - source: init_db_entrypoint
+        target: /init-db-entrypoint.sh
+    networks:
+      - infra_postgres
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      <<: [*place-vm, *deploy-init]
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-tiny
+
 volumes:
   mealie-data:
 
 networks:
   infra_gw-external:
+    external: true
+  infra_postgres:
     external: true

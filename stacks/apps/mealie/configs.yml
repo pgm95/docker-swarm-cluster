@@ -1,0 +1,4 @@
+configs:
+  init_db_entrypoint:
+    name: mealie_init_db_entrypoint_${DEPLOY_VERSION}
+    file: ./config/bootstrap/init-db.sh
