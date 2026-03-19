@@ -24,7 +24,7 @@ services:
       - default
       - infra_gw-internal
     volumes:
-      - /mnt/photos/immich:/data
+      - /mnt/photos:/data
     deploy:
       <<: [*place-storage, *deploy]
       update_config:

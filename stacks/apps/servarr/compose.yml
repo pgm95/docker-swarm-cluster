@@ -16,7 +16,7 @@ services:
       - infra_gw-internal
     volumes:
       - radarr-data:/config
-      - /mnt/servarr:/servarr
+      - /mnt/media:/servarr
     deploy:
       <<: [*place-storage, *deploy]
       update_config:
@@ -45,7 +45,7 @@ services:
       - infra_gw-internal
     volumes:
       - sonarr-data:/config
-      - /mnt/servarr:/servarr
+      - /mnt/media:/servarr
     deploy:
       <<: [*place-storage, *deploy]
       update_config:

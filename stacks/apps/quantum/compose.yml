@@ -32,7 +32,6 @@ services:
     volumes:
       - quantum-data:/quantum
       - /mnt/personal:/mnt/personal
-      - /mnt/archive:/mnt/archive
       - /mnt/apple:/mnt/apple:ro
       - /mnt/photos:/mnt/photos
       - /mnt/media:/mnt/media

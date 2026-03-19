@@ -28,10 +28,7 @@ services:
     volumes:
       - syncthing-data:/var/syncthing
       - /mnt/personal:/mnt/personal
-      - /mnt/archive:/mnt/archive
-      - /mnt/apple:/mnt/apple:ro
       - /mnt/photos:/mnt/photos
-      - /mnt/media:/mnt/media
     healthcheck:
       test: ["CMD", "curl", "-fkLsS", "-m", "2", "http://127.0.0.1:8384/rest/noauth/health"]
       interval: 60s
