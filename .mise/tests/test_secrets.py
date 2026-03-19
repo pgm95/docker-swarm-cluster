@@ -76,7 +76,7 @@ class TestCreateVersionedSecrets:
             lambda f: [("DB_PASS", "secret123"), ("OTHER_KEY", "ignored")],
         )
         created_secrets = []
-        monkeypatch.setattr("swarm.secrets.secret_exists", lambda name: False)
+        monkeypatch.setattr("swarm.secrets.secret_list", lambda: [])
         monkeypatch.setattr("swarm.secrets.secret_create", lambda name, val: created_secrets.append((name, val)))
 
         result = create_versioned_secrets(stack, "abc_123", env={"GLOBAL_SECRETS": ""})
@@ -90,7 +90,7 @@ class TestCreateVersionedSecrets:
             secrets_env="placeholder",
         )
         monkeypatch.setattr("swarm.secrets.sops_decrypt", lambda f: [("DB_PASS", "val")])
-        monkeypatch.setattr("swarm.secrets.secret_exists", lambda name: True)
+        monkeypatch.setattr("swarm.secrets.secret_list", lambda: ["db_pass_abc_123"])
         monkeypatch.setattr("swarm.secrets.secret_create", lambda name, val: None)
 
         result = create_versioned_secrets(stack, "abc_123", env={"GLOBAL_SECRETS": ""})
@@ -103,7 +103,7 @@ class TestCreateVersionedSecrets:
             secrets_env="placeholder",
         )
         monkeypatch.setattr("swarm.secrets.sops_decrypt", lambda f: [("UNRELATED", "val")])
-        monkeypatch.setattr("swarm.secrets.secret_exists", lambda name: False)
+        monkeypatch.setattr("swarm.secrets.secret_list", lambda: [])
         monkeypatch.setattr("swarm.secrets.secret_create", lambda name, val: None)
 
         result = create_versioned_secrets(stack, "abc_123", env={"GLOBAL_SECRETS": ""})
@@ -124,7 +124,7 @@ class TestCreateVersionedSecrets:
         # sops_decrypt returns already-decoded values (key without _B64 suffix)
         monkeypatch.setattr("swarm.secrets.sops_decrypt", lambda f: [("OIDC_KEY", "decoded-pem")])
         created = []
-        monkeypatch.setattr("swarm.secrets.secret_exists", lambda name: False)
+        monkeypatch.setattr("swarm.secrets.secret_list", lambda: [])
         monkeypatch.setattr("swarm.secrets.secret_create", lambda name, val: created.append((name, val)))
 
         create_versioned_secrets(stack, "v1", env={"GLOBAL_SECRETS": ""})

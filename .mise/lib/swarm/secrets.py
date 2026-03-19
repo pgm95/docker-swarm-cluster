@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from . import SecretError, ValidationError
-from ._docker import secret_create, secret_exists
+from ._docker import secret_create, secret_list
 from ._output import error, info, setup
 from ._sops import sops_decrypt
 
@@ -78,6 +78,7 @@ def create_versioned_secrets(
     global_secrets = env.get("GLOBAL_SECRETS", "")
 
     info(f"Creating versioned secrets ({len(needed)} needed)...")
+    existing = set(secret_list())
     created = skipped = filtered = 0
 
     for secret_file in [str(stack_path / "secrets.env"), global_secrets]:
@@ -89,7 +90,7 @@ def create_versioned_secrets(
                 filtered += 1
                 continue
             secret_name = f"{lower_key}_{deploy_version}"
-            if secret_exists(secret_name):
+            if secret_name in existing:
                 skipped += 1
             else:
                 secret_create(secret_name, value)

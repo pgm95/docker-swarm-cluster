@@ -3,10 +3,9 @@
 import sys
 
 from . import SwarmError
-from ._docker import inspect_nodes, stack_list, stack_ps, stack_services
+from ._docker import inspect_nodes, service_ls, service_ps_multi
 from ._output import error, setup, table
 from ._stack import find_stacks, stack_name
-from .convergence import is_task_complete
 
 
 def get_node_status() -> list[dict]:
@@ -32,66 +31,9 @@ def get_node_status() -> list[dict]:
     return result
 
 
-def get_stack_health(svc_stack_name: str) -> dict:
-    """Assess health of a deployed stack.
-
-    Returns:
-        {"name", "status", "services": [...], "nodes": [...], "errors": [...]}
-    """
-    deployed = stack_list()
-    if svc_stack_name not in deployed:
-        return {"name": svc_stack_name, "status": "not deployed", "services": [], "nodes": [], "errors": []}
-
-    services = []
-    healthy = True
-    for name, replicas in stack_services(svc_stack_name):
-        current, desired = replicas.split("/")
-        current, desired = int(current), int(desired)
-        svc_healthy = True
-        if current < desired:
-            if not is_task_complete(name):
-                svc_healthy = False
-                healthy = False
-        short = name.removeprefix(f"{svc_stack_name}_")
-        services.append({"name": short, "replicas": replicas, "healthy": svc_healthy})
-
-    # Collect node placement
-    nodes = set()
-    rows = stack_ps(
-        svc_stack_name,
-        format_str="{{.Name}}\t{{.Node}}",
-        filters=["desired-state=running"],
-    )
-    for row in rows:
-        if len(row) >= 2 and row[1]:
-            nodes.add(row[1])
-
-    # Collect errors for unhealthy services
-    errors = []
-    if not healthy:
-        err_rows = stack_ps(
-            svc_stack_name,
-            format_str="{{.Name}}\t{{.Error}}",
-            filters=["desired-state=running"],
-            no_trunc=True,
-        )
-        for row in err_rows:
-            if len(row) >= 2 and row[1]:
-                short = row[0].split(".")[0].removeprefix(f"{svc_stack_name}_")
-                errors.append({"service": short, "error": row[1]})
-
-    return {
-        "name": svc_stack_name,
-        "status": "healthy" if healthy else "UNHEALTHY",
-        "services": services,
-        "nodes": sorted(nodes),
-        "errors": errors,
-    }
-
-
 def status() -> int:
     """Full status display. Returns exit code."""
-    # --- Nodes ---
+    # --- Nodes (2 docker calls) ---
     nodes = get_node_status()
     table(
         ["NODE", "ROLE", "STATUS", "ENGINE", "LABELS"],
@@ -99,37 +41,111 @@ def status() -> int:
     )
     print()
 
-    # --- Stacks ---
-    all_stacks = []
+    # --- Discover all known stacks ---
+    all_stack_names = []
     for ns in ["stacks/infra", "stacks/apps"]:
         for d in find_stacks(ns):
-            all_stacks.append(stack_name(d))
+            all_stack_names.append(stack_name(d))
 
+    # --- Fetch all services in one call ---
+    all_services = service_ls()
+
+    # Group services by stack (service name format: stackname_servicename)
+    deployed_stacks: set[str] = set()
+    services_by_stack: dict[str, list[tuple[str, str]]] = {}
+    for svc_name, replicas in all_services:
+        for candidate in all_stack_names:
+            if svc_name.startswith(f"{candidate}_"):
+                deployed_stacks.add(candidate)
+                services_by_stack.setdefault(candidate, []).append((svc_name, replicas))
+                break
+
+    # --- Identify services needing task queries ---
+    # Services with current < desired need is_task_complete check
+    # All deployed services need node placement
+    deployed_svc_names = [name for name, _ in all_services]
+
+    # Fetch running tasks for all services (node placement) — 1 call
+    node_by_task: dict[str, set[str]] = {}
+    if deployed_svc_names:
+        task_rows = service_ps_multi(
+            deployed_svc_names,
+            format_str="{{.Name}}\t{{.Node}}",
+            filters=["desired-state=running"],
+        )
+        for row in task_rows:
+            if len(row) >= 2 and row[1]:
+                # task name format: stackname_servicename.slot.id or stackname_servicename.nodeid.id
+                svc_key = row[0].rsplit(".", 2)[0] if "." in row[0] else row[0]
+                node_by_task.setdefault(svc_key, set()).add(row[1])
+
+    # Identify under-replicated services that might be init sidecars
+    under_replicated = []
+    for svc_name, replicas in all_services:
+        parts = replicas.split("/")
+        if len(parts) == 2:
+            current, desired = int(parts[0]), int(parts[1])
+            if current < desired:
+                under_replicated.append(svc_name)
+
+    # Fetch shutdown tasks for under-replicated services (is_task_complete) — 1 call
+    completed_services: set[str] = set()
+    if under_replicated:
+        shutdown_rows = service_ps_multi(
+            under_replicated,
+            format_str="{{.Name}}\t{{.CurrentState}}",
+            filters=["desired-state=shutdown"],
+        )
+        # Group by service, check if most recent shutdown task is Complete
+        latest_state: dict[str, str] = {}
+        for row in shutdown_rows:
+            if len(row) >= 2:
+                svc_key = row[0].rsplit(".", 2)[0] if "." in row[0] else row[0]
+                if svc_key not in latest_state:
+                    latest_state[svc_key] = row[1]
+        for svc_name in under_replicated:
+            state = latest_state.get(svc_name, "")
+            if state.startswith("Complete"):
+                completed_services.add(svc_name)
+
+    # --- Build output ---
     total = healthy_count = unhealthy_count = 0
     rows = []
-    error_details = []
 
-    for name in all_stacks:
-        health = get_stack_health(name)
-        if health["status"] == "not deployed":
+    for name in all_stack_names:
+        if name not in deployed_stacks:
             rows.append([name, "not deployed", "", ""])
             continue
-        total += 1
-        svc_summary = " ".join(f"{s['name']}({s['replicas']})" for s in health["services"])
-        node_col = " ".join(health["nodes"]) if health["nodes"] else "-"
-        rows.append([name, health["status"], node_col, svc_summary])
 
-        if health["status"] == "UNHEALTHY":
-            unhealthy_count += 1
-            for e in health["errors"]:
-                error_details.append((name, e["service"], e["error"]))
-        else:
+        total += 1
+        stack_svcs = services_by_stack.get(name, [])
+        healthy = True
+        svc_parts = []
+
+        for svc_name, replicas in stack_svcs:
+            parts = replicas.split("/")
+            current, desired = int(parts[0]), int(parts[1])
+            if current < desired and svc_name not in completed_services:
+                healthy = False
+            short = svc_name.removeprefix(f"{name}_")
+            svc_parts.append(f"{short}({replicas})")
+
+        # Collect nodes for this stack's services
+        stack_nodes: set[str] = set()
+        for svc_name, _ in stack_svcs:
+            stack_nodes.update(node_by_task.get(svc_name, set()))
+
+        svc_summary = " ".join(svc_parts)
+        node_col = " ".join(sorted(stack_nodes)) if stack_nodes else "-"
+        status_str = "healthy" if healthy else "UNHEALTHY"
+        rows.append([name, status_str, node_col, svc_summary])
+
+        if healthy:
             healthy_count += 1
+        else:
+            unhealthy_count += 1
 
     table(["STACK", "STATUS", "NODE", "SERVICES"], rows)
-
-    for stack_nm, svc, err in error_details:
-        print(f"  {svc}: {err}")
 
     print()
     print(f"Deployed: {total} | Healthy: {healthy_count} | Unhealthy: {unhealthy_count}")

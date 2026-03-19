@@ -106,6 +106,47 @@ def stack_list() -> list[str]:
     return [line for line in result.stdout.strip().splitlines() if line]
 
 
+def service_ls() -> list[tuple[str, str]]:
+    """Get all services across all stacks.
+
+    Returns:
+        List of (service_name, "current/desired") tuples.
+    """
+    result = run(
+        "service", "ls",
+        "--format", "{{.Name}}\t{{.Replicas}}",
+    )
+    services = []
+    for line in result.stdout.strip().splitlines():
+        if "\t" in line:
+            name, replicas = line.split("\t", 1)
+            services.append((name, replicas))
+    return services
+
+
+def service_ps_multi(
+    service_names: list[str],
+    format_str: str = "{{.Name}}\t{{.CurrentState}}",
+    filters: list[str] | None = None,
+) -> list[list[str]]:
+    """Get tasks for multiple services in a single call.
+
+    Returns:
+        List of rows, each row a list of fields split by tab.
+    """
+    if not service_names:
+        return []
+    cmd = ["service", "ps", *service_names, "--format", format_str]
+    for f in filters or []:
+        cmd.extend(["--filter", f])
+    result = run(*cmd, check=False)
+    rows = []
+    for line in result.stdout.strip().splitlines():
+        if line:
+            rows.append(line.split("\t"))
+    return rows
+
+
 def secret_exists(name: str) -> bool:
     """Check if a Docker secret exists."""
     result = run("secret", "inspect", name, check=False)
