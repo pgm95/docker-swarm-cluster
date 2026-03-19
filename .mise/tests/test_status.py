@@ -84,4 +84,5 @@ class TestStatus:
         rc = status()
         assert rc == 0
         out = capsys.readouterr().out
-        assert "not deployed" in out
+        assert "Not deployed:" in out
+        assert "mystack" in out

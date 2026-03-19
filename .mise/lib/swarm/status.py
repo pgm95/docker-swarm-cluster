@@ -111,10 +111,11 @@ def status() -> int:
     # --- Build output ---
     total = healthy_count = unhealthy_count = 0
     rows = []
+    not_deployed = []
 
     for name in all_stack_names:
         if name not in deployed_stacks:
-            rows.append([name, "not deployed", "", ""])
+            not_deployed.append(name)
             continue
 
         total += 1
@@ -146,8 +147,10 @@ def status() -> int:
             unhealthy_count += 1
 
     table(["STACK", "STATUS", "NODE", "SERVICES"], rows)
-
     print()
+
+    if not_deployed:
+        print(f"Not deployed: {', '.join(not_deployed)}")
     print(f"Deployed: {total} | Healthy: {healthy_count} | Unhealthy: {unhealthy_count}")
     return 1 if unhealthy_count > 0 else 0
 

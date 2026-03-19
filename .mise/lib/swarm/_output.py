@@ -45,9 +45,26 @@ def table(headers: list[str], rows: list[list[str]]) -> None:
                 col_widths[i] = max(col_widths[i], len(str(cell)))
             else:
                 col_widths.append(len(str(cell)))
-    fmt = "  ".join(f"{{:<{w}}}" for w in col_widths)
+    # Don't right-pad the last column
+    parts = [f"{{:<{w}}}" for w in col_widths[:-1]] + ["{}"]
+    fmt = "  ".join(parts)
+    prefix_width = sum(col_widths[:-1]) + 2 * (len(col_widths) - 1)
+
     print(fmt.format(*headers))
-    print(fmt.format(*("-" * w for w in col_widths)))
+    sep_widths = col_widths[:-1] + [len(headers[-1])]
+    print(fmt.format(*("-" * w for w in sep_widths)))
+    indent = " " * prefix_width
     for row in rows:
         padded = [str(row[i]) if i < len(row) else "" for i in range(len(col_widths))]
-        print(fmt.format(*padded))
+        last = padded[-1]
+        words = last.split()
+        if len(words) > 3:
+            for i in range(0, len(words), 3):
+                chunk = " ".join(words[i:i + 3])
+                if i == 0:
+                    padded[-1] = chunk
+                    print(fmt.format(*padded))
+                else:
+                    print(f"{indent}{chunk}")
+        else:
+            print(fmt.format(*padded))
