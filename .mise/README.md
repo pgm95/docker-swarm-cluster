@@ -9,7 +9,7 @@ Task orchestration, deployment pipeline, and development tooling for swarm-clust
   config.toml             # Base env vars, tool versions, task includes
   config.{dev,prod}.toml  # Per-environment secrets, nodes, domains
   tasks/                  # Task definitions (TOML) — what to run
-    swarm.toml            #   Stack operations: deploy, remove, status, cleanup, validate
+    swarm.toml            #   Stack operations: deploy, remove, cleanup, validate
     site.toml             #   Cluster-wide: deploy-infra, deploy-apps, reset, registry:auth
     sops.toml             #   Secrets: init, encrypt, edit, status
   lib/swarm/              # Python package — how tasks work
