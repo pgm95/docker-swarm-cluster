@@ -2,6 +2,9 @@
 
 # /mnt/servarr must exist on storage node
 
+include:
+  - configs.yml
+
 services:
   radarr:
     image: linuxserver/radarr:latest
@@ -12,8 +15,15 @@ services:
       - PUID=${GLOBAL_NONROOT_PUID}
       - PGID=${GLOBAL_NONROOT_PGID}
       - RADARR__AUTH__APIKEY=${RADARR__AUTH__APIKEY:-}
+      - RADARR__POSTGRES__HOST=postgres
+      - RADARR__POSTGRES__PORT=5432
+      - RADARR__POSTGRES__USER=radarr
+      - RADARR__POSTGRES__PASSWORD=${RADARR_POSTGRES_PASSWORD}
+      - RADARR__POSTGRES__MAINDB=radarr-main
+      - RADARR__POSTGRES__LOGDB=radarr-log
     networks:
       - infra_gw-internal
+      - infra_postgres
     volumes:
       - radarr-data:/config
       - /mnt/media:/servarr
@@ -41,8 +51,15 @@ services:
       - PUID=${GLOBAL_NONROOT_PUID}
       - PGID=${GLOBAL_NONROOT_PGID}
       - SONARR__AUTH__APIKEY=${SONARR__AUTH__APIKEY:-}
+      - SONARR__POSTGRES__HOST=postgres
+      - SONARR__POSTGRES__PORT=5432
+      - SONARR__POSTGRES__USER=sonarr
+      - SONARR__POSTGRES__PASSWORD=${SONARR_POSTGRES_PASSWORD}
+      - SONARR__POSTGRES__MAINDB=sonarr-main
+      - SONARR__POSTGRES__LOGDB=sonarr-log
     networks:
       - infra_gw-internal
+      - infra_postgres
     volumes:
       - sonarr-data:/config
       - /mnt/media:/servarr
@@ -70,9 +87,16 @@ services:
       - PUID=${GLOBAL_NONROOT_PUID}
       - PGID=${GLOBAL_NONROOT_PGID}
       - PROWLARR__AUTH__APIKEY=${PROWLARR__AUTH__APIKEY:-}
+      - PROWLARR__POSTGRES__HOST=postgres
+      - PROWLARR__POSTGRES__PORT=5432
+      - PROWLARR__POSTGRES__USER=prowlarr
+      - PROWLARR__POSTGRES__PASSWORD=${PROWLARR_POSTGRES_PASSWORD}
+      - PROWLARR__POSTGRES__MAINDB=prowlarr-main
+      - PROWLARR__POSTGRES__LOGDB=prowlarr-log
     networks:
       - default
       - infra_gw-internal
+      - infra_postgres
     volumes:
       - prowlarr-data:/config
     deploy:
@@ -111,6 +135,32 @@ services:
       resources:
         <<: *resources-large
 
+  init-db:
+    image: postgres:17-alpine
+    entrypoint: ["/bin/sh", "/init-db-entrypoint.sh"]
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    environment:
+      - PROVISIONER_USER=${GLOBAL_POSTGRES_PROVISIONER_USER}
+      - PROVISIONER_PASSWORD=${GLOBAL_POSTGRES_PROVISIONER_PASSWORD}
+      - RADARR_DB_PASSWORD=${RADARR_POSTGRES_PASSWORD}
+      - SONARR_DB_PASSWORD=${SONARR_POSTGRES_PASSWORD}
+      - PROWLARR_DB_PASSWORD=${PROWLARR_POSTGRES_PASSWORD}
+    configs:
+      - source: init_db_entrypoint
+        target: /init-db-entrypoint.sh
+    networks:
+      - infra_postgres
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      <<: [*place-vm, *deploy-init]
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-tiny
+
 volumes:
   radarr-data:
   sonarr-data:
@@ -118,4 +168,6 @@ volumes:
 
 networks:
   infra_gw-internal:
+    external: true
+  infra_postgres:
     external: true
