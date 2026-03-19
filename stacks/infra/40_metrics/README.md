@@ -10,8 +10,6 @@ Metrics collection, storage, visualization, and uptime monitoring.
 | node-exporter | Host-level metrics (CPU, memory, disk, network) | Global |
 | grafana | Dashboards and visualization (OIDC auth) | Replicated (1) |
 | uptime-kuma | Status monitoring and alerting | Replicated (1) |
-| cadvisor | Per-container resource metrics (CPU, memory, network, disk) | Global |
-| cadvisor-socket-proxy | Read-only Docker API proxy for cAdvisor | Global |
 | init-db | Provisions Grafana's Postgres database | Replicated (1) |
 
 ## First Deploy
@@ -58,33 +56,9 @@ exactly one target per task.
 
 ### Service name format
 
-Swarm prefixes service names with the stack name: `metrics_node-exporter`, `logging_alloy`.
-The `relabel_configs` filter on `__meta_dockerswarm_service_name` must use the full prefixed name.
-
-## cAdvisor
-
-Requires v0.54.0+ for Docker 29 compatibility (containerd-snapshotter support). The
-ghcr.io image tags strip the `v` prefix (e.g., `ghcr.io/google/cadvisor:0.56.2`).
-
-The official docs recommend mounting all of `/var/run:/var/run:ro`, which implicitly
-provides both the Docker and containerd sockets. Our setup is more restrictive — the
-Docker socket goes through a socket-proxy, so the containerd socket must be mounted
-explicitly.
-
-### Host Access
-
-| Mount | Purpose | Notes |
-|-------|---------|-------|
-| Docker socket (via proxy) | Container discovery, names, labels, image info | `--docker` flag points to proxy socket |
-| `/run/containerd/containerd.sock` | Layer resolution (snapshotter) | `--containerd` flag, default path |
-| `/:/rootfs:ro` | Host filesystem for disk/fs metrics | |
-| `/sys:/sys:ro` | Kernel sysfs for cgroup data | |
-
-Not mounted (accepted trade-offs): `/dev/kmsg` (OOM event detection requires
-`--privileged`), `/dev/disk` (disk device metadata).
-
-The containerd socket is a direct bind mount — no gRPC-aware socket proxy exists.
-`:ro` on socket mounts has no effect on protocol-level access.
+Swarm prefixes service names with the stack name: `metrics_node-exporter`, `cadvisor_cadvisor`,
+`logging_alloy`. The `relabel_configs` filter on `__meta_dockerswarm_service_name` must use the
+full prefixed name.
 
 ## Grafana
 

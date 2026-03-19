@@ -1,0 +1,4 @@
+configs:
+  cadvisor_entrypoint:
+    name: cadvisor_entrypoint_${DEPLOY_VERSION}
+    file: ./config/cadvisor/entrypoint.sh

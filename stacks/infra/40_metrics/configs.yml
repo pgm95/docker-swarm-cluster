@@ -41,9 +41,6 @@ configs:
   grafana_dashboard_cadvisor:
     name: grafana_dashboard_cadvisor_${DEPLOY_VERSION}
     file: ./config/grafana/dashboards/cadvisor-overview.json
-  cadvisor_entrypoint:
-    name: cadvisor_entrypoint_${DEPLOY_VERSION}
-    file: ./config/cadvisor/entrypoint.sh
   init_db_entrypoint:
     name: metrics_init_db_${DEPLOY_VERSION}
     file: ./config/bootstrap/init-db.sh

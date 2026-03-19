@@ -138,22 +138,27 @@ versions persist until `swarm:cleanup`.
 Services needing non-root volume ownership use entrypoint wrappers (Docker Config init
 scripts) that chown and drop privileges (`setpriv` on Debian, `su` on Alpine).
 
-### Infrastructure Stacks
+### Infrastructure Components
 
-Nine infra stacks deploy in `NN_` prefix order.
+Infra stacks are auto-discovered deploy in `NN_` prefix order
 Each stack's README documents service-level details and operational procedures.
 
-| Stack | Purpose |
-|-------|---------|
-| `socket` | Read-only Docker API proxy — shared by consumers that need Swarm or container data without direct socket access |
-| `postgres` | Central Postgres instance — all stateful services share one database server via dedicated roles |
-| `backup` | Borgmatic — scheduled `pg_dump` of all databases, streamed to a borg repository with dedup and encryption |
-| `gateway-internal` | Traefik for LAN/Tailscale clients (`DOMAIN_PRIVATE`) — security headers only |
-| `gateway-external` | Traefik for public internet (`DOMAIN_PUBLIC`) — CrowdSec WAF + IP geoblocking + security headers |
-| `metrics` | Prometheus, Grafana (OIDC), Node Exporter, cAdvisor, Uptime Kuma — scraping and visualization |
-| `logging` | Loki + Alloy — centralized container log aggregation from all nodes |
-| `registry` | Private Docker registry — hosts custom images built by the deploy pipeline |
-| `accounts` | LLDAP + Authelia + Redis — LDAP directory, authentication server, and OIDC provider |
+- **Socket Proxy:** Central read-only Docker API gateway for consumers needing node-agnostic Swarm API info.
+- **Postgres:** Central database server.
+  All stateful services share one instance via dedicated roles provisioned by init-db sidecars.
+- **Backup:** Borgmatic with borg deduplication and encryption.
+  Auto-discovers all Postgres databases, streams dumps directly to the repository.
+  Restore uses superuser credentials passed at restore time.
+- **Dual Gateways:** Two Traefik instances: external (Coupled with CrowdSec WAF + geoblocking
+  for public internet), and internal (Internal services accessible only on LAN/Tailscale).
+  Both use host-mode ports and DNS-based routing.
+- **Observability:** Node Exporter and cAdvisor for host and per-container metrics.
+  Prometheus scrapes these and all other compatible targets
+  Alloy collects logs and Loki stores them. Grafana visualizes everything.
+- **Registry:** private OCI registry for custom-built images.
+  Deploy pipeline pushes content-hash-tagged images; all nodes authenticate via `registry:auth`.
+- **Authentication:** Authelia with LLDAP backend provides OIDC with group-to-role mapping.
+  Webfinger endpoint provided by Carpal.
 
 #### Cross-Stack Pipelines
 

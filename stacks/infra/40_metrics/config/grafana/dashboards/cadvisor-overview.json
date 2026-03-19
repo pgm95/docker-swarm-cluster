@@ -670,7 +670,17 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "label_replace(sum by (container_label_com_docker_swarm_service_name, instance, image, name) (rate(container_cpu_usage_seconds_total{job=\"cadvisor\", instance=~\"$node\", container_label_com_docker_swarm_service_name=~\"$service\", name=~\".+\"}[$__rate_interval])), \"image_short\", \"$1\", \"image\", \"([^@]+).*\")",
+          "expr": "label_replace(time() - container_start_time_seconds{job=\"cadvisor\", instance=~\"$node\", container_label_com_docker_swarm_service_name=~\"$service\", container_label_com_docker_swarm_service_name=~\".+\", name=~\".+\"}, \"image_short\", \"$1\", \"image\", \"([^@]+).*\")",
+          "format": "table",
+          "instant": true,
+          "refId": "F"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{job=\"cadvisor\", instance=~\"$node\", container_label_com_docker_swarm_service_name=~\"$service\", container_label_com_docker_swarm_service_name=~\".+\", name=~\".+\"}[$__rate_interval]))",
           "format": "table",
           "instant": true,
           "refId": "A"
@@ -680,7 +690,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "container_memory_working_set_bytes{job=\"cadvisor\", instance=~\"$node\", container_label_com_docker_swarm_service_name=~\"$service\", name=~\".+\"}",
+          "expr": "container_memory_working_set_bytes{job=\"cadvisor\", instance=~\"$node\", container_label_com_docker_swarm_service_name=~\"$service\", container_label_com_docker_swarm_service_name=~\".+\", name=~\".+\"}",
           "format": "table",
           "instant": true,
           "refId": "B"
@@ -690,7 +700,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "container_spec_memory_limit_bytes{job=\"cadvisor\", instance=~\"$node\", container_label_com_docker_swarm_service_name=~\"$service\", name=~\".+\"} > 0",
+          "expr": "container_spec_memory_limit_bytes{job=\"cadvisor\", instance=~\"$node\", container_label_com_docker_swarm_service_name=~\"$service\", container_label_com_docker_swarm_service_name=~\".+\", name=~\".+\"} > 0",
           "format": "table",
           "instant": true,
           "refId": "C"
@@ -700,20 +710,10 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "container_memory_working_set_bytes{job=\"cadvisor\", instance=~\"$node\", container_label_com_docker_swarm_service_name=~\"$service\", name=~\".+\"} / container_spec_memory_limit_bytes{job=\"cadvisor\", instance=~\"$node\", container_label_com_docker_swarm_service_name=~\"$service\", name=~\".+\"} > 0",
+          "expr": "container_memory_working_set_bytes{job=\"cadvisor\", instance=~\"$node\", container_label_com_docker_swarm_service_name=~\"$service\", container_label_com_docker_swarm_service_name=~\".+\", name=~\".+\"} / container_spec_memory_limit_bytes{job=\"cadvisor\", instance=~\"$node\", container_label_com_docker_swarm_service_name=~\"$service\", container_label_com_docker_swarm_service_name=~\".+\", name=~\".+\"} > 0",
           "format": "table",
           "instant": true,
           "refId": "D"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "time() - container_start_time_seconds{job=\"cadvisor\", instance=~\"$node\", container_label_com_docker_swarm_service_name=~\"$service\", name=~\".+\"}",
-          "format": "table",
-          "instant": true,
-          "refId": "E"
         }
       ],
       "transformations": [
@@ -731,17 +731,17 @@
               "container_label_com_docker_swarm_service_name 1": true,
               "instance 1": true,
               "image_short 1": true,
+              "Value #F": true,
               "Value #A": true,
               "Value #B": true,
               "Value #C": true,
-              "Value #D": true,
-              "Value #E": true
+              "Value #D": true
             },
             "indexByName": {
               "container_label_com_docker_swarm_service_name 1": 0,
               "instance 1": 1,
               "image_short 1": 2,
-              "Value #E": 3,
+              "Value #F": 3,
               "Value #A": 4,
               "Value #B": 5,
               "Value #C": 6,
@@ -755,7 +755,7 @@
               "Value #B": "Memory",
               "Value #C": "Mem Limit",
               "Value #D": "Mem %",
-              "Value #E": "Uptime"
+              "Value #F": "Uptime"
             }
           }
         }
