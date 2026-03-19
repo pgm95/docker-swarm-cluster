@@ -68,6 +68,8 @@ services:
   alloy-socket-proxy:
     image: wollomatic/socket-proxy:1.11.4
     user: "0:0"
+    environment:
+      DEPLOY_VERSION: "${DEPLOY_VERSION}" # HACK: forces restart on redeploy. wollomatic deletes socket on shutdown
     logging:
       <<: *logging
     stop_grace_period: 30s
