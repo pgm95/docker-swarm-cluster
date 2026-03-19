@@ -2,13 +2,14 @@
   "title": "Borgmatic Logs",
   "uid": "borgmatic-logs",
   "id": null,
-  "version": 1,
+  "version": 2,
   "schemaVersion": 39,
-  "description": "Borgmatic Logs & Stats",
+  "description": "Borgmatic backup monitoring",
   "editable": true,
   "graphTooltip": 0,
   "tags": [
-    "loki"
+    "loki",
+    "backup"
   ],
   "refresh": "",
   "time": {
@@ -18,26 +19,7 @@
   "timepicker": {},
   "timezone": "",
   "annotations": {
-    "list": [
-      {
-        "builtIn": 1,
-        "datasource": {
-          "type": "datasource",
-          "uid": "grafana"
-        },
-        "enable": true,
-        "hide": true,
-        "iconColor": "rgba(0, 211, 255, 1)",
-        "name": "Annotations & Alerts",
-        "target": {
-          "limit": 100,
-          "matchAny": false,
-          "tags": [],
-          "type": "dashboard"
-        },
-        "type": "dashboard"
-      }
-    ]
+    "list": []
   },
   "panels": [
     {
@@ -48,7 +30,8 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "continuous-greens"
+            "mode": "fixed",
+            "fixedColor": "green"
           },
           "mappings": [
             {
@@ -70,8 +53,7 @@
               }
             ]
           },
-          "unit": "short",
-          "unitScale": true
+          "unit": "short"
         },
         "overrides": []
       },
@@ -98,7 +80,6 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.3.3",
       "targets": [
         {
           "datasource": {
@@ -106,7 +87,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "sum by(instance) (count_over_time({$label_name=~\"$label_value\", job=~\"$job\", instance=~\"$instance\"} |~ \"Started backup\" | __error__=\"\" [$__interval]))",
+          "expr": "count_over_time({service=\"backup_borgmatic\", node=~\"$node\"} |= `local: Creating archive` != `Creating archive at` [$__interval])",
           "queryType": "range",
           "refId": "A"
         }
@@ -122,7 +103,8 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "continuous-greens"
+            "mode": "fixed",
+            "fixedColor": "green"
           },
           "mappings": [
             {
@@ -144,8 +126,7 @@
               }
             ]
           },
-          "unit": "short",
-          "unitScale": true
+          "unit": "short"
         },
         "overrides": []
       },
@@ -172,7 +153,6 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.3.3",
       "targets": [
         {
           "datasource": {
@@ -180,7 +160,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "sum by(instance) (count_over_time({$label_name=~\"$label_value\", job=~\"$job\", instance=~\"$instance\"} |~ \"Backup created.\" | __error__=\"\" [$__interval]))",
+          "expr": "count_over_time({service=\"backup_borgmatic\", node=~\"$node\"} |= `Renaming archive` [$__interval])",
           "queryType": "range",
           "refId": "A"
         }
@@ -196,7 +176,8 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "continuous-reds"
+            "mode": "fixed",
+            "fixedColor": "red"
           },
           "mappings": [
             {
@@ -213,13 +194,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "red",
                 "value": null
               }
             ]
           },
-          "unit": "short",
-          "unitScale": true
+          "unit": "short"
         },
         "overrides": []
       },
@@ -246,7 +226,6 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "10.3.3",
       "targets": [
         {
           "datasource": {
@@ -254,7 +233,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "sum by(instance) (count_over_time({$label_name=~\"$label_value\", job=~\"$job\", instance=~\"$instance\"} |~ \"Failed backup\" | __error__=\"\" [$__interval]))",
+          "expr": "count_over_time({service=\"backup_borgmatic\", node=~\"$node\"} |= `Error running` [$__interval])",
           "queryType": "range",
           "refId": "A"
         }
@@ -282,8 +261,7 @@
               }
             ]
           },
-          "unit": "dateTimeFromNow",
-          "unitScale": true
+          "unit": "dateTimeFromNow"
         },
         "overrides": []
       },
@@ -296,7 +274,7 @@
       "id": 4,
       "options": {
         "colorMode": "background_solid",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "center",
         "orientation": "auto",
         "reduceOptions": {
@@ -310,7 +288,6 @@
         "textMode": "value",
         "wideLayout": true
       },
-      "pluginVersion": "10.3.3",
       "targets": [
         {
           "datasource": {
@@ -318,12 +295,12 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "sum by(instance) (count_over_time({$label_name=~\"$label_value\", job=~\"$job\", instance=~\"$instance\"} |~ \"Backup created.\" | __error__=\"\" [$__interval]))",
-          "queryType": "range",
+          "expr": "{service=\"backup_borgmatic\", node=~\"$node\"} |= `Renaming archive`",
+          "queryType": "instant",
           "refId": "A"
         }
       ],
-      "title": "Time of Last Successful Backup",
+      "title": "Last Successful Backup",
       "type": "stat"
     },
     {
@@ -340,11 +317,11 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "Size of Database",
+            "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "bars",
-            "fillOpacity": 0,
+            "fillOpacity": 20,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
@@ -368,7 +345,6 @@
               "mode": "off"
             }
           },
-          "displayName": "Backup Size",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -376,17 +352,43 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           },
-          "unit": "bytes",
-          "unitScale": true
+          "unit": "bytes"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "This Archive"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "All Archives"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 7,
@@ -397,7 +399,114 @@
       "id": 5,
       "options": {
         "legend": {
-          "calcs": [],
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "editorMode": "code",
+          "expr": "max_over_time({service=\"backup_borgmatic\", node=~\"$node\"} |= `All archives:` | regexp `All archives:\\s+(?P<original_size>[\\d.]+) (?P<original_unit>PB|TB|GB|MB|kB)\\s+(?P<compressed_size>[\\d.]+) (?P<compressed_unit>PB|TB|GB|MB|kB)\\s+(?P<deduplicated_size>[\\d.]+) (?P<deduplicated_unit>PB|TB|GB|MB|kB)` | line_format `{{ if eq .deduplicated_unit \"kB\" }}{{ mulf .deduplicated_size 1024 }}{{ else if eq .deduplicated_unit \"MB\" }}{{ mulf .deduplicated_size 1048576 }}{{ else if eq .deduplicated_unit \"GB\" }}{{ mulf .deduplicated_size 1073741824 }}{{ else if eq .deduplicated_unit \"TB\" }}{{ mulf .deduplicated_size 1099511627776 }}{{ end }}` | pattern `<size_bytes>` | unwrap size_bytes [$__interval])",
+          "legendFormat": "All Archives",
+          "queryType": "range",
+          "refId": "all_archives"
+        },
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "editorMode": "code",
+          "expr": "max_over_time({service=\"backup_borgmatic\", node=~\"$node\"} |= `This archive:` | regexp `This archive:\\s+(?P<original_size>[\\d.]+) (?P<original_unit>PB|TB|GB|MB|kB)\\s+(?P<compressed_size>[\\d.]+) (?P<compressed_unit>PB|TB|GB|MB|kB)\\s+(?P<deduplicated_size>[\\d.]+) (?P<deduplicated_unit>PB|TB|GB|MB|kB)` | line_format `{{ if eq .deduplicated_unit \"kB\" }}{{ mulf .deduplicated_size 1024 }}{{ else if eq .deduplicated_unit \"MB\" }}{{ mulf .deduplicated_size 1048576 }}{{ else if eq .deduplicated_unit \"GB\" }}{{ mulf .deduplicated_size 1073741824 }}{{ else if eq .deduplicated_unit \"TB\" }}{{ mulf .deduplicated_size 1099511627776 }}{{ end }}` | pattern `<size_bytes>` | unwrap size_bytes [$__interval])",
+          "legendFormat": "This Archive",
+          "queryType": "range",
+          "refId": "this_archive"
+        }
+      ],
+      "title": "Deduplicated Size",
+      "transformations": [],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "always",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 7
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
@@ -407,7 +516,6 @@
           "sort": "none"
         }
       },
-      "pluginVersion": "10.3.3",
       "targets": [
         {
           "datasource": {
@@ -415,24 +523,13 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "max by (label_name) (max_over_time({$label_name=~\"$label_value\", job=~\"$job\", instance=~\"$instance\"} |= `All archives: ` | regexp `(?P<archive_type>All archives|This archive):\\s+(?P<original_size>\\d+\\.\\d{2}) (?P<original_unit>PB|TB|GB|MB)\\s+(?P<compressed_size>\\d+\\.\\d{2}) (?P<compressed_unit>PB|TB|GB|MB)\\s+(?P<deduplicated_size>\\d+\\.\\d{2}) (?P<deduplicated_unit>PB|TB|GB|MB)` | line_format `{{ if eq .deduplicated_unit \"MB\" }}{{ mulf .deduplicated_size 1024 1024 }}{{ else if eq .deduplicated_unit \"GB\" }}{{ mulf .deduplicated_size 1024 1024 1024 }}{{ else if eq .deduplicated_unit \"TB\" }}{{ mulf .deduplicated_size 1024 1024 1024 1024 }}{{ else if eq .deduplicated_unit \"PB\" }}{{ mulf .deduplicated_size 1024 1024 1024 1024 1024 }}{{ end }}` | pattern `<deduplicated_size_byte>` | unwrap deduplicated_size_byte [$__interval]))",
+          "expr": "max_over_time({service=\"backup_borgmatic\", node=~\"$node\"} |= `Duration:` | regexp `Duration: (?P<duration>[\\d.]+) seconds` | unwrap duration [$__interval])",
+          "legendFormat": "Duration",
           "queryType": "range",
-          "refId": "dedup_size"
-        },
-        {
-          "datasource": {
-            "type": "loki",
-            "uid": "loki"
-          },
-          "editorMode": "code",
-          "expr": "last_over_time({$label_name=~\"$label_value\", job=~\"$job\", instance=~\"$instance\"} |= `All archives: ` | regexp `(?P<archive_type>All archives|This archive):\\s+(?P<original_size>\\d+\\.\\d{2}) (?P<original_unit>PB|TB|GB|MB)\\s+(?P<compressed_size>\\d+\\.\\d{2}) (?P<compressed_unit>PB|TB|GB|MB)\\s+(?P<deduplicated_size>\\d+\\.\\d{2}) (?P<deduplicated_unit>PB|TB|GB|MB)` | unwrap deduplicated_unit [$__interval])",
-          "hide": false,
-          "queryType": "instant",
-          "refId": "dedup_unit"
+          "refId": "A"
         }
       ],
-      "title": "Size of Backup Database",
-      "transformations": [],
+      "title": "Backup Duration",
       "type": "timeseries"
     },
     {
@@ -441,10 +538,10 @@
         "uid": "loki"
       },
       "gridPos": {
-        "h": 8,
+        "h": 10,
         "w": 24,
         "x": 0,
-        "y": 7
+        "y": 14
       },
       "id": 1,
       "options": {
@@ -464,61 +561,18 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{$label_name=~\"$label_value\", job=~\"$job\", instance=~\"$instance\"} ",
+          "expr": "{service=\"backup_borgmatic\", node=~\"$node\"}",
           "queryType": "range",
           "refId": "A"
         }
       ],
-      "title": "Borgmatic Recent Log",
+      "title": "Borgmatic Logs",
       "type": "logs"
     }
   ],
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": false,
-          "text": "Loki",
-          "value": "be407b99-bce6-4dde-88d0-1689bba7c85c"
-        },
-        "hide": 0,
-        "includeAll": false,
-        "label": "Datasource",
-        "multi": false,
-        "name": "datasource",
-        "options": [],
-        "query": "loki",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "type": "datasource"
-      },
-      {
-        "current": {},
-        "datasource": {
-          "type": "loki",
-          "uid": "loki"
-        },
-        "definition": "",
-        "hide": 0,
-        "includeAll": false,
-        "label": "Label Name",
-        "multi": false,
-        "name": "label_name",
-        "options": [],
-        "query": {
-          "label": "",
-          "refId": "LokiVariableQueryEditor-VariableQuery",
-          "stream": "",
-          "type": 0
-        },
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
-      },
-      {
         "current": {},
         "datasource": {
           "type": "loki",
@@ -527,64 +581,14 @@
         "definition": "",
         "hide": 0,
         "includeAll": true,
-        "label": "Label value",
+        "label": "Node",
         "multi": true,
-        "name": "label_value",
+        "name": "node",
         "options": [],
         "query": {
-          "label": "$label_name",
+          "label": "node",
           "refId": "LokiVariableQueryEditor-VariableQuery",
-          "stream": "",
-          "type": 1
-        },
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
-      },
-      {
-        "current": {},
-        "datasource": {
-          "type": "loki",
-          "uid": "loki"
-        },
-        "definition": "",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Job",
-        "multi": true,
-        "name": "job",
-        "options": [],
-        "query": {
-          "label": "job",
-          "refId": "LokiVariableQueryEditor-VariableQuery",
-          "stream": "{$label_name=~\"$label_value\"}",
-          "type": 1
-        },
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
-      },
-      {
-        "current": {},
-        "datasource": {
-          "type": "loki",
-          "uid": "loki"
-        },
-        "definition": "",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Instance",
-        "multi": true,
-        "name": "instance",
-        "options": [],
-        "query": {
-          "label": "instance",
-          "refId": "LokiVariableQueryEditor-VariableQuery",
-          "stream": "{$label_name=~\"$label_value\"}",
+          "stream": "{service=\"backup_borgmatic\"}",
           "type": 1
         },
         "refresh": 2,
