@@ -41,6 +41,17 @@ def get_service_node(compose_file: str) -> list[tuple[str, str]]:
     """
     compose_json = json.loads(compose_config(compose_file, "--format", "json"))
     raw_nodes = inspect_nodes()
+    return resolve_service_nodes(compose_json, raw_nodes)
+
+
+def resolve_service_nodes(
+    compose_json: dict, raw_nodes: list[dict],
+) -> list[tuple[str, str]]:
+    """Match services to nodes from pre-fetched data.
+
+    Returns:
+        List of (service_name, hostname|"UNRESOLVED") tuples.
+    """
     nodes = [
         {
             "hostname": n["Description"]["Hostname"],

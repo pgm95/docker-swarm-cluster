@@ -3,8 +3,14 @@
 import json
 
 
-from conftest import make_completed
-from swarm.validate import _sed_transforms, check_bind_mounts, extract_bind_mounts, validate_compose
+from conftest import SAMPLE_NODES, make_completed
+from swarm.validate import (
+    _sed_transforms,
+    check_paths_on_node,
+    collect_bind_mounts,
+    extract_bind_mounts,
+    validate_compose,
+)
 
 
 class TestExtractBindMounts:
@@ -128,64 +134,68 @@ class TestValidateCompose:
         assert "invalid config" in err
 
 
-class TestCheckBindMounts:
-    def test_finds_missing_paths(self, monkeypatch):
-        compose_json = json.dumps({
+class TestCollectBindMounts:
+    def test_collects_paths_by_node(self, monkeypatch):
+        compose_json = {
             "services": {
                 "web": {
                     "volumes": [{"type": "bind", "source": "/mnt/data", "target": "/data"}],
                     "deploy": {"placement": {"constraints": ["node.labels.type == vm"]}},
                 },
             },
-        })
-        monkeypatch.setattr("swarm.validate.compose_config", lambda *a: compose_json)
-        monkeypatch.setattr("swarm.validate.get_service_node", lambda f: [("web", "swarm-vm")])
+        }
+        monkeypatch.setattr("swarm.validate.compose_config", lambda *a: json.dumps(compose_json))
+        from pathlib import Path
+        result = collect_bind_mounts(Path("stacks/apps/test/compose.yml"), SAMPLE_NODES)
+        assert "swarm-vm" in result
+        assert "/mnt/data" in result["swarm-vm"]
+
+    def test_no_bind_mounts(self, monkeypatch):
+        monkeypatch.setattr("swarm.validate.compose_config", lambda *a: json.dumps({"services": {"web": {"image": "nginx"}}}))
+        from pathlib import Path
+        result = collect_bind_mounts(Path("stacks/apps/test/compose.yml"), SAMPLE_NODES)
+        assert result == {}
+
+    def test_no_constraints_matches_first_node(self, monkeypatch):
+        compose_json = {
+            "services": {
+                "web": {
+                    "volumes": [{"type": "bind", "source": "/mnt/data", "target": "/data"}],
+                },
+            },
+        }
+        monkeypatch.setattr("swarm.validate.compose_config", lambda *a: json.dumps(compose_json))
+        from pathlib import Path
+        result = collect_bind_mounts(Path("stacks/apps/test/compose.yml"), SAMPLE_NODES)
+        # No constraints = matches first node
+        assert len(result) == 1
+        assert "/mnt/data" in list(result.values())[0]
+
+
+class TestCheckPathsOnNode:
+    def test_missing_path(self, monkeypatch):
         monkeypatch.setattr(
             "swarm.validate.ssh_node",
             lambda h, c, **kw: make_completed(stdout="MISSING /mnt/data"),
         )
-        from pathlib import Path
-        results = check_bind_mounts(Path("stacks/apps/test/compose.yml"))
+        results = check_paths_on_node("swarm-vm", {"/mnt/data"})
         assert len(results) == 1
         assert results[0]["status"] == "missing"
         assert results[0]["path"] == "/mnt/data"
 
-    def test_ok_paths(self, monkeypatch):
-        compose_json = json.dumps({
-            "services": {
-                "web": {
-                    "volumes": [{"type": "bind", "source": "/mnt/data", "target": "/data"}],
-                },
-            },
-        })
-        monkeypatch.setattr("swarm.validate.compose_config", lambda *a: compose_json)
-        monkeypatch.setattr("swarm.validate.get_service_node", lambda f: [("web", "swarm-vm")])
+    def test_ok_path(self, monkeypatch):
         monkeypatch.setattr(
             "swarm.validate.ssh_node",
             lambda h, c, **kw: make_completed(stdout="drwxr-xr-x root:root /mnt/data"),
         )
-        from pathlib import Path
-        results = check_bind_mounts(Path("stacks/apps/test/compose.yml"))
+        results = check_paths_on_node("swarm-vm", {"/mnt/data"})
         assert len(results) == 1
         assert results[0]["status"] == "ok"
+        assert results[0]["path"] == "/mnt/data"
 
-    def test_no_bind_mounts(self, monkeypatch):
-        compose_json = json.dumps({"services": {"web": {"image": "nginx"}}})
-        monkeypatch.setattr("swarm.validate.compose_config", lambda *a: compose_json)
-        from pathlib import Path
-        results = check_bind_mounts(Path("stacks/apps/test/compose.yml"))
-        assert results == []
-
-    def test_unreachable_node(self, monkeypatch):
-        compose_json = json.dumps({
-            "services": {
-                "web": {
-                    "volumes": [{"type": "bind", "source": "/mnt/data", "target": "/data"}],
-                },
-            },
-        })
-        monkeypatch.setattr("swarm.validate.compose_config", lambda *a: compose_json)
-        monkeypatch.setattr("swarm.validate.get_service_node", lambda f: [("web", "UNRESOLVED")])
-        from pathlib import Path
-        results = check_bind_mounts(Path("stacks/apps/test/compose.yml"))
+    def test_unreachable(self, monkeypatch):
+        def fail(*a, **kw):
+            raise Exception("ssh failed")
+        monkeypatch.setattr("swarm.validate.ssh_node", fail)
+        results = check_paths_on_node("swarm-vm", {"/mnt/data"})
         assert results[0]["status"] == "unreachable"

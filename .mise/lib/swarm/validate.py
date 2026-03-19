@@ -8,10 +8,11 @@ from pathlib import Path
 
 from . import SwarmError
 from ._compose import compose_config
+from ._docker import inspect_nodes
 from ._output import error, setup
 from ._ssh import ssh_node
 from .deploy import compute_content_hash
-from .nodes import get_service_node
+from .nodes import resolve_service_nodes
 
 
 def validate_compose(stack_file: Path) -> tuple[bool, str]:
@@ -89,61 +90,61 @@ def extract_bind_mounts(compose_json: dict) -> dict[str, list[str]]:
     return result
 
 
-def check_bind_mounts(stack_file: Path) -> list[dict]:
-    """Full bind mount check for a stack.
+def collect_bind_mounts(
+    stack_file: Path, raw_nodes: list[dict],
+) -> dict[str, set[str]]:
+    """Collect bind mount paths grouped by node for a stack.
 
     Returns:
-        [{"stack", "node", "path", "status": "ok"|"missing"|"unreachable", "permissions"}]
+        {node_hostname: {path, ...}} — empty dict if no bind mounts.
     """
     try:
         raw_json = compose_config(str(stack_file), "--format", "json")
         compose_json = json.loads(raw_json)
     except Exception:
-        return []
+        return {}
 
     binds = extract_bind_mounts(compose_json)
     if not binds:
-        return []
+        return {}
 
-    # Resolve service->node mapping
     try:
-        svc_nodes = dict(get_service_node(str(stack_file)))
+        svc_nodes = dict(resolve_service_nodes(compose_json, raw_nodes))
     except Exception:
         svc_nodes = {}
 
-    # Group paths by target node, deduplicating
     node_paths: dict[str, set[str]] = {}
     for svc, paths in binds.items():
         node = svc_nodes.get(svc, "UNKNOWN")
         node_paths.setdefault(node, set()).update(paths)
+    return node_paths
 
-    stack_nm = str(stack_file.parent)
+
+def check_paths_on_node(node: str, paths: set[str]) -> list[dict]:
+    """SSH to a node and stat all paths in a single call.
+
+    Returns:
+        [{"path", "status": "ok"|"missing", "permissions"}]
+    """
+    stat_cmd = "; ".join(
+        f"if [ -e '{p}' ]; then stat -c '%A %U:%G {p}' '{p}'; else echo 'MISSING {p}'; fi"
+        for p in sorted(paths)
+    )
+    try:
+        result = ssh_node(node, stat_cmd, check=False)
+    except Exception:
+        return [{"path": p, "status": "unreachable", "permissions": ""} for p in sorted(paths)]
+
     results = []
-    for node, paths in sorted(node_paths.items()):
-        if node in ("UNKNOWN", "UNRESOLVED"):
-            for p in sorted(paths):
-                results.append({"stack": stack_nm, "node": node, "path": p, "status": "unreachable", "permissions": ""})
-            continue
-
-        stat_cmd = "; ".join(
-            f"if [ -e '{p}' ]; then stat -c '%A %U:%G {p}' '{p}'; else echo 'MISSING {p}'; fi"
-            for p in sorted(paths)
-        )
-        try:
-            result = ssh_node(node, stat_cmd, check=False)
-            for line in result.stdout.strip().splitlines():
-                if line.startswith("MISSING"):
-                    path = line.split(" ", 1)[1] if " " in line else line
-                    results.append({"stack": stack_nm, "node": node, "path": path, "status": "missing", "permissions": ""})
-                else:
-                    parts = line.rsplit(" ", 1)
-                    perms = parts[0] if len(parts) > 1 else ""
-                    path = parts[-1]
-                    results.append({"stack": stack_nm, "node": node, "path": path, "status": "ok", "permissions": perms})
-        except Exception:
-            for p in sorted(paths):
-                results.append({"stack": stack_nm, "node": node, "path": p, "status": "unreachable", "permissions": ""})
-
+    for line in result.stdout.strip().splitlines():
+        if line.startswith("MISSING"):
+            path = line.split(" ", 1)[1] if " " in line else line
+            results.append({"path": path, "status": "missing", "permissions": ""})
+        else:
+            parts = line.rsplit(" ", 1)
+            perms = parts[0] if len(parts) > 1 else ""
+            path = parts[-1]
+            results.append({"path": path, "status": "ok", "permissions": perms})
     return results
 
 
@@ -182,29 +183,59 @@ def validate(stack_file: str | None = None) -> int:
     if failed:
         return 1
 
-    # --- Bind mount checks ---
+    # --- Bind mount checks (1 inspect_nodes + 1 SSH per node) ---
     print()
     print("=== Bind mount paths ===")
-    warnings = 0
+
+    raw_nodes = inspect_nodes()
+
+    # Collect all bind mounts across all stacks, grouped by node
+    # Track which stack+node owns each path for display
+    all_node_paths: dict[str, set[str]] = {}
+    path_owners: dict[tuple[str, str], str] = {}  # (node, path) -> stack
     for f in files:
-        results = check_bind_mounts(f)
-        if not results:
-            continue
-        # Group by node for display
-        current_stack = ""
-        for r in results:
-            header = f"{r['stack']} ({r['node']}):"
-            if header != current_stack:
-                current_stack = header
-                print(header)
-            if r["status"] == "missing":
-                print(f"  ⚠ MISSING {r['path']}")
-                warnings += 1
-            elif r["status"] == "unreachable":
-                print(f"  ⚠ {r['node']}: unreachable")
-                warnings += 1
-            else:
-                print(f"  {r['permissions']}")
+        stack_nm = str(f.parent)
+        node_paths = collect_bind_mounts(f, raw_nodes)
+        for node, paths in node_paths.items():
+            all_node_paths.setdefault(node, set()).update(paths)
+            for p in paths:
+                path_owners[(node, p)] = stack_nm
+
+    # One SSH call per node for all paths
+    node_results: dict[str, list[dict]] = {}
+    for node, paths in sorted(all_node_paths.items()):
+        if node in ("UNKNOWN", "UNRESOLVED"):
+            node_results[node] = [{"path": p, "status": "unreachable", "permissions": ""} for p in sorted(paths)]
+        else:
+            node_results[node] = check_paths_on_node(node, paths)
+
+    # Display grouped by stack and node
+    warnings = 0
+    displayed: set[str] = set()
+    for f in files:
+        stack_nm = str(f.parent)
+        node_paths = collect_bind_mounts(f, raw_nodes)
+        for node in sorted(node_paths):
+            header = f"{stack_nm} ({node}):"
+            header_printed = False
+            for r in node_results.get(node, []):
+                if path_owners.get((node, r["path"])) != stack_nm:
+                    continue
+                display_key = f"{stack_nm}:{node}:{r['path']}"
+                if display_key in displayed:
+                    continue
+                displayed.add(display_key)
+                if not header_printed:
+                    print(header)
+                    header_printed = True
+                if r["status"] == "missing":
+                    print(f"  ⚠ MISSING {r['path']}")
+                    warnings += 1
+                elif r["status"] == "unreachable":
+                    print(f"  ⚠ {node}: unreachable")
+                    warnings += 1
+                else:
+                    print(f"  {r['permissions']} {r['path']}")
 
     if warnings > 0:
         print()
