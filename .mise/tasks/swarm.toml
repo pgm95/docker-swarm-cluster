@@ -36,11 +36,6 @@ description = "Remove a deployed stack and wait for services to drain"
 usage = 'arg "<path>" help="Path to stack directory"'
 run = 'python3 -m swarm.remove "${usage_path}"'
 
-["swarm:status"]
-alias = "status"
-description = "Show cluster nodes and health status of all deployed stacks"
-run = 'python3 -m swarm.status'
-
 ["swarm:cleanup"]
 description = "Remove unused versioned secrets, configs, dead containers, and dangling images"
 usage = 'flag "--prune-images" help="Also prune all unused images on every node"'

@@ -131,7 +131,7 @@ Task logic lives in the `swarm` Python package at `.mise/lib/swarm/`, invoked by
 | `deploy` | `swarm:deploy` | Deploy preparation: secrets, builds, env exports |
 | `convergence` | `swarm:deploy` | Post-deploy convergence polling and health checks |
 | `remove` | `swarm:remove` | Stack removal with drain wait |
-| `status` | `swarm:status` | Cluster node and stack health display |
+| `status` | `status` | Cluster node and stack health display |
 | `validate` | `swarm:validate` | Compose validation and bind mount path checks |
 | `cleanup` | `swarm:cleanup` | Orphaned secret/config removal, node pruning |
 | `networks` | `swarm:init-networks` | Overlay network discovery and creation |

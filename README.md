@@ -211,7 +211,7 @@ pulled by Swarm nodes via `--with-registry-auth`. Existing tags are skipped.
   during initial `site:deploy`. Fix: `docker service update --force`.
 
 - **Init sidecars show `0/1` replicas.** This is correct, they exit after provisioning.
-  The deploy pipeline and `swarm:status` recognize completed tasks.
+  The deploy pipeline and `status` recognize completed tasks.
 
 ### LXC Nodes
 

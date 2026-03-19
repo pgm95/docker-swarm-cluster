@@ -69,3 +69,7 @@ description = " " # Run all pre-commit hooks
 run = [
   "pre-commit run --config .config/pre-commit.yaml --all-files"
 ]
+
+[tasks."status"]
+description = " " # Show cluster nodes and health status of all deployed stacks
+run = 'python3 -m swarm.status'
