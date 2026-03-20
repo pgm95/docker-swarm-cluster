@@ -22,6 +22,10 @@ def setup(verbose: bool = False) -> None:
     log.setLevel(level)
 
 
+def debug(msg: str) -> None:
+    log.debug(msg)
+
+
 def info(msg: str) -> None:
     log.info(msg)
 

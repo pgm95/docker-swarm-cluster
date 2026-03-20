@@ -2,15 +2,20 @@
 
 ["swarm:deploy"]
 description = "Deploy a stack with automatic secret management"
-usage = 'arg "<path>" help="Path to stack directory"'
+usage = '''
+arg "<path>" help="Path to stack directory"
+flag "--update" help="Re-pull mutable image tags (e.g. latest, release)"
+'''
 env.CONVERGE_TIMEOUT = "180"
 env.CONVERGE_INTERVAL = "2"
 run = '''
 #!/usr/bin/env bash
 prepare_out=$(python3 -m swarm.deploy prepare "${usage_path}") || exit 1
 eval "${prepare_out}"
+RESOLVE_IMAGE=""
+[[ "${usage_update:-}" == "true" ]] && RESOLVE_IMAGE="--resolve-image always"
 echo "Deploying: ${STACK_NAME}"
-if ! python3 -m swarm._compose "${STACK_PATH}/compose.yml" | sed '/^name:/d; s/published: "\([0-9]*\)"/published: \1/' | docker stack deploy --detach --with-registry-auth -c - "${STACK_NAME}"; then
+if ! python3 -m swarm._compose "${STACK_PATH}/compose.yml" | sed '/^name:/d; s/published: "\([0-9]*\)"/published: \1/' | docker stack deploy --detach --with-registry-auth ${RESOLVE_IMAGE} -c - "${STACK_NAME}"; then
     echo "ERROR: Deploy command failed"
     [[ -n "${DEPLOY_VERSION:-}" ]] && echo "Tip: Run 'mise run swarm:cleanup' to remove orphaned secrets"
     exit 1
@@ -37,6 +42,7 @@ usage = 'arg "<path>" help="Path to stack directory"'
 run = 'python3 -m swarm.remove "${usage_path}"'
 
 ["swarm:cleanup"]
+alias = "cleanup"
 description = "Remove unused versioned secrets, configs, dead containers, and dangling images"
 usage = 'flag "--prune-images" help="Also prune all unused images on every node"'
 run = 'python3 -m swarm.cleanup'

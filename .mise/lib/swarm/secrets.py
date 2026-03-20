@@ -8,7 +8,7 @@ from pathlib import Path
 
 from . import SecretError, ValidationError
 from ._docker import secret_create, secret_list
-from ._output import error, info, setup
+from ._output import debug, error, info, setup
 from ._sops import sops_decrypt
 
 # Pattern: "name: some_secret_name_${DEPLOY_VERSION}" or similar
@@ -97,7 +97,7 @@ def create_versioned_secrets(
                 info(f"    + {secret_name}")
                 created += 1
 
-    info(f"    Created: {created}, Skipped: {skipped}, Filtered: {filtered}")
+    debug(f"    Created: {created}, Skipped: {skipped}, Filtered: {filtered}")
     return {"created": created, "skipped": skipped, "filtered": filtered}
 
 
