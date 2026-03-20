@@ -83,3 +83,17 @@ The IP2Location database is required for the geoblock middleware. If missing, th
 Uses `mode: host` for ports 80/443 — bypasses Swarm ingress mesh for predictable source IP handling.
 
 Static config via CLI flags in compose `command:`. Dynamic config via Docker Configs (file provider).
+
+## Dual-Scope Services and Phantom Routers
+
+Traefik's `--providers.swarm.constraints` filters at the service level, not the router level.
+Once a Swarm service passes the constraint check, all its `traefik.*` labels are processed,
+including routers meant for the other gateway.
+
+This only affects services that set both `traefik.scope.internal=true` and `traefik.scope.external=true`.
+Each gateway creates phantom routers from the other gateway's labels.
+Phantoms are inert (entrypoint-level wildcard `tls.domains` cause a cert mismatch,
+and DNS doesn't route to the wrong gateway), but they appear on the dashboard.
+
+This is a known Traefik limitation ([#2009](https://github.com/traefik/traefik/issues/2009),
+[#11909](https://github.com/traefik/traefik/issues/11909)).
