@@ -26,4 +26,8 @@ layout:
   Applications:
     header: false
     style: row
-    columns: 2
+    columns: 3
+  Media:
+    header: false
+    style: row
+    columns: 3

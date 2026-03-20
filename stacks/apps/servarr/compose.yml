@@ -37,6 +37,16 @@ services:
         - "traefik.http.routers.radarr.rule=Host(`radarr.${DOMAIN_PRIVATE}`)"
         - "traefik.http.routers.radarr.entrypoints=websecure"
         - "traefik.http.services.radarr.loadbalancer.server.port=7878"
+        - "homepage.group=Media"
+        - "homepage.name=Radarr"
+        - "homepage.icon=radarr"
+        - "homepage.href=https://radarr.${DOMAIN_PRIVATE}"
+        - "homepage.description=Movie Management"
+        - "homepage.widget.type=radarr"
+        - "homepage.widget.url=https://radarr.${DOMAIN_PRIVATE}"
+        - "homepage.widget.key={{HOMEPAGE_VAR_RADARR_KEY}}"
+        - "homepage.widget.enableQueue=true"
+        - 'homepage.widget.fields=["wanted", "queued", "movies"]'
       mode: replicated
       replicas: 1
       resources:
@@ -73,6 +83,16 @@ services:
         - "traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAIN_PRIVATE}`)"
         - "traefik.http.routers.sonarr.entrypoints=websecure"
         - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+        - "homepage.group=Media"
+        - "homepage.name=Sonarr"
+        - "homepage.icon=sonarr"
+        - "homepage.href=https://sonarr.${DOMAIN_PRIVATE}"
+        - "homepage.description=TV Show Management"
+        - "homepage.widget.type=sonarr"
+        - "homepage.widget.url=https://sonarr.${DOMAIN_PRIVATE}"
+        - "homepage.widget.key={{HOMEPAGE_VAR_SONARR_KEY}}"
+        - "homepage.widget.enableQueue=true"
+        - 'homepage.widget.fields=["wanted", "queued", "series"]'
       mode: replicated
       replicas: 1
       resources:
@@ -109,6 +129,14 @@ services:
         - "traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN_PRIVATE}`)"
         - "traefik.http.routers.prowlarr.entrypoints=websecure"
         - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
+        - "homepage.group=Media"
+        - "homepage.name=Prowlarr"
+        - "homepage.icon=prowlarr"
+        - "homepage.href=https://prowlarr.${DOMAIN_PRIVATE}"
+        - "homepage.description=Indexer Management"
+        - "homepage.widget.type=prowlarr"
+        - "homepage.widget.url=https://prowlarr.${DOMAIN_PRIVATE}"
+        - "homepage.widget.key={{HOMEPAGE_VAR_PROWLARR_KEY}}"
       mode: replicated
       replicas: 1
       resources:

@@ -20,11 +20,6 @@ services:
     networks:
       - infra_gw-external
       - infra_gw-internal
-    # ports:
-    #   - target: 8096
-    #     published: 8096
-    #     protocol: tcp
-    #     mode: host
     volumes:
       - /dev/dri:/dev/dri
       - /mnt/media:/media
@@ -56,12 +51,13 @@ services:
         - "traefik.http.routers.jellyfin-internal.rule=Host(`stream.${DOMAIN_PRIVATE}`)"
         - "traefik.http.routers.jellyfin-internal.entrypoints=websecure"
         - "traefik.http.routers.jellyfin-internal.service=jellyfin"
-        - "homepage.group=Applications"
+        - "homepage.group=Media"
         - "homepage.name=Jellyfin"
         - "homepage.icon=jellyfin"
         - "homepage.href=https://stream.${DOMAIN_PRIVATE}"
         - "homepage.description=Movies & TV"
         - "homepage.widget.type=jellyfin"
+        - "homepage.widget.version=2"
         - "homepage.widget.url=https://stream.${DOMAIN_PRIVATE}"
         - "homepage.widget.key={{HOMEPAGE_VAR_JELLYFIN_KEY}}"
         - "homepage.widget.enableNowPlaying=false"

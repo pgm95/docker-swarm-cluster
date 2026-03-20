@@ -81,11 +81,11 @@ Two sed transforms required because `docker stack deploy` rejects:
 
 ## Deploy Pipeline
 
-`mise run swarm:deploy stacks/<ns>/<stack>` stages:
+`mise run swarm:deploy stacks/<ns>/<stack> [--update]` stages:
 
 1. **Prepare** (`swarm.deploy`) — resolves stack name, detects versioning, decrypts secrets, validates, creates versioned Docker secrets/configs, builds+pushes custom images. Outputs shell exports for the bash wrapper.
 2. **Compose preprocessing** (`swarm._compose`) — anchor concatenation + `docker compose config` + sed transforms
-3. **Stack deploy** — `docker stack deploy --detach --with-registry-auth -c -`
+3. **Stack deploy** — `docker stack deploy --detach --with-registry-auth -c -`. With `--update`, adds `--resolve-image always` to force Swarm to re-pull mutable tags (`latest`, `release`, etc.)
 4. **Convergence wait** (`swarm.convergence`) — polls until replicas running (default 180s, configurable via `CONVERGE_TIMEOUT`)
 
 The prepare step runs as a Python subprocess. Its stdout contains `export KEY=VALUE` statements that the bash wrapper `eval`s, making decrypted secrets and computed values (STACK_NAME, DEPLOY_VERSION, OCI_TAG_*) available for compose interpolation and the deploy command.

@@ -160,8 +160,11 @@ services:
         - "homepage.icon=grafana"
         - "homepage.href=https://grafana.${DOMAIN_PRIVATE}"
         - "homepage.description=Dashboards & Visualization"
-        - "homepage.widget.type=grafana"
-        - "homepage.widget.url=https://grafana.${DOMAIN_PRIVATE}"
+        # - "homepage.widget.type=grafana"
+        # - "homepage.widget.version=2"
+        # - "homepage.widget.url=https://grafana.${DOMAIN_PRIVATE}"
+        # - "homepage.widget.username={{HOMEPAGE_VAR_GRAFANA_USER}}"
+        # - "homepage.widget.password={{HOMEPAGE_VAR_GRAFANA_PASS}}"
 
   uptime-kuma:
     image: louislam/uptime-kuma:2-slim-rootless
@@ -199,8 +202,9 @@ services:
         - "homepage.icon=uptime-kuma"
         - "homepage.href=https://status.${DOMAIN_PRIVATE}"
         - "homepage.description=Status & Monitoring"
-        - "homepage.widget.type=uptimekuma"
-        - "homepage.widget.url=https://status.${DOMAIN_PRIVATE}"
+        # - "homepage.widget.type=uptimekuma"
+        # - "homepage.widget.url=https://status.${DOMAIN_PRIVATE}"
+        # - "homepage.widget.slug=PLACEHOLDER"
 
   init-db:
     image: postgres:17-alpine

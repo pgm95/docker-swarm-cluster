@@ -63,6 +63,11 @@ services:
         - "traefik.http.routers.stirling-pdf.rule=Host(`pdf.${DOMAIN_PRIVATE}`)"
         - "traefik.http.routers.stirling-pdf.entrypoints=websecure"
         - "traefik.http.services.stirling-pdf.loadbalancer.server.port=8070"
+        - "homepage.group=Applications"
+        - "homepage.name=Stirling-PDF"
+        - "homepage.icon=stirling-pdf"
+        - "homepage.href=https://pdf.${DOMAIN_PRIVATE}"
+        - "homepage.description=PDF Management and Processing"
       mode: replicated
       replicas: 1
       resources:

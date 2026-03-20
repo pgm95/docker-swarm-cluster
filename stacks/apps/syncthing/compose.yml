@@ -45,6 +45,11 @@ services:
         - "traefik.http.routers.syncthing.rule=Host(`sync.${DOMAIN_PRIVATE}`)"
         - "traefik.http.routers.syncthing.entrypoints=websecure"
         - "traefik.http.services.syncthing.loadbalancer.server.port=8384"
+        - "homepage.group=Applications"
+        - "homepage.name=Syncthing"
+        - "homepage.icon=syncthing"
+        - "homepage.href=https://sync.${DOMAIN_PRIVATE}"
+        - "homepage.description=File Synchronization"
       mode: replicated
       replicas: 1
       resources:

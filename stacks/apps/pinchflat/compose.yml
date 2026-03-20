@@ -31,6 +31,11 @@ services:
         - "traefik.http.routers.pinchflat.rule=Host(`youtube.${DOMAIN_PRIVATE}`)"
         - "traefik.http.routers.pinchflat.entrypoints=websecure"
         - "traefik.http.services.pinchflat.loadbalancer.server.port=8945"
+        - "homepage.group=Media"
+        - "homepage.name=Pinchflat"
+        - "homepage.icon=pinchflat"
+        - "homepage.href=https://youtube.${DOMAIN_PRIVATE}"
+        - "homepage.description=YouTube Downloader"
       mode: replicated
       replicas: 1
       resources:

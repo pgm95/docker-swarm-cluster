@@ -18,6 +18,12 @@ services:
       - HOMEPAGE_VAR_JELLYFIN_KEY=${HOMEPAGE_VAR_JELLYFIN_KEY}
       - HOMEPAGE_VAR_PORTAINER_KEY=${HOMEPAGE_VAR_PORTAINER_KEY}
       - HOMEPAGE_VAR_MEALIE_KEY=${HOMEPAGE_VAR_MEALIE_KEY}
+      - HOMEPAGE_VAR_GRAFANA_USER=${HOMEPAGE_VAR_GRAFANA_USER}
+      - HOMEPAGE_VAR_GRAFANA_PASS=${HOMEPAGE_VAR_GRAFANA_PASS}
+      - HOMEPAGE_VAR_IMMICH_KEY=${HOMEPAGE_VAR_IMMICH_KEY}
+      - HOMEPAGE_VAR_RADARR_KEY=${HOMEPAGE_VAR_RADARR_KEY}
+      - HOMEPAGE_VAR_SONARR_KEY=${HOMEPAGE_VAR_SONARR_KEY}
+      - HOMEPAGE_VAR_PROWLARR_KEY=${HOMEPAGE_VAR_PROWLARR_KEY}
     configs:
       - source: homepage_settings
         target: /app/config/settings.yaml
@@ -47,7 +53,7 @@ services:
       retries: 3
       start_period: 30s
     deploy:
-      <<: [*place-onprem, *deploy]
+      <<: [*place-vm, *deploy]
       update_config:
         order: start-first
       labels:

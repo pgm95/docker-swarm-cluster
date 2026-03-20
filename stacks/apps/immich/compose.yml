@@ -40,11 +40,16 @@ services:
         - "traefik.http.routers.immich.rule=Host(`immich.${DOMAIN_PRIVATE}`)"
         - "traefik.http.routers.immich.entrypoints=websecure"
         - "traefik.http.services.immich.loadbalancer.server.port=2283"
-        - "homepage.group=Applications"
+        - "homepage.group=Media"
         - "homepage.name=Immich"
         - "homepage.icon=immich"
         - "homepage.href=https://immich.${DOMAIN_PRIVATE}"
         - "homepage.description=Photo Management"
+        - "homepage.widget.type=immich"
+        - "homepage.widget.version=2"
+        - "homepage.widget.url=https://immich.${DOMAIN_PRIVATE}"
+        - "homepage.widget.key={{HOMEPAGE_VAR_IMMICH_KEY}}"
+        - 'homepage.widget.fields=["photos", "videos", "storage"]'
       mode: replicated
       replicas: 1
       resources:
