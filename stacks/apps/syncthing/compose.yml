@@ -1,7 +1,5 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 
-# Port 22000 open on host for peer discovery
-
 services:
   syncthing:
     image: syncthing/syncthing:latest
@@ -16,14 +14,13 @@ services:
       - infra_gw-internal
       - infra_metrics
     ports:
-      # Sync protocol - must be host mode for peer discovery
       - target: 22000
         published: 22000
         protocol: tcp
         mode: host
       - target: 22000
         published: 22000
-        protocol: udp
+        protocol: udp #quic
         mode: host
     volumes:
       - syncthing-data:/var/syncthing
