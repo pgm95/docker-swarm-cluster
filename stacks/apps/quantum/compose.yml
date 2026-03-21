@@ -3,20 +3,17 @@
 include:
   - configs.yml
 
-# OIDC client configured in Authelia
-
 services:
   quantum:
-    image: gtstef/filebrowser:latest
+    image: gtstef/filebrowser:stable
     entrypoint: ["/bin/sh", "/init.sh"]
     logging:
       <<: *logging
     stop_grace_period: 30s
     environment:
-      - QUANTUM_OWNER=${GLOBAL_NONROOT_DOCKER}
+      - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
       - FILEBROWSER_DATABASE=/quantum/data.db
       - FILEBROWSER_CONFIG=/quantum/config.yaml
-      # FileBrowser doesn't support _FILE env vars - keep as env injection
       - FILEBROWSER_ADMIN_USERNAME=${FILEBROWSER_ADMIN_USERNAME}
       - FILEBROWSER_ADMIN_PASSWORD=${FILEBROWSER_ADMIN_PASSWORD}
       - FILEBROWSER_OIDC_CLIENT_ID=${FILEBROWSER_OIDC_CLIENT_ID}
@@ -24,7 +21,7 @@ services:
       - FILEBROWSER_OIDC_CLIENT_SECRET=${FILEBROWSER_OIDC_CLIENT_SECRET}
     configs:
       - source: quantum_config
-        target: /quantum/config.yaml
+        target: /tmp/config.yaml.tpl
       - source: quantum_init
         target: /init.sh
     networks:
@@ -36,7 +33,7 @@ services:
       - /mnt/photos:/mnt/photos
       - /mnt/media:/mnt/media
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:15031/health"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8080/health"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -50,7 +47,7 @@ services:
         - "traefik.scope.internal=true"
         - "traefik.http.routers.quantum.rule=Host(`files.${DOMAIN_PRIVATE}`)"
         - "traefik.http.routers.quantum.entrypoints=websecure"
-        - "traefik.http.services.quantum.loadbalancer.server.port=15031"
+        - "traefik.http.services.quantum.loadbalancer.server.port=8080"
         - "homepage.group=Applications"
         - "homepage.name=Quantum"
         - "homepage.icon=filebrowser-quantum"

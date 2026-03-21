@@ -4,10 +4,10 @@ server:
   disablePreviews: false
   disablePreviewResize: false
   disableTypeDetectionByHeader: false
-  port: 15031
+  port: 8080
   baseURL: "/"
   externalUrl: ""
-  internalUrl: "http://localhost:15031"
+  internalUrl: "http://127.0.0.1:8080"
   logging:
     - output: "stdout"
       noColors: false
@@ -24,12 +24,6 @@ server:
         denyByDefault: false
         private: false
         disabled: false
-        disableIndexing: false
-        conditionals:
-          hidden: false
-          ignoreZeroSizeFolders: false
-          rules:
-            - folderPath: "archive"
         defaultUserScope: "/"
         defaultEnabled: true
         createUserDir: false
@@ -39,10 +33,6 @@ server:
         denyByDefault: false
         private: false
         disabled: false
-        disableIndexing: false
-        conditionals:
-          hidden: false
-          ignoreZeroSizeFolders: false
         defaultUserScope: "/"
         defaultEnabled: true
         createUserDir: false
@@ -52,24 +42,6 @@ server:
         denyByDefault: false
         private: false
         disabled: false
-        disableIndexing: false
-        conditionals:
-          hidden: false
-          ignoreZeroSizeFolders: false
-        defaultUserScope: "/"
-        defaultEnabled: true
-        createUserDir: false
-    - path: "/mnt/archive"
-      name: "Archive"
-      config:
-        denyByDefault: false
-        private: false
-        disabled: false
-        disableIndexing: false
-        indexingIntervalMinutes: 0
-        conditionals:
-          hidden: false
-          ignoreZeroSizeFolders: false
         defaultUserScope: "/"
         defaultEnabled: true
         createUserDir: false
@@ -79,18 +51,20 @@ server:
         denyByDefault: false
         private: false
         disabled: false
-        disableIndexing: true
-        conditionals:
-          hidden: false
-          ignoreZeroSizeFolders: false
         defaultUserScope: "/"
         defaultEnabled: true
         createUserDir: false
+        rules:
+          - neverWatchPath: "/"
+          - folderPath: "/"
+            viewable: true
+        # Will be deprecated, no viable alternative as of 03/11/26
+        disableIndexing: true
 
 auth:
   tokenExpirationHours: 120
   adminUsername: "root"
-  adminPassword: "admin"
+  adminPassword: "" # Set via FILEBROWSER_ADMIN_PASSWORD
   methods:
     password:
       enabled: true
@@ -98,15 +72,15 @@ auth:
       signup: false
     oidc:
       enabled: true
-      clientId: ''
-      clientSecret: ''
-      issuerUrl: 'https://auth.maliha.vip'
+      clientId: '' # Set via FILEBROWSER_OIDC_CLIENT_ID
+      clientSecret: '' # Set via FILEBROWSER_OIDC_CLIENT_SECRET
+      issuerUrl: 'https://auth.${DOMAIN_PUBLIC}'
       scopes: 'email openid profile groups'
       userIdentifier: 'preferred_username'
       disableVerifyTLS: false
       logoutRedirectUrl: ''
       createUser: true
-      adminGroup: 'system_admin'
+      adminGroup: 'app_admin'
       groupsClaim: 'groups'
 
 frontend:
