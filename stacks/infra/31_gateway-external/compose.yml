@@ -153,7 +153,6 @@ services:
       - LOCAL_API_URL=http://0.0.0.0:8085
       - PARSERS=crowdsecurity/geoip-enrich crowdsecurity/whitelists
       - COLLECTIONS=crowdsecurity/traefik crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules crowdsecurity/base-http-scenarios
-      # Keep as env vars - CrowdSec has buggy _FILE support (GitHub # 221)
       - BOUNCER_KEY_TRAEFIK=${BOUNCER_KEY_TRAEFIK}
       - CTI_KEY=${CROWDSEC_CTI_KEY}
       - CROWDSEC_POSTGRES_PASSWORD=${CROWDSEC_POSTGRES_PASSWORD}
@@ -177,6 +176,8 @@ services:
         target: /etc/crowdsec/notifications/http.yaml
       - source: crowdsec_console
         target: /etc/crowdsec/console.yaml
+      - source: crowdsec_whitelist
+        target: /etc/crowdsec/parsers/s02-enrich/01-custom-whitelist.yaml
     networks:
       - default
       - infra_socket

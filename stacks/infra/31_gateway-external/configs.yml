@@ -35,6 +35,9 @@ configs:
   crowdsec_notifications:
     name: crowdsec_notifications_${DEPLOY_VERSION}
     file: ./config/crowdsec/notifications-http.yaml
+  crowdsec_whitelist:
+    name: crowdsec_whitelist_${DEPLOY_VERSION}
+    file: ./config/crowdsec/whitelist.yaml
   init_db_entrypoint:
     name: crowdsec_init_db_entrypoint_${DEPLOY_VERSION}
     file: ./config/bootstrap/init-db.sh
