@@ -5,9 +5,9 @@ configs:
   traefik_dynamic_base:
     name: traefik_external_dynamic_base_${DEPLOY_VERSION}
     file: ./config/traefik/dynamic/base.yml
-  traefik_dynamic_authelia:
-    name: traefik_external_dynamic_authelia_${DEPLOY_VERSION}
-    file: ./config/traefik/dynamic/authelia.yml
+  traefik_dynamic_authentik:
+    name: traefik_external_dynamic_authentik_${DEPLOY_VERSION}
+    file: ./config/traefik/dynamic/authentik.yml
   traefik_dynamic_crowdsec:
     name: traefik_external_dynamic_crowdsec_${DEPLOY_VERSION}
     file: ./config/traefik/dynamic/crowdsec.yml

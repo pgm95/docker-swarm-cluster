@@ -1,0 +1,352 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+version: 1
+metadata:
+  name: OIDC Providers
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+
+entries:
+  # ===== Stirling-PDF =====
+  - model: authentik_providers_oauth2.oauth2provider
+    id: provider-stirlingpdf
+    state: present
+    identifiers:
+      name: Stirling-PDF
+    attrs:
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      client_type: confidential
+      client_id: stirlingpdf
+      client_secret: !File /run/secrets/oidc_client_secret_stirlingpdf
+      redirect_uris:
+        - url: !Format ["https://pdf.%s/login/oauth2/code/Authelia", !Env DOMAIN_PRIVATE]
+          matching_mode: strict
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
+      signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      access_token_validity: hours=1
+      refresh_token_validity: days=30
+  - model: authentik_core.application
+    state: present
+    identifiers:
+      slug: stirlingpdf
+    attrs:
+      name: Stirling-PDF
+      provider: !KeyOf provider-stirlingpdf
+      policy_engine_mode: any
+
+  # ===== Paperless =====
+  - model: authentik_providers_oauth2.oauth2provider
+    id: provider-paperless
+    state: present
+    identifiers:
+      name: Paperless
+    attrs:
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      client_type: confidential
+      client_id: paperless
+      client_secret: !File /run/secrets/oidc_client_secret_paperless
+      redirect_uris:
+        - url: !Format ["https://docs.%s/accounts/oidc/authelia/login/callback/", !Env DOMAIN_PRIVATE]
+          matching_mode: strict
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
+      signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      access_token_validity: hours=1
+      refresh_token_validity: days=30
+  - model: authentik_core.application
+    state: present
+    identifiers:
+      slug: paperless
+    attrs:
+      name: Paperless
+      provider: !KeyOf provider-paperless
+      policy_engine_mode: any
+
+  # ===== Mealie =====
+  - model: authentik_providers_oauth2.oauth2provider
+    id: provider-mealie
+    state: present
+    identifiers:
+      name: Mealie
+    attrs:
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      client_type: confidential
+      client_id: mealie
+      client_secret: !File /run/secrets/oidc_client_secret_mealie
+      redirect_uris:
+        - url: !Format ["https://recipes.%s/login", !Env DOMAIN_PUBLIC]
+          matching_mode: strict
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, custom/scope-mealie-profile]]
+      signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      access_token_validity: hours=1
+      refresh_token_validity: days=30
+  - model: authentik_core.application
+    state: present
+    identifiers:
+      slug: mealie
+    attrs:
+      name: Mealie
+      provider: !KeyOf provider-mealie
+      policy_engine_mode: any
+
+  # ===== Dawarich =====
+  - model: authentik_providers_oauth2.oauth2provider
+    id: provider-dawarich
+    state: present
+    identifiers:
+      name: Dawarich
+    attrs:
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      client_type: confidential
+      client_id: dawarich
+      client_secret: !File /run/secrets/oidc_client_secret_dawarich
+      redirect_uris:
+        - url: !Format ["https://maps.%s/users/auth/openid_connect/callback", !Env DOMAIN_PRIVATE]
+          matching_mode: strict
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
+      signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      access_token_validity: hours=1
+      refresh_token_validity: days=30
+  - model: authentik_core.application
+    state: present
+    identifiers:
+      slug: dawarich
+    attrs:
+      name: Dawarich
+      provider: !KeyOf provider-dawarich
+      policy_engine_mode: any
+
+  # ===== FileBrowser Quantum =====
+  - model: authentik_providers_oauth2.oauth2provider
+    id: provider-quantum
+    state: present
+    identifiers:
+      name: FileBrowser Quantum
+    attrs:
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      client_type: confidential
+      client_id: quantum
+      client_secret: !File /run/secrets/oidc_client_secret_quantum
+      redirect_uris:
+        - url: !Format ["https://files.%s/api/auth/oidc/callback", !Env DOMAIN_PRIVATE]
+          matching_mode: strict
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
+      signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      access_token_validity: hours=1
+      refresh_token_validity: days=30
+  - model: authentik_core.application
+    state: present
+    identifiers:
+      slug: quantum
+    attrs:
+      name: FileBrowser Quantum
+      provider: !KeyOf provider-quantum
+      policy_engine_mode: any
+
+  # ===== Proxmox =====
+  - model: authentik_providers_oauth2.oauth2provider
+    id: provider-proxmox
+    state: present
+    identifiers:
+      name: Proxmox
+    attrs:
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      client_type: confidential
+      client_id: proxmox
+      client_secret: !File /run/secrets/oidc_client_secret_proxmox
+      redirect_uris:
+        - url: !Format ["https://proxmox.%s", !Env DOMAIN_PUBLIC]
+          matching_mode: strict
+        - url: !Format ["https://proxmox.%s:8006", !Env DOMAIN_PUBLIC]
+          matching_mode: strict
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
+      signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      access_token_validity: hours=1
+      refresh_token_validity: days=30
+  - model: authentik_core.application
+    state: present
+    identifiers:
+      slug: proxmox
+    attrs:
+      name: Proxmox
+      provider: !KeyOf provider-proxmox
+      policy_engine_mode: any
+
+  # ===== Immich =====
+  - model: authentik_providers_oauth2.oauth2provider
+    id: provider-immich
+    state: present
+    identifiers:
+      name: Immich
+    attrs:
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      client_type: confidential
+      client_id: immich
+      client_secret: !File /run/secrets/oidc_client_secret_immich
+      redirect_uris:
+        - url: !Format ["https://immich.%s/auth/login", !Env DOMAIN_PRIVATE]
+          matching_mode: strict
+        - url: !Format ["https://immich.%s/user-settings", !Env DOMAIN_PRIVATE]
+          matching_mode: strict
+        - url: "app.immich:///oauth-callback"
+          matching_mode: strict
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
+      signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      access_token_validity: hours=1
+      refresh_token_validity: days=30
+  - model: authentik_core.application
+    state: present
+    identifiers:
+      slug: immich
+    attrs:
+      name: Immich
+      provider: !KeyOf provider-immich
+      policy_engine_mode: any
+
+  # ===== Portainer =====
+  - model: authentik_providers_oauth2.oauth2provider
+    id: provider-portainer
+    state: present
+    identifiers:
+      name: Portainer
+    attrs:
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      client_type: confidential
+      client_id: portainer
+      client_secret: !File /run/secrets/oidc_client_secret_portainer
+      redirect_uris:
+        - url: !Format ["https://portainer.%s", !Env DOMAIN_PRIVATE]
+          matching_mode: strict
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
+      signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      access_token_validity: hours=1
+      refresh_token_validity: days=30
+  - model: authentik_core.application
+    state: present
+    identifiers:
+      slug: portainer
+    attrs:
+      name: Portainer
+      provider: !KeyOf provider-portainer
+      policy_engine_mode: any
+
+  # ===== Grafana =====
+  - model: authentik_providers_oauth2.oauth2provider
+    id: provider-grafana
+    state: present
+    identifiers:
+      name: Grafana
+    attrs:
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      client_type: confidential
+      client_id: grafana
+      client_secret: !File /run/secrets/oidc_client_secret_grafana
+      redirect_uris:
+        - url: !Format ["https://grafana.%s/login/generic_oauth", !Env DOMAIN_PRIVATE]
+          matching_mode: strict
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, custom/scope-grafana-groups]]
+      signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      access_token_validity: hours=1
+      refresh_token_validity: days=30
+  - model: authentik_core.application
+    state: present
+    identifiers:
+      slug: grafana
+    attrs:
+      name: Grafana
+      provider: !KeyOf provider-grafana
+      policy_engine_mode: any
+
+  # ===== Tailscale =====
+  - model: authentik_providers_oauth2.oauth2provider
+    id: provider-tailscale
+    state: present
+    identifiers:
+      name: Tailscale
+    attrs:
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      client_type: confidential
+      client_id: tailscale
+      client_secret: !File /run/secrets/oidc_client_secret_tailscale
+      redirect_uris:
+        - url: "https://login.tailscale.com/a/oauth_response"
+          matching_mode: strict
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
+      signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      access_token_validity: hours=1
+      refresh_token_validity: days=30
+  - model: authentik_core.application
+    state: present
+    identifiers:
+      slug: tailscale
+    attrs:
+      name: Tailscale
+      provider: !KeyOf provider-tailscale
+      policy_engine_mode: any
+
+  # ===== Cloudflare =====
+  - model: authentik_providers_oauth2.oauth2provider
+    id: provider-cloudflare
+    state: present
+    identifiers:
+      name: Cloudflare
+    attrs:
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      client_type: confidential
+      client_id: cloudflare
+      client_secret: !File /run/secrets/oidc_client_secret_cloudflare
+      redirect_uris: []
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
+      signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      access_token_validity: hours=1
+      refresh_token_validity: days=30
+  - model: authentik_core.application
+    state: present
+    identifiers:
+      slug: cloudflare
+    attrs:
+      name: Cloudflare
+      provider: !KeyOf provider-cloudflare
+      policy_engine_mode: any

@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+version: 1
+metadata:
+  name: Brand Configuration
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+
+entries:
+  # Dedicated OIDC provider + application for WebFinger discovery.
+  # Needed to enable the /.well-known/webfinger endpoint.
+  - model: authentik_providers_oauth2.oauth2provider
+    id: provider-webfinger
+    state: present
+    identifiers:
+      name: WebFinger Discovery
+    attrs:
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      client_type: confidential
+      client_id: webfinger-discovery
+      redirect_uris: []
+      signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+  - model: authentik_core.application
+    id: app-webfinger
+    state: present
+    identifiers:
+      slug: webfinger-discovery
+    attrs:
+      name: WebFinger Discovery
+      provider: !KeyOf provider-webfinger
+      policy_engine_mode: any
+  - model: authentik_brands.brand
+    state: present
+    identifiers:
+      default: true
+    attrs:
+      branding_title: Authentik
+      default_application: !KeyOf app-webfinger

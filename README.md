@@ -157,8 +157,8 @@ Each stack's README documents service-level details and operational procedures.
   Alloy collects logs and Loki stores them. Grafana visualizes everything.
 - **Registry:** private OCI registry for custom-built images.
   Deploy pipeline pushes content-hash-tagged images; all nodes authenticate via `registry:auth`.
-- **Authentication:** Authelia with LLDAP backend provides OIDC with group-to-role mapping.
-  Webfinger endpoint provided by Carpal.
+- **Authentication:** Authentik provides OIDC, user directory, LDAP outpost, and WebFinger.
+  Configuration is declarative via blueprints.
 
 #### Cross-Stack Pipelines
 
@@ -175,11 +175,11 @@ Services opt in with scope labels (`traefik.scope.internal=true` / `traefik.scop
 **Auth chain:** OIDC-protected services delegate authentication through:
 
 ```text
-Gateway → Authelia (session + OIDC) → LLDAP (user/group lookup) → Postgres (persistent storage)
+Gateway → Authentik (session + OIDC + user directory) → Postgres (persistent storage)
 ```
 
-OIDC consumers validate tokens against Authelia directly.
-LDAP group membership (`app_admin`) maps to application-level admin roles.
+OIDC consumers validate tokens against Authentik directly.
+Group membership (`app_admin`) maps to application-level admin roles.
 
 **Observability:** metrics and logs flow through two parallel pipelines:
 

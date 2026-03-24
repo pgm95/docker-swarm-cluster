@@ -1,71 +1,57 @@
 # Accounts Stack
 
-Authentication and identity management.
+Authentication, identity management, and OIDC provider via Authentik.
 
-## Services
+## Blueprint Extension
 
-| Service | Purpose | Port |
-|---------|---------|------|
-| redis | Session storage for Authelia | 6379 |
-| lldap | LDAP directory (user/group management) | 389 |
-| authelia | Authentication server + OIDC provider | 9091 |
-| webfinger | OpenID Connect discovery endpoint | 8008 |
-| init-db | Provisions Postgres roles and databases | — |
-| init-ldap | Seeds LDAP bind users for Authelia and WebFinger | — |
+Only `*.yaml` files are discovered. Authentik's `blueprints_find()` uses `rglob("**/*.yaml")` --
+files with `.yml` extension are silently ignored.
 
-## Convergence
+## Resource Requirements
 
-All services start concurrently — Swarm has no `depends_on`. Services crash and retry via
-deploy restart policy (`max_attempts: 3`, `window: 120s`). Typical first-deploy order:
+Server and worker each need `*resources-huge` (1024M). Authentik is a full Django application --
+`*resources-medium` (256M) causes OOMKill, `*resources-large` (512M) is borderline.
 
-1. **redis** — starts immediately
-2. **init-db** — polls postgres, provisions databases
-3. **lldap** — crashes once (DB not ready), succeeds on retry
-4. **authelia** — crashes once/twice (redis/lldap/postgres), succeeds on retry
-5. **init-ldap** — polls lldap, seeds bind users
-6. **webfinger** — starts once lldap is reachable
+## LDAP Outpost Token Pre-Sharing
 
-## Init Sidecars
+Authentik normally auto-generates a service account + token when creating an outpost, and grants
+object-level permissions via `Outpost.save()`. When providing an external service account via
+`token_identifier`, the outpost skips auto-generation but also skips permission grants.
 
-### init-db (Postgres)
+The `ldap.yaml` blueprint solves this by creating the full permission chain:
 
-Connects as provisioner role, idempotently creates `authelia` and `lldap` roles and databases.
-Passwords from `secrets.env` — single source of truth, no duplication with the postgres stack.
+1. RBAC role with global permissions (`view_user`, `view_group`, `add_event`) in `attrs.permissions`
+2. Group assigned that role
+3. Service account in that group
+4. Token with pre-shared key via `!File /run/secrets/...`
+5. Outpost with `token_identifier` pointing to our token
+6. Object-level permissions on the outpost and LDAP provider entries (`permissions` field with `user` ref)
 
-### init-ldap (LDAP)
+The ldap-outpost container receives the same token value via `AUTHENTIK_TOKEN` env var from SOPS.
+Entry order matters -- all entries are in one atomic transaction.
 
-Seeds groups and users using LLDAP's built-in `/app/bootstrap.sh`. Generates group and user
-config JSON from compose env vars at runtime, writes to `/tmp/bootstrap/group-configs`
-(`GROUP_CONFIGS_DIR`) and `/tmp/bootstrap/user-configs` (`USER_CONFIGS_DIR`). Creates groups
-first, then users via GraphQL API. Sets passwords via `lldap_set_password` (OPAQUE protocol).
-Fully idempotent — skips existing entries, updates changed, re-syncs passwords on every deploy.
+## LDAP Authentication Flow
 
-**Groups created:**
+The LDAP provider uses a dedicated authentication flow (`ldap-authentication-flow`) instead of the
+default. LDAP clients send plain username+password binds and cannot handle MFA challenges. The
+default flow includes an `AuthenticatorValidateStage` that would cause bind failures for any user
+with MFA enabled. The custom flow has only identification (with inline password) and login stages.
 
-| Group | Source | Purpose |
-|-------|--------|---------|
-| `GLOBAL_LDAP_ADMIN_GROUP` | mise `[env]` | App-level admin role, mapped by OIDC consumers (Grafana, Mealie) |
+A `ldapservice` user in the `ldapsearch` group provides a dedicated bind account for LDAP consumers
+(e.g., Jellyfin). Password must be set before use.
 
-**Users bootstrapped:**
+## WebFinger Bare-Domain Router
 
-| User | Groups | Purpose |
-|------|--------|---------|
-| `GLOBAL_USERNAME` (admin) | `GLOBAL_LDAP_ADMIN_GROUP`, `lldap_password_manager` | Primary admin — LLDAP creates the user, bootstrap adds group memberships |
-| `AUTHELIA_LDAP_BIND_USER` | `lldap_password_manager` | Authelia bind user (password reset access) |
-| `CARPAL_LDAP_BIND_USER` | `lldap_strict_readonly` | WebFinger bind user (read-only queries) |
+WebFinger spec requires `/.well-known/webfinger` on the account's domain (`DOMAIN_PUBLIC`), not
+the auth subdomain (`auth.DOMAIN_PUBLIC`). A separate Traefik router forwards
+`Host(DOMAIN_PUBLIC) && PathPrefix(/.well-known/webfinger)` to authentik alongside the main
+`auth.DOMAIN_PUBLIC` router.
 
-The admin user already exists (created by LLDAP at startup). Bootstrap skips creation and
-syncs group memberships. `lldap_admin` membership is managed by LLDAP itself, not bootstrap —
-the warning about it not being declared in config files is expected.
+## Bootstrap Limitations
 
-## WebFinger Custom Image
+`AUTHENTIK_BOOTSTRAP_PASSWORD`, `AUTHENTIK_BOOTSTRAP_TOKEN`, and `AUTHENTIK_BOOTSTRAP_EMAIL`
+cannot use `file://` syntax -- they must be plain env vars. Only read on first startup; subsequent
+deploys ignore them. The `directory.yaml` blueprint creates the real admin user and deactivates
+the default `akadmin` account.
 
-Custom build in `build/webfinger/` — `swarm:deploy` auto-builds with content-hash tags.
-
-The Dockerfile copies `entrypoint.sh` into the image and fixes `/etc/carpal` permissions for
-non-root (UID 1000). At startup, the entrypoint reads config templates from `/config/` (Docker
-Configs), expands environment variables via sed, writes processed files to `/etc/carpal/`, then
-starts carpal. Runs as non-root (`user: ${GLOBAL_NONROOT_DOCKER}`).
-
-Required env vars from `secrets.env`: `CARPAL_LDAP_BIND_USER`, `CARPAL_LDAP_BIND_PASS`.
-Required from `GLOBAL_SECRETS`: `GLOBAL_LDAP_BASE_DN`, `GLOBAL_OIDC_URL`.
+The LDAP outpost's `AUTHENTIK_TOKEN` env var also cannot use `file://` (Go binary limitation).

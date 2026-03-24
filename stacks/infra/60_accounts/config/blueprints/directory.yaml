@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+version: 1
+metadata:
+  name: Directory Bootstrap
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+
+entries:
+  - model: authentik_core.group
+    id: admin-group
+    state: created
+    identifiers:
+      name: !Env GLOBAL_LDAP_ADMIN_GROUP
+    attrs:
+      is_superuser: false
+  - model: authentik_core.user
+    id: primary-admin
+    state: present
+    identifiers:
+      username: !Env GLOBAL_USERNAME
+    attrs:
+      name: !Env GLOBAL_USERNAME
+      email: !Format ["%s@%s", !Env GLOBAL_USERNAME, !Env DOMAIN_PUBLIC]
+      password: !File /run/secrets/global_password
+      is_active: true
+      groups:
+        - !Find [authentik_core.group, [name, authentik Admins]]
+        - !KeyOf admin-group
+  - model: authentik_core.user
+    state: present
+    identifiers:
+      username: akadmin
+    attrs:
+      is_active: false

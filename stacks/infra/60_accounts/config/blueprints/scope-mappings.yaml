@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+version: 1
+metadata:
+  name: Custom Scope Mappings
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+
+entries:
+  # Mealie needs profile claims in the ID token (not just userinfo endpoint).
+  # Authentik 2024.8+ stopped including these by default.
+  - model: authentik_providers_oauth2.scopemapping
+    id: scope-mealie-profile
+    state: present
+    identifiers:
+      managed: custom/scope-mealie-profile
+    attrs:
+      name: "Mealie Profile Claims"
+      scope_name: profile
+      description: "Profile claims for Mealie (included in ID token)"
+      expression: |
+        return {
+            "name": request.user.name,
+            "preferred_username": request.user.username,
+            "groups": [group.name for group in request.user.groups.all()],
+            "email": request.user.email,
+            "email_verified": True,
+        }
+
+  # Grafana needs groups claim for role mapping.
+  - model: authentik_providers_oauth2.scopemapping
+    id: scope-grafana-groups
+    state: present
+    identifiers:
+      managed: custom/scope-grafana-groups
+    attrs:
+      name: "Grafana Groups Claim"
+      scope_name: profile
+      description: "Profile claims with groups for Grafana role mapping"
+      expression: |
+        return {
+            "preferred_username": request.user.username,
+            "email": request.user.email,
+            "groups": [group.name for group in request.user.groups.all()],
+        }

@@ -80,7 +80,7 @@ services:
       - "--entryPoints.websecure.http.encodedCharacters.allowEncodedHash=false"
     environment:
       - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
-      - AUTHELIA_URL=${AUTHELIA_URL}
+      - AUTHENTIK_URL=${AUTHENTIK_URL}
       - TRUSTED_IPS=10.0.0.0/8,127.0.0.0/16,172.16.0.0/12,100.64.0.0/10
       - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/cloudflare_dns_api_token_external
       # Keep as env vars - geoblock plugin reads token from dynamic config Go template, CrowdSec has buggy _FILE support (GitHub issue 221)
@@ -93,8 +93,8 @@ services:
         target: /geoblock-entrypoint.sh
       - source: traefik_dynamic_base
         target: /etc/traefik/dynamic/base.yml
-      - source: traefik_dynamic_authelia
-        target: /etc/traefik/dynamic/authelia.yml
+      - source: traefik_dynamic_authentik
+        target: /etc/traefik/dynamic/authentik.yml
       - source: traefik_dynamic_crowdsec
         target: /etc/traefik/dynamic/crowdsec.yml
       - source: traefik_dynamic_geoblock

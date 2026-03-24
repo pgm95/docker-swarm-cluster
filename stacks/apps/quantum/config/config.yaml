@@ -74,7 +74,7 @@ auth:
       enabled: true
       clientId: '' # Set via FILEBROWSER_OIDC_CLIENT_ID
       clientSecret: '' # Set via FILEBROWSER_OIDC_CLIENT_SECRET
-      issuerUrl: 'https://auth.${DOMAIN_PUBLIC}'
+      issuerUrl: 'https://auth.${DOMAIN_PUBLIC}/application/o/quantum/'
       scopes: 'email openid profile groups'
       userIdentifier: 'preferred_username'
       disableVerifyTLS: false

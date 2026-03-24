@@ -1,7 +1,0 @@
-aliases:
-  - "mailto:{{ index . "mail" }}"
-properties:
-  'http://webfinger.example/ns/name': '{{ index . "cn" }}'
-links:
-  - rel: "http://openid.net/specs/connect/1.0/issuer"
-    href: 'https://{{ env "OIDC_URL" }}'

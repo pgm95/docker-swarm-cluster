@@ -1,0 +1,186 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+version: 1
+metadata:
+  name: LDAP Provider
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+
+entries:
+  # --- Search group and service account ---
+  - model: authentik_core.group
+    id: ldapsearch-group
+    state: present
+    identifiers:
+      name: ldapsearch
+  - model: authentik_core.user
+    id: ldapservice-user
+    state: present
+    identifiers:
+      username: ldapservice
+    attrs:
+      name: ldapservice
+      path: goauthentik.io/service-accounts
+      type: service_account
+      is_active: true
+      groups:
+        - !KeyOf ldapsearch-group
+      attributes:
+        goauthentik.io/user/service-account: true
+        goauthentik.io/user/token-expires: false
+
+  # --- LDAP authentication flow ---
+  - model: authentik_flows.flow
+    id: ldap-authentication-flow
+    state: present
+    identifiers:
+      slug: ldap-authentication-flow
+    attrs:
+      name: LDAP Authentication Flow
+      title: LDAP Authentication
+      designation: authentication
+      authentication: none
+      policy_engine_mode: any
+  - model: authentik_stages_password.passwordstage
+    id: ldap-password-stage
+    state: present
+    identifiers:
+      name: ldap-authentication-password
+    attrs:
+      backends:
+        - authentik.core.auth.InbuiltBackend
+        - authentik.core.auth.TokenBackend
+  - model: authentik_stages_identification.identificationstage
+    id: ldap-identification-stage
+    state: present
+    identifiers:
+      name: ldap-identification-stage
+    attrs:
+      case_insensitive_matching: true
+      pretend_user_exists: true
+      show_matched_user: true
+      password_stage: !KeyOf ldap-password-stage
+      user_fields:
+        - username
+        - email
+  - model: authentik_stages_user_login.userloginstage
+    id: ldap-login-stage
+    state: present
+    identifiers:
+      name: ldap-authentication-login
+
+  # Flow stage bindings
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf ldap-authentication-flow
+      stage: !KeyOf ldap-identification-stage
+      order: 10
+  - model: authentik_flows.flowstagebinding
+    state: present
+    identifiers:
+      target: !KeyOf ldap-authentication-flow
+      stage: !KeyOf ldap-login-stage
+      order: 30
+
+  # --- LDAP provider ---
+  - model: authentik_providers_ldap.ldapprovider
+    id: ldap-provider
+    state: present
+    identifiers:
+      name: LDAP
+    attrs:
+      authorization_flow: !KeyOf ldap-authentication-flow
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-invalidation-flow]]
+      base_dn: !Env GLOBAL_LDAP_BASE_DN
+      search_group: !KeyOf ldapsearch-group
+      bind_mode: cached
+      search_mode: direct
+      mfa_support: true
+      uid_start_number: 10001
+      gid_start_number: 10001
+
+  # --- LDAP application ---
+  - model: authentik_core.application
+    state: present
+    identifiers:
+      slug: ldap
+    attrs:
+      name: LDAP
+      policy_engine_mode: any
+      backchannel_providers:
+        - !KeyOf ldap-provider
+
+  # --- LDAP outpost service account + token + outpost ---
+  # Create SA + token BEFORE outpost. Set token_identifier on outpost to use our pre-shared token.
+  # Grant permissions via RBAC role + object-level permissions on outpost and provider entries.
+
+  # RBAC role with global permissions the outpost SA needs.
+  # RoleSerializer in blueprint context accepts permissions in attrs as app_label.codename strings, assigning them globally (no object).
+  - model: authentik_rbac.role
+    id: ldap-outpost-role
+    state: present
+    identifiers:
+      name: LDAP Outpost Service Account
+    attrs:
+      permissions:
+        - authentik_events.add_event
+        - authentik_core.view_user
+        - authentik_core.view_group
+  - model: authentik_core.group
+    id: ldap-outpost-group
+    state: present
+    identifiers:
+      name: LDAP Outpost Service Accounts
+    attrs:
+      roles:
+        - !KeyOf ldap-outpost-role
+  - model: authentik_core.user
+    id: ldap-outpost-sa
+    state: present
+    identifiers:
+      username: ak-outpost-ldap-external
+    attrs:
+      name: LDAP Outpost Service Account
+      path: goauthentik.io/outposts
+      type: service_account
+      is_active: true
+      groups:
+        - !KeyOf ldap-outpost-group
+      attributes:
+        goauthentik.io/user/service-account: true
+        goauthentik.io/user/token-expires: false
+  - model: authentik_core.token
+    state: present
+    identifiers:
+      identifier: ak-outpost-ldap-external-api
+    attrs:
+      user: !KeyOf ldap-outpost-sa
+      intent: api
+      expiring: false
+      key: !File /run/secrets/authentik_outpost_token
+  - model: authentik_outposts.outpost
+    id: ldap-outpost
+    state: present
+    identifiers:
+      name: LDAP Outpost
+    attrs:
+      type: ldap
+      managed: null
+      providers:
+        - !KeyOf ldap-provider
+      token_identifier: ak-outpost-ldap-external-api
+      config:
+        authentik_host: http://authentik-server:9000
+        authentik_host_insecure: true
+        log_level: info
+    permissions:
+      - permission: authentik_outposts.view_outpost
+        user: !KeyOf ldap-outpost-sa
+  # Grant view on the LDAP provider to the outpost SA
+  - model: authentik_providers_ldap.ldapprovider
+    state: present
+    identifiers:
+      name: LDAP
+    permissions:
+      - permission: authentik_providers_ldap.view_ldapprovider
+        user: !KeyOf ldap-outpost-sa
