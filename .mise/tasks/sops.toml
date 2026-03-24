@@ -30,6 +30,7 @@ fi
 ["sops:encrypt"]
 description = "Encrypt all plaintext secrets files"
 run = '''
+{% raw %}
 #!/usr/bin/env bash
 [[ -f "${SOPS_AGE_KEY_FILE}" ]] || { echo "Error: No key. Run: mise run sops:init"; exit 1; }
 encrypted=() skipped=()
@@ -57,6 +58,7 @@ if [[ ${#skipped[@]} -gt 0 ]]; then
 fi
 [[ ${#encrypted[@]} -eq 0 && ${#skipped[@]} -eq 0 ]] && echo "No secrets files found"
 exit 0
+{% endraw %}
 '''
 
 ["sops:edit"]
