@@ -20,6 +20,7 @@ services:
     networks:
       - infra_gw-external
       - infra_gw-internal
+      - infra_ldap
     volumes:
       - /dev/dri:/dev/dri
       - /mnt/media:/media
@@ -85,4 +86,6 @@ networks:
   infra_gw-external:
     external: true
   infra_gw-internal:
+    external: true
+  infra_ldap:
     external: true

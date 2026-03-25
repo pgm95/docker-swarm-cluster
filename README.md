@@ -77,7 +77,7 @@ label constraints to reusable deploy blocks.
 
 ### Networking
 
-Five overlay networks partition traffic by function:
+Six overlay networks partition traffic by function:
 
 | Network | Purpose | Flags |
 |---------|---------|-------|
@@ -86,6 +86,7 @@ Five overlay networks partition traffic by function:
 | `infra_gw-external` | External Traefik routing (public internet) | |
 | `infra_metrics` | Prometheus scraping | |
 | `infra_postgres` | Central Postgres access | |
+| `infra_ldap` | LDAP directory access | |
 
 Networks are discovered dynamically from compose files and pre-created before deployment.
 This breaks circular dependencies between stacks that need each other's networks.

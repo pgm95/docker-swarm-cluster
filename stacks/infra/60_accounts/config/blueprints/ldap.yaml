@@ -7,11 +7,23 @@ metadata:
 
 entries:
   # --- Search group and service account ---
+  - model: authentik_rbac.role
+    id: ldapsearch-role
+    state: present
+    identifiers:
+      name: LDAP Search
+    attrs:
+      permissions:
+        - authentik_providers_ldap.search_full_directory
+
   - model: authentik_core.group
     id: ldapsearch-group
     state: present
     identifiers:
       name: ldapsearch
+    attrs:
+      roles:
+        - !KeyOf ldapsearch-role
   - model: authentik_core.user
     id: ldapservice-user
     state: present
@@ -19,6 +31,7 @@ entries:
       username: ldapservice
     attrs:
       name: ldapservice
+      password: !File /run/secrets/authentik_ldap_bind_password
       path: goauthentik.io/service-accounts
       type: service_account
       is_active: true
@@ -92,7 +105,7 @@ entries:
       authorization_flow: !KeyOf ldap-authentication-flow
       invalidation_flow: !Find [authentik_flows.flow, [slug, default-invalidation-flow]]
       base_dn: !Env GLOBAL_LDAP_BASE_DN
-      search_group: !KeyOf ldapsearch-group
+
       bind_mode: cached
       search_mode: direct
       mfa_support: true

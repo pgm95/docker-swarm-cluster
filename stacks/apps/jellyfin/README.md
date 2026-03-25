@@ -147,3 +147,52 @@ Vulkan video extensions are available (decode: H.264, H.265, AV1; encode: H.264,
 | JPEG VAAPI encode | No encode entrypoint for JPEG Baseline |
 | `tonemap_vulkan` filter | Does not exist as an ffmpeg filter |
 | OpenCL zero-copy interop | Rusticl lacks VA-API/DRM device derivation for ffmpeg |
+
+## LDAP Setup
+
+Jellyfin does not support OIDC. Authentication is via LDAP against the Authentik LDAP outpost
+over the `infra_ldap` overlay. The outpost uses `endpoint_mode: dnsrr` for LXC compatibility.
+
+Install the **LDAP Authentication** plugin in Jellyfin admin, then configure:
+
+### Connection
+
+| Setting | Value |
+|---------|-------|
+| LDAP Server | `accounts_ldap-outpost` |
+| LDAP Port | `3389` |
+| Secure LDAP | Unchecked (Tailscale encrypts the overlay) |
+| LDAP Bind User | `cn=ldapservice,ou=users,GLOBAL_LDAP_BASE_DN` |
+| LDAP Bind Password | From `secrets.env` (`AUTHENTIK_LDAP_BIND_PASSWORD`) |
+| LDAP Base DN | `GLOBAL_LDAP_BASE_DN` |
+
+### Users
+
+| Setting | Value |
+|---------|-------|
+| LDAP Search Filter | `(objectClass=user)` |
+| LDAP Search Attributes | `uid, cn, mail, displayName` |
+| LDAP Uid Attribute | `uid` |
+| LDAP Username Attribute | `cn` |
+| LDAP Password Attribute | *(empty)* |
+| Enable case insensitive username | Checked |
+| Enable user creation | Checked |
+| Allow password change | Unchecked |
+| Password Reset URL | `https://auth.DOMAIN_PUBLIC/if/user/#/settings` |
+
+### Administrators
+
+| Setting | Value |
+|---------|-------|
+| LDAP Admin Base DN | `GLOBAL_LDAP_BASE_DN` |
+| LDAP Admin Filter | `(memberOf=cn=app_admin,ou=groups,GLOBAL_LDAP_BASE_DN)` |
+| Enable Admin Filter memberUid mode | Unchecked |
+
+### Authentik LDAP Limitations
+
+Authentik's LDAP outpost is read-only. Password changes and profile image sync are not supported
+via LDAP. Users change passwords through the Authentik web UI (password reset URL above).
+Profile images must be managed in Authentik directly.
+
+`GLOBAL_LDAP_BASE_DN` and `DOMAIN_PUBLIC` vary by environment. Configuration is stored in
+Jellyfin's database (set once via plugin UI, not in compose).

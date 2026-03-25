@@ -38,7 +38,16 @@ default flow includes an `AuthenticatorValidateStage` that would cause bind fail
 with MFA enabled. The custom flow has only identification (with inline password) and login stages.
 
 A `ldapservice` user in the `ldapsearch` group provides a dedicated bind account for LDAP consumers
-(e.g., Jellyfin). Password must be set before use.
+(e.g., Jellyfin). The `search_full_directory` permission (replacing the deprecated `search_group`
+provider field removed in 2024.8) is granted to the `ldapsearch` group via an RBAC role in the
+blueprint.
+
+## Deploy-Triggered Restart
+
+The worker and LDAP outpost have `DEPLOY_VERSION` in their environment. This forces Swarm to
+recreate both containers on every deploy. The worker restart triggers fresh blueprint discovery
+(the inotify file watcher misses Docker Config atomic swaps). The outpost restart picks up
+permission and provider config changes that aren't pushed via websocket.
 
 ## WebFinger Bare-Domain Router
 

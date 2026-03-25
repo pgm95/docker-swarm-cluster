@@ -100,6 +100,8 @@ services:
       - GLOBAL_LDAP_ADMIN_GROUP=${GLOBAL_LDAP_ADMIN_GROUP}
       - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
       - DOMAIN_PRIVATE=${DOMAIN_PRIVATE}
+      # Forces container restart on every deploy, triggering fresh blueprint discovery
+      - DEPLOY_VERSION=${DEPLOY_VERSION}
     secrets:
       - authentik_secret_key
       - authentik_postgres_password
@@ -117,12 +119,12 @@ services:
       - oidc_client_secret_grafana
       - oidc_client_secret_tailscale
       - oidc_client_secret_cloudflare
+      - authentik_ldap_bind_password
     configs:
       - source: blueprint_directory
         target: /blueprints/custom/directory.yaml
       - source: blueprint_ldap
         target: /blueprints/custom/ldap.yaml
-
       - source: blueprint_providers
         target: /blueprints/custom/providers.yaml
       - source: blueprint_brand
@@ -159,6 +161,10 @@ services:
       - AUTHENTIK_HOST=http://authentik-server:9000
       - AUTHENTIK_TOKEN=${AUTHENTIK_OUTPOST_TOKEN}
       - AUTHENTIK_INSECURE=true
+      - DEPLOY_VERSION=${DEPLOY_VERSION}
+    networks:
+      - default
+      - infra_ldap
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:9300/outpost.goauthentik.io/ping"]
       interval: 10s
@@ -169,6 +175,7 @@ services:
       <<: [*place-vm, *deploy]
       update_config:
         order: start-first
+      endpoint_mode: dnsrr
       mode: replicated
       replicas: 1
       resources:
@@ -205,6 +212,7 @@ volumes:
 networks:
   infra_gw-external:
     external: true
-
   infra_postgres:
+    external: true
+  infra_ldap:
     external: true
