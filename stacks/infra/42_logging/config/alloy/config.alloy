@@ -30,8 +30,6 @@ loki.source.docker "containers" {
 }
 
 loki.process "docker" {
-  stage.docker {}
-
   forward_to = [loki.write.loki.receiver]
 }
 
