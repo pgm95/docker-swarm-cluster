@@ -1,0 +1,95 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+include:
+  - secrets.yml
+
+services:
+  mariadb:
+    image: mariadb:11.4
+    command: --innodb-use-native-aio=0
+    logging:
+      <<: *logging
+    stop_grace_period: 60s
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mariadb_root_password
+      MYSQL_DATABASE: uptime_kuma
+      MYSQL_USER: uptime_kuma
+      MYSQL_PASSWORD_FILE: /run/secrets/mariadb_db_password
+    secrets:
+      - mariadb_root_password
+      - mariadb_db_password
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      <<: [*place-vm, *deploy]
+      update_config:
+        order: stop-first
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-small
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:2-slim-rootless
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    environment:
+      UPTIME_KUMA_DB_TYPE: mariadb
+      UPTIME_KUMA_DB_HOSTNAME: mariadb
+      UPTIME_KUMA_DB_PORT: "3306"
+      UPTIME_KUMA_DB_NAME: uptime_kuma
+      UPTIME_KUMA_DB_USERNAME: uptime_kuma
+      UPTIME_KUMA_DB_PASSWORD_FILE: /run/secrets/mariadb_db_password
+    secrets:
+      - mariadb_db_password
+    networks:
+      - default
+      - infra_metrics
+      - infra_gw-internal
+      - infra_socket
+    volumes:
+      - uptimekuma-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+    deploy:
+      <<: [*place-vm, *deploy]
+      update_config:
+        order: stop-first
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-medium
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.internal=true"
+        - "traefik.http.routers.uptime.rule=Host(`status.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.uptime.entrypoints=websecure"
+        - "traefik.http.services.uptime.loadbalancer.server.port=3001"
+        - "homepage.group=Infrastructure"
+        - "homepage.name=Uptime Kuma"
+        - "homepage.icon=uptime-kuma"
+        - "homepage.href=https://status.${DOMAIN_PRIVATE}"
+        - "homepage.description=Status & Monitoring"
+
+volumes:
+  mariadb-data:
+  uptimekuma-data:
+
+networks:
+  infra_metrics:
+    external: true
+  infra_gw-internal:
+    external: true
+  infra_socket:
+    external: true

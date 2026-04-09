@@ -1,6 +1,5 @@
 """Main entry point for Email Forwarder."""
 import logging
-import os
 import signal
 import sys
 import time
@@ -31,9 +30,8 @@ def _shutdown_handler(signum: int, _frame: Optional[FrameType]) -> None:
 def main() -> None:
     """Main loop with connection management and heartbeat logging."""
     # Configure logging
-    log_level = os.environ.get('LOG_LEVEL', 'INFO').upper()
     logging.basicConfig(
-        level=getattr(logging, log_level, logging.INFO),
+        level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s'
     )
 

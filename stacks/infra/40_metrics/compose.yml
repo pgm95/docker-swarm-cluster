@@ -166,46 +166,6 @@ services:
         # - "homepage.widget.username={{HOMEPAGE_VAR_GRAFANA_USER}}"
         # - "homepage.widget.password={{HOMEPAGE_VAR_GRAFANA_PASS}}"
 
-  uptime-kuma:
-    image: louislam/uptime-kuma:2-slim-rootless
-    logging:
-      <<: *logging
-    stop_grace_period: 30s
-    networks:
-      - infra_metrics
-      - infra_gw-internal
-      - infra_socket
-    volumes:
-      - uptimekuma-data:/app/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 180s
-    deploy:
-      <<: [*place-vm, *deploy]
-      update_config:
-        order: stop-first
-      mode: replicated
-      replicas: 1
-      resources:
-        <<: *resources-medium
-      labels:
-        - "traefik.enable=true"
-        - "traefik.scope.internal=true"
-        - "traefik.http.routers.uptime.rule=Host(`status.${DOMAIN_PRIVATE}`)"
-        - "traefik.http.routers.uptime.entrypoints=websecure"
-        - "traefik.http.services.uptime.loadbalancer.server.port=3001"
-        - "homepage.group=Infrastructure"
-        - "homepage.name=Uptime Kuma"
-        - "homepage.icon=uptime-kuma"
-        - "homepage.href=https://status.${DOMAIN_PRIVATE}"
-        - "homepage.description=Status & Monitoring"
-        # - "homepage.widget.type=uptimekuma"
-        # - "homepage.widget.url=https://status.${DOMAIN_PRIVATE}"
-        # - "homepage.widget.slug=PLACEHOLDER"
-
   init-db:
     image: postgres:17-alpine
     entrypoint: ["/bin/sh", "/init-db-entrypoint.sh"]
@@ -233,7 +193,6 @@ services:
 volumes:
   prometheus-data:
   grafana-data:
-  uptimekuma-data:
 
 networks:
   infra_metrics:
