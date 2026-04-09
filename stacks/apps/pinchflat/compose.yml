@@ -20,9 +20,9 @@ services:
       - infra_gw-internal
     volumes:
       - pinchflat-data:/config
-      - /mnt/media:/downloads
+      - cifs-media:/downloads
     deploy:
-      <<: [*place-storage, *deploy]
+      <<: [*place-vm, *deploy]
       update_config:
         order: start-first
       labels:
@@ -43,6 +43,12 @@ services:
 
 volumes:
   pinchflat-data:
+  cifs-media:
+    driver: local
+    driver_opts:
+      type: cifs
+      device: //${GLOBAL_CIFS_HOST}/media
+      o: "username=${GLOBAL_CIFS_USERNAME},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
 
 networks:
   infra_gw-internal:

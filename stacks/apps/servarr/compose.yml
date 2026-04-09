@@ -1,7 +1,5 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 
-# /mnt/servarr must exist on storage node
-
 include:
   - configs.yml
 
@@ -26,9 +24,9 @@ services:
       - infra_postgres
     volumes:
       - radarr-data:/config
-      - /mnt/media:/servarr
+      - cifs-media:/servarr
     deploy:
-      <<: [*place-storage, *deploy]
+      <<: [*place-vm, *deploy]
       update_config:
         order: start-first
       labels:
@@ -72,9 +70,9 @@ services:
       - infra_postgres
     volumes:
       - sonarr-data:/config
-      - /mnt/media:/servarr
+      - cifs-media:/servarr
     deploy:
-      <<: [*place-storage, *deploy]
+      <<: [*place-vm, *deploy]
       update_config:
         order: start-first
       labels:
@@ -120,7 +118,7 @@ services:
     volumes:
       - prowlarr-data:/config
     deploy:
-      <<: [*place-storage, *deploy]
+      <<: [*place-vm, *deploy]
       update_config:
         order: start-first
       labels:
@@ -154,10 +152,9 @@ services:
     networks:
       - default
     deploy:
-      <<: [*place-storage, *deploy]
+      <<: [*place-vm, *deploy]
       update_config:
         order: start-first
-      endpoint_mode: dnsrr
       mode: replicated
       replicas: 1
       resources:
@@ -193,6 +190,12 @@ volumes:
   radarr-data:
   sonarr-data:
   prowlarr-data:
+  cifs-media:
+    driver: local
+    driver_opts:
+      type: cifs
+      device: //${GLOBAL_CIFS_HOST}/media
+      o: "username=${GLOBAL_CIFS_USERNAME},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
 
 networks:
   infra_gw-internal:

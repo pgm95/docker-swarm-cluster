@@ -134,7 +134,12 @@ versions persist until `swarm:cleanup`.
 |------|---------|----------|
 | Persistent data | `<service>-<purpose>` named volume | Docker volume (Swarm-prefixed) |
 | Configuration | `./config/<service>/` | Docker Configs (versioned, immutable) |
-| Bulk media/files | `/mnt/*` | Bind mount |
+| Bulk storage (local) | `/mnt/*` | Bind mount (services co-located with storage) |
+| Bulk storage (remote) | `cifs-<share>` named volume | Docker CIFS volume (services on nodes without local storage) |
+
+CIFS volumes use Docker's local driver with `type: cifs`, mounting SMB shares directly.
+Credentials come from `GLOBAL_CIFS_*` in shared secrets. CIFS volumes are for bulk
+file access only (media, photos, documents) -- never for database-like workloads.
 
 Services needing non-root volume ownership use entrypoint wrappers (Docker Config init
 scripts) that chown and drop privileges (`setpriv` on Debian, `su` on Alpine).
@@ -222,8 +227,10 @@ pulled by Swarm nodes via `--with-registry-auth`. Existing tags are skipped.
 ### LXC Nodes
 
 Unprivileged LXC containers cannot use IPVS (Docker Swarm's default VIP load balancing).
-Intra-stack services on LXC nodes must set `endpoint_mode: dnsrr`. Services routed through
-Traefik are unaffected.
+Any service that has consumers on LXC must set `endpoint_mode: dnsrr`, regardless of where
+the service itself runs. The IPVS limitation is on the client side -- LXC nodes cannot
+translate VIP addresses to task IPs. Services only receiving traffic via Traefik are
+unaffected (VIP resolution happens on the Traefik node).
 
 ### Docker Configs
 
