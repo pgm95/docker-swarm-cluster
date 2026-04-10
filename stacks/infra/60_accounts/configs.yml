@@ -1,20 +1,19 @@
 configs:
   blueprint_directory:
     name: blueprint_directory_${DEPLOY_VERSION}
-    file: ./config/blueprints/directory.yaml
-  blueprint_ldap:
-    name: blueprint_ldap_${DEPLOY_VERSION}
-    file: ./config/blueprints/ldap.yaml
-
-  blueprint_providers:
-    name: blueprint_providers_${DEPLOY_VERSION}
-    file: ./config/blueprints/providers.yaml
-  blueprint_brand:
-    name: blueprint_brand_${DEPLOY_VERSION}
-    file: ./config/blueprints/brand.yaml
+    file: ./config/blueprints/10_directory.yaml
   blueprint_scope_mappings:
     name: blueprint_scope_mappings_${DEPLOY_VERSION}
-    file: ./config/blueprints/scope-mappings.yaml
+    file: ./config/blueprints/20_scope-mappings.yaml
+  blueprint_providers:
+    name: blueprint_providers_${DEPLOY_VERSION}
+    file: ./config/blueprints/30_providers.yaml
+  blueprint_ldap:
+    name: blueprint_ldap_${DEPLOY_VERSION}
+    file: ./config/blueprints/40_ldap.yaml
+  blueprint_brand:
+    name: blueprint_brand_${DEPLOY_VERSION}
+    file: ./config/blueprints/50_brand.yaml
   init_db_entrypoint:
     name: init_db_accounts_entrypoint_${DEPLOY_VERSION}
     file: ./config/bootstrap/init-db.sh

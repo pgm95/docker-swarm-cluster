@@ -63,10 +63,14 @@ services:
         - "traefik.http.routers.authentik-external.entrypoints=websecure"
         - "traefik.http.routers.authentik-external.service=authentik"
         - "traefik.http.services.authentik.loadbalancer.server.port=9000"
-        # WebFinger endpoint on bare domain
-        - "traefik.http.routers.authentik-webfinger.rule=Host(`${DOMAIN_PUBLIC}`) && PathPrefix(`/.well-known/webfinger`) && Method(`GET`)"
-        - "traefik.http.routers.authentik-webfinger.entrypoints=websecure"
-        - "traefik.http.routers.authentik-webfinger.service=authentik"
+        ## WebFinger: redirect bare domain to auth subdomain for correct OIDC issuer URL
+        ## Only needed for initial OIDC discovery, subsequent requests go to the correct subdomain via the issuer URL in the ID Token
+        # - "traefik.http.routers.authentik-webfinger.rule=Host(`${DOMAIN_PUBLIC}`) && PathPrefix(`/.well-known/webfinger`) && Method(`GET`)"
+        # - "traefik.http.routers.authentik-webfinger.entrypoints=websecure"
+        # - "traefik.http.routers.authentik-webfinger.service=authentik"
+        # - "traefik.http.routers.authentik-webfinger.middlewares=webfinger-redirect"
+        # - "traefik.http.middlewares.webfinger-redirect.redirectregex.regex=^https://[^/]+(/.+)"
+        # - "traefik.http.middlewares.webfinger-redirect.redirectregex.replacement=https://auth.${DOMAIN_PUBLIC}$${1}"
 
   authentik-worker:
     image: ghcr.io/goauthentik/server:2026.2.1
@@ -122,15 +126,15 @@ services:
       - authentik_ldap_bind_password
     configs:
       - source: blueprint_directory
-        target: /blueprints/custom/directory.yaml
-      - source: blueprint_ldap
-        target: /blueprints/custom/ldap.yaml
-      - source: blueprint_providers
-        target: /blueprints/custom/providers.yaml
-      - source: blueprint_brand
-        target: /blueprints/custom/brand.yaml
+        target: /blueprints/custom/10_directory.yaml
       - source: blueprint_scope_mappings
-        target: /blueprints/custom/scope-mappings.yaml
+        target: /blueprints/custom/20_scope-mappings.yaml
+      - source: blueprint_providers
+        target: /blueprints/custom/30_providers.yaml
+      - source: blueprint_ldap
+        target: /blueprints/custom/40_ldap.yaml
+      - source: blueprint_brand
+        target: /blueprints/custom/50_brand.yaml
     networks:
       - default
       - infra_postgres

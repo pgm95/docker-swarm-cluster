@@ -49,12 +49,29 @@ recreate both containers on every deploy. The worker restart triggers fresh blue
 (the inotify file watcher misses Docker Config atomic swaps). The outpost restart picks up
 permission and provider config changes that aren't pushed via websocket.
 
-## WebFinger Bare-Domain Router
+## WebFinger Bare-Domain Redirect
 
 WebFinger spec requires `/.well-known/webfinger` on the account's domain (`DOMAIN_PUBLIC`), not
-the auth subdomain (`auth.DOMAIN_PUBLIC`). A separate Traefik router forwards
-`Host(DOMAIN_PUBLIC) && PathPrefix(/.well-known/webfinger)` to authentik alongside the main
-`auth.DOMAIN_PUBLIC` router.
+the auth subdomain (`auth.DOMAIN_PUBLIC`). A Traefik router on `DOMAIN_PUBLIC` redirects
+WebFinger requests to `auth.DOMAIN_PUBLIC` so Authentik constructs the OIDC issuer URL with
+the correct domain. Without the redirect, Authentik uses the request Host (`DOMAIN_PUBLIC`)
+in the `href`, but OIDC endpoints are only served at `auth.DOMAIN_PUBLIC`.
+
+The brand's `default_application` is the Tailscale app -- Authentik's per-application OIDC
+issuers mean WebFinger returns the default app's slug in the issuer path.
+
+## Blueprint Ordering
+
+Blueprints use `NN_` prefixes to enforce processing order via Authentik's alphabetical
+discovery. Cross-blueprint `!Find` references require the target entity to exist first.
+
+| Prefix | Blueprint | Depends on |
+|--------|-----------|------------|
+| `10_` | directory | -- |
+| `20_` | scope-mappings | -- |
+| `30_` | providers | scope-mappings (custom scopes) |
+| `40_` | ldap | -- |
+| `50_` | brand | providers (Tailscale app for WebFinger) |
 
 ## Bootstrap Limitations
 

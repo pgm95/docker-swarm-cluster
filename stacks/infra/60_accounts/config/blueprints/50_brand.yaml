@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+version: 1
+metadata:
+  name: Brand Configuration
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+
+entries:
+  # default_application determines WebFinger OIDC issuer href.
+  # WebFinger consumer application must match the provider's issuer.
+  # Usually only needed once at initial OIDC discovery.
+  # There can only be one default_application at a time.
+  - model: authentik_brands.brand
+    state: present
+    identifiers:
+      default: true
+    attrs:
+      branding_title: Authentik
+      default_application: !Find [authentik_core.application, [slug, tailscale]]
