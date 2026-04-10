@@ -8,15 +8,18 @@ configs:
   traefik_dynamic_authentik:
     name: traefik_external_dynamic_authentik_${DEPLOY_VERSION}
     file: ./config/traefik/dynamic/authentik.yml
-  traefik_dynamic_crowdsec:
-    name: traefik_external_dynamic_crowdsec_${DEPLOY_VERSION}
-    file: ./config/traefik/dynamic/crowdsec.yml
+  traefik_dynamic_bouncer:
+    name: traefik_external_dynamic_bouncer_${DEPLOY_VERSION}
+    file: ./config/traefik/dynamic/bouncer.yml
   traefik_dynamic_geoblock:
     name: traefik_external_dynamic_geoblock_${DEPLOY_VERSION}
     file: ./config/traefik/dynamic/geoblock.yml
   traefik_dynamic_hass-public:
     name: traefik_external_dynamic_hass-public_${DEPLOY_VERSION}
     file: ./config/traefik/dynamic/hass-public.yml
+  traefik_dynamic_jellyfin:
+    name: traefik_external_dynamic_jellyfin_${DEPLOY_VERSION}
+    file: ./config/traefik/dynamic/jellyfin.yml
   crowdsec_entrypoint:
     name: crowdsec_entrypoint_${DEPLOY_VERSION}
     file: ./config/crowdsec/entrypoint.sh

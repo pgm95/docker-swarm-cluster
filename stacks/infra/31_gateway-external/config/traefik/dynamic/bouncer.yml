@@ -16,8 +16,8 @@ http:
           forwardedHeadersTrustedIPs: '{{ env "TRUSTED_IPS" }}'
           crowdsecAppsecEnabled: true
           crowdsecAppsecHost: crowdsec:7422
-          crowdsecAppsecFailureBlock: true
-          crowdsecAppsecUnreachableBlock: true
+          crowdsecAppsecFailureBlock: false
+          crowdsecAppsecUnreachableBlock: false
           crowdsecLapiHost: crowdsec:8085
           crowdsecLapiKey: '{{ env "CROWDSEC_LAPI_KEY" }}'
           crowdsecLapiScheme: http

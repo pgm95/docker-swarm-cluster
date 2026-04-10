@@ -15,7 +15,7 @@ http:
           databaseAutoUpdateToken: '{{ env "GEOBLOCK_IP2LOCATION_TOKEN" }}'
           databaseAutoUpdateCode: "DB1"
           defaultAllow: false
-          allowedCountries: [DK,LB,FR,MX,CA,AE,US,GB]
+          allowedCountries: [DK,LB,FR,MX,CA,AE,US,GB,ES,PT]
           blockedCountries: [RU,CN,IN]
           blockedIPBlocks: []
           allowPrivate: true
@@ -24,15 +24,15 @@ http:
             - 127.0.0.0/16
             - 172.16.0.0/12
             - 100.64.0.0/10
-          ipHeaders:
-            - "remoteAddress"
+          ipHeaders: # Headers to use for client IPs (required)
+            - "remoteAddress" # Real TCP source - cannot be spoofed
           banHtmlFilePath: ""
           ipHeaderStrategy: CheckFirstNonePrivate
-          banIfError: true
-          disallowedStatusCode: 403
-          logLevel: "info"
-          logFormat: "json"
-          logPath: "/var/log/traefik/geoblock.log"
-          logBannedRequests: true
-          fileLogBufferSizeBytes: 1024
-          fileLogBufferTimeoutSeconds: 2
+          banIfError: false # Block requests if IP lookup fails
+          disallowedStatusCode: 403 # HTTP status code for blocked requests.
+          logLevel: "info" # Available: debug, info, warn, error
+          logFormat: "json" # Available: json, text
+          logPath: "" # Empty for Traefik's standard output
+          logBannedRequests: true # Log blocked requests. They will be logged at info level.
+          fileLogBufferSizeBytes: 1024 # Buffer size for file logging in bytes (default: 1024)
+          fileLogBufferTimeoutSeconds: 2 # Buffer timeout for file logging in seconds (default: 2)

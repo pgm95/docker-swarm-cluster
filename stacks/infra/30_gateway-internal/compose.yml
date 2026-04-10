@@ -79,6 +79,8 @@ services:
         target: /etc/traefik/dynamic/base.yml
       - source: traefik_dynamic_hass-private
         target: /etc/traefik/dynamic/hass-private.yml
+      - source: traefik_dynamic_jellyfin
+        target: /etc/traefik/dynamic/jellyfin.yml
     networks:
       - infra_socket
       - infra_gw-internal

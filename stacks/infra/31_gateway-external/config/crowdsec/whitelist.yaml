@@ -1,5 +1,5 @@
-name: 01-custom-whitelist
-description: "Trusted IP Ranges"
+name: 01-local-cidr
+description: "Private IP Ranges"
 whitelist:
   reason: "RFC-1918, RFC-6598"
   cidr:

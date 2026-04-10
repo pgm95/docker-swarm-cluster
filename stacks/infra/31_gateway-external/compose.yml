@@ -95,12 +95,14 @@ services:
         target: /etc/traefik/dynamic/base.yml
       - source: traefik_dynamic_authentik
         target: /etc/traefik/dynamic/authentik.yml
-      - source: traefik_dynamic_crowdsec
-        target: /etc/traefik/dynamic/crowdsec.yml
+      - source: traefik_dynamic_bouncer
+        target: /etc/traefik/dynamic/bouncer.yml
       - source: traefik_dynamic_geoblock
         target: /etc/traefik/dynamic/geoblock.yml
       - source: traefik_dynamic_hass-public
         target: /etc/traefik/dynamic/hass-public.yml
+      - source: traefik_dynamic_jellyfin
+        target: /etc/traefik/dynamic/jellyfin.yml
     networks:
       - default
       - infra_socket
