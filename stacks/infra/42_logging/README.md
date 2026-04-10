@@ -63,7 +63,7 @@ Three of the images lack standard CLI tools:
 |-------|------|-------|-------|-------------|
 | wollomatic/socket-proxy | scratch | None | `/healthcheck` binary | `["CMD", "/healthcheck"]` (probes :55555/health) |
 | grafana/loki | distroless | None | None | `loki -health` (built-in, added in 3.6.x) |
-| grafana/alloy | Ubuntu 24.04 | bash | No wget/curl | `bash </dev/tcp/localhost/12345` |
+| grafana/alloy | Ubuntu 24.04 | bash | No wget/curl | `bash </dev/tcp/127.0.0.1/12345` |
 
 ## Startup Ordering
 

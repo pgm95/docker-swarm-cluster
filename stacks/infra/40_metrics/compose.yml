@@ -29,7 +29,7 @@ services:
     volumes:
       - prometheus-data:/prometheus
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:9090/-/healthy"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -77,7 +77,7 @@ services:
       - /sys:/host/sys:ro
       - /:/rootfs:ro
     healthcheck:
-      test: ["CMD", "/bin/wget", "-q", "--spider", "http://localhost:9100/"]
+      test: ["CMD", "/bin/wget", "-q", "--spider", "http://127.0.0.1:9100/"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -136,7 +136,7 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

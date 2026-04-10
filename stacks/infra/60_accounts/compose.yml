@@ -166,7 +166,7 @@ services:
       - default
       - infra_ldap
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9300/outpost.goauthentik.io/ping"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:9300/outpost.goauthentik.io/ping"]
       interval: 10s
       timeout: 3s
       retries: 3

@@ -60,7 +60,7 @@ services:
     volumes:
       - mealie-data:/app/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9025/api/app/about"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:9025/api/app/about"]
       interval: 30s
       timeout: 10s
       retries: 3

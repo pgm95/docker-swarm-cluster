@@ -38,7 +38,7 @@ services:
     volumes:
       - registry-data:/var/lib/registry
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:5001/debug/health"]
+      test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1:5001/debug/health"]
       interval: 10s
       timeout: 5s
       retries: 3
