@@ -9,14 +9,7 @@ Metrics collection, storage, visualization, and uptime monitoring.
 | prometheus | Scrapes targets, stores TSDB, evaluates recording rules | Replicated (1) |
 | node-exporter | Host-level metrics (CPU, memory, disk, network) | Global |
 | grafana | Dashboards and visualization (OIDC auth) | Replicated (1) |
-| uptime-kuma | Status monitoring and alerting | Replicated (1) |
 | init-db | Provisions Grafana's Postgres database | Replicated (1) |
-
-## First Deploy
-
-Uptime Kuma requires manual setup: navigate to `status.DOMAIN_PRIVATE` to create an admin
-account, add Docker host `tcp://socket-proxy:2375`, create an API key and uncomment the
-Prometheus scrape target in `prometheus.yml`, then redeploy metrics.
 
 ## Scraping Global Services
 

@@ -10,6 +10,7 @@
 .archive/
 .stversions
 *_LOCALDEV*
+.nodeploy
 
 # Python
 *.egg

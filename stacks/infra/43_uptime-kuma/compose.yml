@@ -5,7 +5,7 @@ include:
 
 services:
   mariadb:
-    image: mariadb:11.4
+    image: mariadb:11.8
     command: --innodb-use-native-aio=0
     logging:
       <<: *logging
