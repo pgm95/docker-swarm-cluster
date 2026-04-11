@@ -33,7 +33,7 @@ services:
       mode: replicated
       replicas: 1
       resources:
-        <<: *resources-small
+        <<: *resources-medium
 
   uptime-kuma:
     image: louislam/uptime-kuma:2-slim-rootless
