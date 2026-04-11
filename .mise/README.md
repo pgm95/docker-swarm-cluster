@@ -27,11 +27,11 @@ The Python package centralizes all Docker CLI and SSH calls through `_docker.py`
 Dev/prod separation uses mise's `MISE_ENV` profile system. Dev is default (set in `.config/miserc.toml`).
 
 ```bash
-# Dev (default)
-mise run swarm:deploy stacks/infra/00_socket
+# Dev (default) — accepts bare name, dir name, or full path
+mise run swarm:deploy socket
 
 # Prod
-MISE_ENV=prod mise run swarm:deploy stacks/infra/00_socket
+MISE_ENV=prod mise run swarm:deploy socket
 ```
 
 Each profile provides:
@@ -82,7 +82,9 @@ Two sed transforms required because `docker stack deploy` rejects:
 
 ## Deploy Pipeline
 
-`mise run swarm:deploy stacks/<ns>/<stack> [--update]` stages:
+`mise run swarm:deploy <stack> [--update]` stages:
+
+The `<stack>` argument accepts a bare stack name (`metrics`), a directory name (`40_metrics`), or a full path (`stacks/infra/40_metrics`). `resolve_stack_path()` searches `stacks/infra/` then `stacks/apps/` for a match.
 
 1. **Prepare** (`swarm.deploy`) — resolves stack name, detects versioning, decrypts secrets, validates, creates versioned Docker secrets/configs, builds+pushes custom images. Outputs shell exports for the bash wrapper.
 2. **Compose preprocessing** (`swarm._compose`) — anchor concatenation + `docker compose config` + sed transforms
@@ -123,7 +125,7 @@ Task logic lives in the `swarm` Python package at `.mise/lib/swarm/`, invoked by
 | `_ssh` | SSH execution helpers for remote node commands |
 | `_output` | Logging and output formatting (data to stdout, diagnostics to stderr) |
 | `_sops` | SOPS decryption — calls sops binary, handles `_B64` suffix |
-| `_stack` | Stack name resolution (`NN_` prefix stripping) and directory discovery |
+| `_stack` | Stack name resolution (`NN_` prefix stripping), path resolution, and directory discovery |
 
 ### Public modules (CLI entry points)
 
@@ -139,7 +141,7 @@ Task logic lives in the `swarm` Python package at `.mise/lib/swarm/`, invoked by
 | `nodes` | (library) | Swarm node discovery and placement constraint matching |
 | `secrets` | (library) | Secret parsing, validation, and versioned creation |
 | `site` | `site:deploy-infra`, `site:deploy-apps`, `site:reset` | Site-wide orchestration |
-| `registry_auth` | `registry:auth` | Registry login across swarm nodes |
+| `registry_auth` | `site:registry-auth` | Registry login across swarm nodes |
 
 ### Testing
 

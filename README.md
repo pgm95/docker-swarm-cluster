@@ -51,8 +51,8 @@ Only the final `docker stack deploy` command executes over SSH.
    mise run site:deploy      # Deploy everything (infra then apps)
    ```
 
-   `site:deploy-infra` automatically runs `registry:auth` after the registry stack deploys,
-   so nodes are authenticated before any stack that uses custom images.
+   After the registry stack deploys, run `mise run site:registry-auth` to authenticate
+   all nodes before deploying stacks that use custom images.
 
    First deploy may require `docker service update --force <service>` for services that start
    before their dependencies converge.
@@ -101,7 +101,9 @@ Two separate Traefik instances serve different access patterns:
 - **Internal** (`*place-vm`, `DOMAIN_PRIVATE`): Security headers only. Serves LAN and
   Tailscale clients exclusively.
 
-Both bind ports 80/443 in host mode and use a unified `websecure` entrypoint on `:443`.
+Both use host-mode ports and a unified `websecure` entrypoint on `:443`.
+  The external gateway binds only `:443` (ACME uses DNS-01, no HTTP entrypoint needed).
+  The internal gateway binds `:80` (redirect to HTTPS) and `:443`.
 Routing correctness is via Host rules and DNS, not entrypoint names. Each gateway's Swarm
 provider only discovers services that opt in via scope labels
 (`traefik.scope.internal=true` / `traefik.scope.external=true`).
@@ -162,7 +164,7 @@ Each stack's README documents service-level details and operational procedures.
   Prometheus scrapes these and all other compatible targets
   Alloy collects logs and Loki stores them. Grafana visualizes everything.
 - **Registry:** private OCI registry for custom-built images.
-  Deploy pipeline pushes content-hash-tagged images; all nodes authenticate via `registry:auth`.
+  Deploy pipeline pushes content-hash-tagged images; all nodes authenticate via `site:registry-auth`.
 - **Authentication:** Authentik provides OIDC, user directory, LDAP outpost, and WebFinger.
   Configuration is declarative via blueprints.
 
