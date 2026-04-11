@@ -6,7 +6,7 @@ Public ingress with WAF protection. See [main README](../../../README.md#dual-ga
 
 | Service | Purpose | Port |
 |---------|---------|------|
-| traefik | Reverse proxy + TLS termination | 80, 443 (host mode) |
+| traefik | Reverse proxy + TLS termination | 443 (host mode) |
 | crowdsec | WAF + intrusion detection (Postgres backend) | 8085 (LAPI), 6060 (metrics) |
 | init-db | Postgres bootstrap sidecar | — |
 
@@ -80,7 +80,7 @@ The IP2Location database is required for the geoblock middleware. If missing, th
 
 ## Port Binding
 
-Uses `mode: host` for ports 80/443 — bypasses Swarm ingress mesh for predictable source IP handling.
+Uses `mode: host` for port 443 — bypasses Swarm ingress mesh for predictable source IP handling. No HTTP entrypoint; ACME uses DNS-01 via Cloudflare.
 
 Static config via CLI flags in compose `command:`. Dynamic config via Docker Configs (file provider).
 

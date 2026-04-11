@@ -56,9 +56,6 @@ services:
       - "--certificatesResolvers.letsencrypt.acme.dnsChallenge.resolvers=1.1.1.1:53,8.8.8.8:53,9.9.9.9:53"
       # Entrypoints
       - "--entryPoints.metrics.address=:9091"
-      - "--entryPoints.web.address=:80"
-      - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
-      - "--entryPoints.web.http.redirections.entryPoint.scheme=https"
       - "--entryPoints.websecure.address=:443"
       - "--entryPoints.websecure.asDefault=true"
       - "--entryPoints.websecure.http.middlewares=security-headers@file,geoblock@file,crowdsec@file"
@@ -111,10 +108,6 @@ services:
     ports:
       - target: 443
         published: 443
-        protocol: tcp
-        mode: host
-      - target: 80
-        published: 80
         protocol: tcp
         mode: host
     volumes:

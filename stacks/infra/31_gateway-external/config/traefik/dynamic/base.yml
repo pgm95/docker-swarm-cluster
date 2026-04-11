@@ -4,6 +4,19 @@
 # yaml-language-server: $schema=https://json.schemastore.org/traefik-v3-file-provider.json
 
 http:
+  routers:
+    catch-all:
+      rule: "PathPrefix(`/`)"
+      entryPoints:
+        - websecure
+      priority: 1
+      service: catch-all
+
+  services:
+    catch-all:
+      loadBalancer:
+        servers: []
+
   middlewares:
     security-headers:
       headers:
