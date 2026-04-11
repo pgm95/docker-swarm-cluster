@@ -29,7 +29,7 @@ services:
     volumes:
       - quantum-data:/quantum
       - cifs-personal:/mnt/personal
-      - cifs-apple:/mnt/apple:ro
+      # - cifs-apple:/mnt/apple:ro
       - cifs-photos:/mnt/photos
       - cifs-media:/mnt/media
     healthcheck:
@@ -65,12 +65,6 @@ volumes:
     driver_opts:
       type: cifs
       device: //${GLOBAL_CIFS_HOST}/personal
-      o: "username=${GLOBAL_CIFS_USERNAME},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
-  cifs-apple:
-    driver: local
-    driver_opts:
-      type: cifs
-      device: //${GLOBAL_CIFS_HOST}/apple
       o: "username=${GLOBAL_CIFS_USERNAME},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
   cifs-photos:
     driver: local

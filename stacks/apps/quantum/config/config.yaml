@@ -45,21 +45,6 @@ server:
         defaultUserScope: "/"
         defaultEnabled: true
         createUserDir: false
-    - path: "/mnt/apple"
-      name: "Apple"
-      config:
-        denyByDefault: false
-        private: false
-        disabled: false
-        defaultUserScope: "/"
-        defaultEnabled: true
-        createUserDir: false
-        rules:
-          - neverWatchPath: "/"
-          - folderPath: "/"
-            viewable: true
-        # Will be deprecated, no viable alternative as of 03/11/26
-        disableIndexing: true
 
 auth:
   tokenExpirationHours: 120
