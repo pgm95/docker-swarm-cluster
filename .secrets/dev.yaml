@@ -1,6 +1,6 @@
 DOMAIN_PUBLIC: ENC[AES256_GCM,data:iL6vTGy2k0dr+Q==,iv:5JpRTiFNhEQxjytFCRm1BvP+oAT/xrQWJDK1wFvOEDo=,tag:4zYI3YxMwoowuNUAYpq27g==,type:str]
 DOMAIN_PRIVATE: ENC[AES256_GCM,data:5tK/DPL1kUW9drRBa4ScpLJN,iv:qYI55aeaNbHuMiBGhy1iUBIrOe0rzNrWUB4UF25O3gQ=,tag:5uEOIfX7YU8b8txYUjd+9Q==,type:str]
-DOMAIN_TAILNET: ENC[AES256_GCM,data:OEBPif0dIAKO4CSPzqmhzLy/,iv:BWrm8W76IRAwcYO4w0uiWWReNGM+LZ+lM92pmSHxYag=,tag:8oJX9yPzOj0Vm1k9mq6kQQ==,type:str]
+DOMAIN_TAILNET: ENC[AES256_GCM,data:OBcLpLsXyXjlEif8UPuEDKTqm+ll1M3fl7faeA==,iv:02n+VS0ffL4/G/XMlotX2JLMuLE9xhpx/YSvbrrs+QI=,tag:BScBfbxaJKA1flRlxXZIMA==,type:str]
 GLOBAL_OIDC_URL: ENC[AES256_GCM,data:FUpSTrPYz3atKgODfHLB,iv:80cdklmhUmP986AaEkDpbTkJQjix2nz9qHXzFJu0LPc=,tag:lHDH/oMMECsWNKV4/Htd/A==,type:str]
 GLOBAL_LDAP_BASE_DN: ENC[AES256_GCM,data:Bc2QGa1KGBcOVD4n2d5DBQ==,iv:YUSWfbkIHNS0TqLvoJjpV8fRLO4FO6MApb2diIAXk7c=,tag:0PuC7adi/Lk3B8Za/dXIaQ==,type:str]
 GLOBAL_CIFS_HOST: ENC[AES256_GCM,data:ovzbXvXDatogMNqhj4Hkl6U4QjHptf9T,iv:AdmNnjLZYVPMcPBuJlo1rvwVHYz3pMRlvkFuqD5h6W0=,tag:qJ62jhtmTcE0+TemyAd12g==,type:str]
@@ -17,7 +17,7 @@ sops:
             K0ZpWWYzKzNpQ3Vaak9DODhvOWh0clUK3cc9Y0VS8J0vQEU7xaJHqm1hn4mEcTok
             xvwbvJvWSliItwMO823oD5jvyw27g1/K/kfnGuOq1F8BdACevR1+rw==
             -----END AGE ENCRYPTED FILE-----
-    lastmodified: "2026-04-09T15:11:31Z"
-    mac: ENC[AES256_GCM,data:QBmkH2uKKOaVA+Aaxto9hpDfhJyOqOGEMmleGhLJ4lNDWvZNom7ywnmx6iktI027Li+h/tLEm6gE4zK+pVznVUvBwRL1OHCmriVlj1qZoqhMT9Qlu/TK1/Z2N2UJpaOVsleyLYwnNBBmlF2oV0Cjzt0pwbmgyC+EAVZGTx2fPUA=,iv:PlSUA7ePxjZ9jUretX/j+76jlVKHJXpxJByG8PGX2LM=,tag:/UA2NViEQf8dFsUUYdn3IQ==,type:str]
+    lastmodified: "2026-04-11T04:26:26Z"
+    mac: ENC[AES256_GCM,data:bxxhXaWbdRb5bXZCZ9cM4t5tvvnhOISyFTZUluTUcXHSG/WECcntdDpLBbQQfWt3gLkm4zcAJhOY/r0tv1l2gC+aJggDBBE216N6wjJHQyy4FkQRzrw/TLpNIR/UUuGOUw321Bx3LNOgAGZo6GoJhVLJHho+F2yttzQKk0coK6c=,iv:DMbE3AXitONBedt7PIR6GBzJUlukALdyAtX+IcJm9G4=,tag:gCQBYYlMl/ZMioWsO0rw4A==,type:str]
     unencrypted_suffix: _unencrypted
     version: 3.12.2

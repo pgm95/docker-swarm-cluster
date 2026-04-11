@@ -3,7 +3,7 @@
 [env]
 _.file = { path = "{{ env.PROJECT_SECRETS_DIR }}/prod.yaml", redact = true }
 
-SWARM_NODE_DEFAULT = "swarm-vm.home.arpa"
+SWARM_NODE_DEFAULT = "swarm-vm"
 SWARM_SSH_USER = "root"
 DOCKER_HOST = "ssh://{{ env.SWARM_SSH_USER }}@{{ env.SWARM_NODE_DEFAULT }}"
 
