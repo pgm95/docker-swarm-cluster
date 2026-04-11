@@ -7,12 +7,12 @@ import time
 from . import SwarmError
 from ._docker import run as docker_run, stack_list
 from ._output import error, info, setup, warn
-from ._stack import stack_name
+from ._stack import resolve_stack_path, stack_name
 
 
-def remove(stack_path: str, timeout: int = 60, interval: int = 3) -> int:
+def remove(stack_ref: str, timeout: int = 60, interval: int = 3) -> int:
     """Remove a stack and wait for services to drain."""
-    name = stack_name(stack_path)
+    name = stack_name(resolve_stack_path(stack_ref))
 
     if name not in stack_list():
         info(f"Not deployed: {name}")

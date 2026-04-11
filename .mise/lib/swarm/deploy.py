@@ -13,7 +13,7 @@ from . import SwarmError
 from ._docker import build, manifest_exists, push
 from ._output import error, info, setup
 from ._sops import sops_decrypt
-from ._stack import stack_name
+from ._stack import resolve_stack_path, stack_name
 from .secrets import create_versioned_secrets, validate_config_files, validate_required_secrets
 
 
@@ -102,7 +102,7 @@ def prepare(stack_path_str: str) -> None:
     Outputs shell-safe export statements to stdout for bash eval.
     Progress and diagnostics go to stderr.
     """
-    stack_path = Path(stack_path_str)
+    stack_path = resolve_stack_path(stack_path_str)
     compose_file = stack_path / "compose.yml"
 
     if not compose_file.is_file():

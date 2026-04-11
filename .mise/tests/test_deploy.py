@@ -149,6 +149,7 @@ class TestPrepare:
             compose="services: {}\n",
         )
         monkeypatch.setenv("SOPS_AGE_KEY_FILE", str(stack / "compose.yml"))  # just needs to exist
+        monkeypatch.setattr("swarm.deploy.resolve_stack_path", lambda p: stack)
         prepare(str(stack))
         stdout = capsys.readouterr().out
         assert "export STACK_NAME=" in stdout
@@ -161,6 +162,7 @@ class TestPrepare:
             secrets_env="placeholder",
         )
         monkeypatch.setenv("SOPS_AGE_KEY_FILE", str(stack / "compose.yml"))
+        monkeypatch.setattr("swarm.deploy.resolve_stack_path", lambda p: stack)
         monkeypatch.setattr("swarm.deploy.sops_decrypt", lambda f: [("S", "val")])
         monkeypatch.setattr("swarm.deploy.validate_required_secrets", lambda p: None)
         monkeypatch.setattr("swarm.deploy.create_versioned_secrets", lambda p, v: {"created": 0, "skipped": 0, "filtered": 0})
@@ -172,5 +174,6 @@ class TestPrepare:
     def test_no_compose_raises(self, tmp_path, monkeypatch):
         from swarm import SwarmError
         monkeypatch.setenv("SOPS_AGE_KEY_FILE", "/dev/null")
+        monkeypatch.setattr("swarm.deploy.resolve_stack_path", lambda p: tmp_path)
         with pytest.raises(SwarmError, match="compose.yml not found"):
             prepare(str(tmp_path))

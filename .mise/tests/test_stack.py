@@ -2,7 +2,10 @@
 
 from pathlib import Path
 
-from swarm._stack import find_stacks, stack_name
+import pytest
+
+from swarm import SwarmError
+from swarm._stack import find_stacks, resolve_stack_path, stack_name
 
 
 class TestStackName:
@@ -20,6 +23,55 @@ class TestStackName:
 
     def test_only_strips_first_nn(self):
         assert stack_name("stacks/infra/42_logging") == "logging"
+
+
+class TestResolveStackPath:
+    def test_full_path(self, tmp_path, monkeypatch):
+        stack = tmp_path / "stacks" / "infra" / "40_metrics"
+        stack.mkdir(parents=True)
+        monkeypatch.chdir(tmp_path)
+        result = resolve_stack_path(str(stack))
+        assert result == stack
+
+    def test_dir_name_with_prefix(self, tmp_path, monkeypatch):
+        infra = tmp_path / "stacks" / "infra"
+        (infra / "40_metrics").mkdir(parents=True)
+        monkeypatch.chdir(tmp_path)
+        result = resolve_stack_path("40_metrics")
+        assert result.name == "40_metrics"
+
+    def test_bare_stack_name(self, tmp_path, monkeypatch):
+        infra = tmp_path / "stacks" / "infra"
+        (infra / "40_metrics").mkdir(parents=True)
+        monkeypatch.chdir(tmp_path)
+        result = resolve_stack_path("metrics")
+        assert result.name == "40_metrics"
+
+    def test_app_stack(self, tmp_path, monkeypatch):
+        apps = tmp_path / "stacks" / "apps"
+        (apps / "mealie").mkdir(parents=True)
+        monkeypatch.chdir(tmp_path)
+        result = resolve_stack_path("mealie")
+        assert result.name == "mealie"
+
+    def test_infra_preferred_over_apps(self, tmp_path, monkeypatch):
+        (tmp_path / "stacks" / "infra" / "metrics").mkdir(parents=True)
+        (tmp_path / "stacks" / "apps" / "metrics").mkdir(parents=True)
+        monkeypatch.chdir(tmp_path)
+        result = resolve_stack_path("metrics")
+        assert "infra" in str(result)
+
+    def test_not_found_raises(self, tmp_path, monkeypatch):
+        (tmp_path / "stacks" / "infra").mkdir(parents=True)
+        (tmp_path / "stacks" / "apps").mkdir(parents=True)
+        monkeypatch.chdir(tmp_path)
+        with pytest.raises(SwarmError, match="Stack not found"):
+            resolve_stack_path("nonexistent")
+
+    def test_not_found_no_namespace_dirs(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        with pytest.raises(SwarmError, match="Stack not found"):
+            resolve_stack_path("anything")
 
 
 class TestFindStacks:

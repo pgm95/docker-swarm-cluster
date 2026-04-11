@@ -10,7 +10,7 @@ from . import SwarmError
 from ._docker import run as docker_run
 from ._output import error, info, setup
 from ._ssh import ssh_node
-from ._stack import find_stacks, stack_name
+from ._stack import find_stacks
 from .networks import get_infra_networks
 from .nodes import get_swarm_nodes
 
@@ -33,12 +33,6 @@ def deploy_infra() -> int:
         if not _mise_run("swarm:deploy", str(stack)):
             info(f"FAILED: {stack.name}")
             failed.append(stack.name)
-        elif stack_name(stack) == "registry":
-            time.sleep(5)
-            info("━━━ registry:auth ━━━")
-            if not _mise_run("registry:auth"):
-                failed.append("registry:auth")
-            info("")
         info("")
 
     deployed = len(stacks) - len(failed)

@@ -14,7 +14,6 @@ class TestDeployInfra:
 
         deployed = []
         monkeypatch.setattr("swarm.site._mise_run", lambda task, *a: (deployed.append(a[0] if a else task), True)[1])
-        monkeypatch.setattr("swarm.site.stack_name", lambda p: p.name.split("_", 1)[-1])
 
         result = deploy_infra()
         assert result == 0
@@ -23,26 +22,24 @@ class TestDeployInfra:
             str(tmp_path / "10_postgres"),
         ]
 
-    def test_triggers_registry_auth(self, tmp_path, monkeypatch):
+    def test_no_registry_auth(self, tmp_path, monkeypatch):
         (tmp_path / "50_registry").mkdir()
         (tmp_path / "50_registry" / "compose.yml").write_text("services: {}")
 
         monkeypatch.setattr("swarm.site.find_stacks", lambda ns: [tmp_path / "50_registry"])
-        monkeypatch.setattr("swarm.site.stack_name", lambda p: "registry")
-        monkeypatch.setattr("time.sleep", lambda s: None)
 
         tasks_run = []
         monkeypatch.setattr("swarm.site._mise_run", lambda task, *a: (tasks_run.append(task), True)[1])
 
         deploy_infra()
-        assert "registry:auth" in tasks_run
+        assert "registry:auth" not in tasks_run
+        assert "site:registry-auth" not in tasks_run
 
     def test_collects_failures(self, tmp_path, monkeypatch):
         (tmp_path / "00_socket").mkdir()
         (tmp_path / "10_postgres").mkdir()
 
         monkeypatch.setattr("swarm.site.find_stacks", lambda ns: sorted(tmp_path.iterdir()))
-        monkeypatch.setattr("swarm.site.stack_name", lambda p: p.name.split("_", 1)[-1])
 
         call_count = 0
 

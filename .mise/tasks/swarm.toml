@@ -3,14 +3,14 @@
 ["swarm:deploy"]
 description = "Deploy a stack with automatic secret management"
 usage = '''
-arg "<path>" help="Path to stack directory"
+arg "<stack>" help="Stack name or path"
 flag "--update" help="Re-pull mutable image tags (e.g. latest, release)"
 '''
 env.CONVERGE_TIMEOUT = "180"
 env.CONVERGE_INTERVAL = "2"
 run = '''
 #!/usr/bin/env bash
-prepare_out=$(python3 -m swarm.deploy prepare "${usage_path}") || exit 1
+prepare_out=$(python3 -m swarm.deploy prepare "${usage_stack}") || exit 1
 eval "${prepare_out}"
 RESOLVE_IMAGE=""
 [[ "${usage_update:-}" == "true" ]] && RESOLVE_IMAGE="--resolve-image always"
@@ -38,8 +38,8 @@ run = 'python3 -m swarm.validate'
 
 ["swarm:remove"]
 description = "Remove a deployed stack and wait for services to drain"
-usage = 'arg "<path>" help="Path to stack directory"'
-run = 'python3 -m swarm.remove "${usage_path}"'
+usage = 'arg "<stack>" help="Stack name or path"'
+run = 'python3 -m swarm.remove "${usage_stack}"'
 
 ["swarm:cleanup"]
 alias = "cleanup"
