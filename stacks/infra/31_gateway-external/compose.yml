@@ -79,12 +79,12 @@ services:
       - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
       - AUTHENTIK_URL=${AUTHENTIK_URL}
       - TRUSTED_IPS=10.0.0.0/8,127.0.0.0/16,172.16.0.0/12,100.64.0.0/10
-      - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/cloudflare_dns_api_token_external
+      - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/cf_acme_api_token
       # Keep as env vars - geoblock plugin reads token from dynamic config Go template, CrowdSec has buggy _FILE support (GitHub issue 221)
       - GEOBLOCK_IP2LOCATION_TOKEN=${GEOBLOCK_IP2LOCATION_TOKEN}
       - CROWDSEC_LAPI_KEY=${BOUNCER_KEY_TRAEFIK}
     secrets:
-      - cloudflare_dns_api_token_external
+      - cf_acme_api_token
     configs:
       - source: traefik_entrypoint
         target: /geoblock-entrypoint.sh

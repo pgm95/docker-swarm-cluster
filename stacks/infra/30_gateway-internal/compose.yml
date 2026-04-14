@@ -71,9 +71,9 @@ services:
       - "--entryPoints.websecure.http.encodedCharacters.allowEncodedHash=false"
     environment:
       - DOMAIN_PRIVATE=${DOMAIN_PRIVATE}
-      - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/cloudflare_dns_api_token_internal
+      - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/cf_acme_api_token
     secrets:
-      - cloudflare_dns_api_token_internal
+      - cf_acme_api_token
     configs:
       - source: traefik_dynamic_base
         target: /etc/traefik/dynamic/base.yml

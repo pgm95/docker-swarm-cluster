@@ -6,6 +6,8 @@ GLOBAL_LDAP_BASE_DN: ENC[AES256_GCM,data:Bc2QGa1KGBcOVD4n2d5DBQ==,iv:YUSWfbkIHNS
 GLOBAL_CIFS_HOST: ENC[AES256_GCM,data:ovzbXvXDatogMNqhj4Hkl6U4QjHptf9T,iv:AdmNnjLZYVPMcPBuJlo1rvwVHYz3pMRlvkFuqD5h6W0=,tag:qJ62jhtmTcE0+TemyAd12g==,type:str]
 GLOBAL_CIFS_USERNAME: ENC[AES256_GCM,data:KrP91YuH,iv:j3k9ymJmb8rrvA1Dk9faoKouQEjIaNvydeAhMT3CcaI=,tag:K8xXtZhF2R6mt9QtGFneiQ==,type:str]
 GLOBAL_CIFS_PASSWORD: ENC[AES256_GCM,data:nII+UA2rq2wnfNJAGiYF5Q5f7g==,iv:/Oypt9WV26lguJwXO3yfkj64x99A3o3T2vo/vSt5/Hw=,tag:GkimgExS2DReATprXau5gQ==,type:str]
+GLOBAL_CF_ACME_API_TOKEN_PUBLIC: ENC[AES256_GCM,data:G1rYfrTUDRs5N9tyrh5BIufHUq9l6JbRYhb1QXr54bRj5ot1eDWOyQ==,iv:5DRlCgfvKqZdD6/8eDt/IiLG1xBX2VHDseIyVxGd/fM=,tag:UFg2RK4Oz6ftxgmkr0HYWw==,type:str]
+GLOBAL_CF_ACME_API_TOKEN_PRIVATE: ENC[AES256_GCM,data:2xNd9DnqEWuPS7XWocmgLptg5dJ88JN4EurpkBmUeRCdzWS3c4sapQ==,iv:TlprjQe7S72i15dANkhinYAdKNrVXNVh89VqVjQZelk=,tag:iNMjKeDKvdxmbWUAS3owSw==,type:str]
 sops:
     age:
         - recipient: age1xcnm9hkeyrrjxz33tvufpxwfwc8ydkwt3dax6kqsklpvggatj5usna7r2l
@@ -17,7 +19,7 @@ sops:
             K0ZpWWYzKzNpQ3Vaak9DODhvOWh0clUK3cc9Y0VS8J0vQEU7xaJHqm1hn4mEcTok
             xvwbvJvWSliItwMO823oD5jvyw27g1/K/kfnGuOq1F8BdACevR1+rw==
             -----END AGE ENCRYPTED FILE-----
-    lastmodified: "2026-04-11T04:26:26Z"
-    mac: ENC[AES256_GCM,data:bxxhXaWbdRb5bXZCZ9cM4t5tvvnhOISyFTZUluTUcXHSG/WECcntdDpLBbQQfWt3gLkm4zcAJhOY/r0tv1l2gC+aJggDBBE216N6wjJHQyy4FkQRzrw/TLpNIR/UUuGOUw321Bx3LNOgAGZo6GoJhVLJHho+F2yttzQKk0coK6c=,iv:DMbE3AXitONBedt7PIR6GBzJUlukALdyAtX+IcJm9G4=,tag:gCQBYYlMl/ZMioWsO0rw4A==,type:str]
+    lastmodified: "2026-04-13T21:52:22Z"
+    mac: ENC[AES256_GCM,data:BxLZQICsoPTf49GrPOVm+P83ywGkSiXKRHGAFOxsc+u51Stl8SKFxaR5+sOba/rzJTJdu9pR08q7CxJySjQ7AuNgpGemhZX0YeSyPs36psc3oeYbaOe3KEReS2PB61jitxBWt04yCju9xg2tXW8eSyCLY0RobaNYn5lzFHplQlQ=,iv:GTRK0bEVqU8hV2bRQzV21NTAics+GH5XR1bjdIGnFto=,tag:htNqvtlwefF+1Pb47OuBbw==,type:str]
     unencrypted_suffix: _unencrypted
     version: 3.12.2
