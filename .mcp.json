@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "loki-mcp-server": {
+      "command": "docker",
+      "args": ["run", "--rm", "-i",
+               "-e", "LOKI_URL=https://loki.${DOMAIN_PRIVATE}:443",
+               "loki-mcp-server:latest"],
+      "env": {
+        "DOCKER_HOST": "unix://${HOME}/.colima/default/docker.sock",
+        "DOMAIN_PRIVATE": "${DOMAIN_PRIVATE}"
+      },
+      "disabled": false,
+      "autoApprove": ["loki_query"]
+    }
+  }
+}

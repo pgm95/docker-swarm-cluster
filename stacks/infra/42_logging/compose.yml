@@ -16,6 +16,7 @@ services:
         target: /etc/loki/loki.yml
     networks:
       - infra_metrics
+      - infra_gw-internal
     volumes:
       - loki-data:/loki
     healthcheck:
@@ -26,6 +27,12 @@ services:
       start_period: 30s
     deploy:
       <<: [*place-vm, *deploy]
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.internal=true"
+        - "traefik.http.routers.loki.rule=Host(`loki.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.loki.entrypoints=websecure"
+        - "traefik.http.services.loki.loadbalancer.server.port=3100"
       update_config:
         order: stop-first
       mode: replicated
@@ -111,4 +118,6 @@ volumes:
 
 networks:
   infra_metrics:
+    external: true
+  infra_gw-internal:
     external: true
