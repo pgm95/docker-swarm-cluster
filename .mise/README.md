@@ -189,7 +189,7 @@ Task logic lives in the `swarm` Python package at `.mise/lib/swarm/`, invoked by
 | `status` | `status` | Cluster node and stack health display |
 | `validate` | `swarm:validate` | Compose validation and bind mount path checks |
 | `cleanup` | `swarm:cleanup` | Orphaned secret/config removal, node pruning |
-| `networks` | `swarm:init-networks` | Overlay network discovery and creation. `SWARM_INTERNAL_NETWORKS` (space-separated) controls which get `--internal` |
+| `networks` | `swarm:init-networks` | Overlay network discovery and creation. `SWARM_INTERNAL_NETWORKS` (space-separated) controls which get `--internal`. `SWARM_OVERLAY_MTU` sets the VXLAN MTU at creation time |
 | `nodes` | (library) | Swarm node discovery and placement constraint matching |
 | `secrets` | (library) | Secret parsing, validation, and versioned creation |
 | `site` | `site:deploy-infra`, `site:deploy-apps`, `site:reset` | Site-wide orchestration |

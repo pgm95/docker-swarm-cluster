@@ -130,3 +130,41 @@ class TestInitNetworks:
         monkeypatch.setattr("swarm.networks.docker_run", fake_docker)
         init_networks(internal_networks={"infra_socket"})
         assert "--internal" not in create_args[0]
+
+    def test_mtu_from_env(self, monkeypatch):
+        monkeypatch.setattr("swarm.networks.get_infra_networks", lambda: ["infra_metrics"])
+        monkeypatch.setenv("SWARM_OVERLAY_MTU", "1230")
+
+        create_args = []
+
+        def fake_docker(*args, check=True):
+            if args[0] == "network" and args[1] == "inspect":
+                return make_completed(returncode=1)
+            if args[0] == "network" and args[1] == "create":
+                create_args.append(args)
+                return make_completed()
+            return make_completed()
+
+        monkeypatch.setattr("swarm.networks.docker_run", fake_docker)
+        init_networks()
+        assert "--opt" in create_args[0]
+        opt_idx = create_args[0].index("--opt")
+        assert create_args[0][opt_idx + 1] == "com.docker.network.driver.mtu=1230"
+
+    def test_no_mtu_without_env(self, monkeypatch):
+        monkeypatch.setattr("swarm.networks.get_infra_networks", lambda: ["infra_metrics"])
+        monkeypatch.delenv("SWARM_OVERLAY_MTU", raising=False)
+
+        create_args = []
+
+        def fake_docker(*args, check=True):
+            if args[0] == "network" and args[1] == "inspect":
+                return make_completed(returncode=1)
+            if args[0] == "network" and args[1] == "create":
+                create_args.append(args)
+                return make_completed()
+            return make_completed()
+
+        monkeypatch.setattr("swarm.networks.docker_run", fake_docker)
+        init_networks()
+        assert "--opt" not in create_args[0]

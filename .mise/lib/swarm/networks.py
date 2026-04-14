@@ -43,6 +43,9 @@ def init_networks(internal_networks: set[str] | None = None) -> None:
             info(f"  exists: {net}")
             continue
         cmd = ["network", "create", "-d", "overlay", "--attachable"]
+        mtu = os.environ.get("SWARM_OVERLAY_MTU", "")
+        if mtu:
+            cmd += ["--opt", f"com.docker.network.driver.mtu={mtu}"]
         if net in internal_networks:
             cmd.append("--internal")
         cmd.append(net)

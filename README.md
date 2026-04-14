@@ -90,6 +90,10 @@ Six overlay networks partition traffic by function:
 
 Networks are discovered dynamically from compose files and pre-created before deployment.
 This breaks circular dependencies between stacks that need each other's networks.
+Overlay MTU is set at creation time via `SWARM_OVERLAY_MTU` (default 1230, derived from
+Tailscale MTU 1280 minus 50 bytes VXLAN overhead). Docker's `daemon.json` `"mtu"` only
+affects the default bridge, not overlays -- the `--opt com.docker.network.driver.mtu`
+flag at network creation is required.
 Tailscale provides the encryption layer for the overlays. Docker's IPsec (`--opt encrypted=true`) fails over WireGuard.
 
 #### Dual Gateways
@@ -233,6 +237,12 @@ Any service that has consumers on LXC must set `endpoint_mode: dnsrr`, regardles
 the service itself runs. The IPVS limitation is on the client side -- LXC nodes cannot
 translate VIP addresses to task IPs. Services only receiving traffic via Traefik are
 unaffected (VIP resolution happens on the Traefik node).
+
+Overlay networks traversing Tailscale require MTU 1230 (Tailscale 1280 minus VXLAN 50-byte
+overhead). Oversized VXLAN UDP packets are silently dropped, breaking both the data plane
+and Docker's memberlist gossip protocol. Symptoms: cross-node overlay timeouts, `memberlist:
+UDP probes failed` in Docker logs, new overlays failing to initialize while established
+ones appear to work (small packets fit under the limit).
 
 ### Docker Configs
 
