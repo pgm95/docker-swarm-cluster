@@ -16,18 +16,18 @@ layout:
   Bookmarks:
     header: false
     style: row
-    columns: 5
+    columns: 4
     target: _blank
     iconsOnly: false
   Infrastructure:
     header: false
     style: row
-    columns: 3
+    columns: 5
   Applications:
     header: false
     style: row
-    columns: 3
+    columns: 5
   Media:
     header: false
     style: row
-    columns: 3
+    columns: 5

@@ -11,10 +11,12 @@ services:
       <<: *logging
     stop_grace_period: 30s
     environment:
-      - HOMEPAGE_ALLOWED_HOSTS=homepage.${DOMAIN_PRIVATE}
       - LOG_TARGETS=stdout
-      - HOMEPAGE_VAR_PRIVATE=${DOMAIN_PRIVATE}
-      - HOMEPAGE_VAR_PUBLIC=${DOMAIN_PUBLIC}
+      - HOMEPAGE_ALLOWED_HOSTS=dash.${DOMAIN_PRIVATE}
+      - HOMEPAGE_VAR_MAIN_USER=${GLOBAL_USERNAME}
+      - HOMEPAGE_VAR_MAIN_PASS=${GLOBAL_PASSWORD}
+      - HOMEPAGE_VAR_DOMAIN_PRIVATE=${DOMAIN_PRIVATE}
+      - HOMEPAGE_VAR_DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
       - HOMEPAGE_VAR_JELLYFIN_KEY=${HOMEPAGE_VAR_JELLYFIN_KEY}
       - HOMEPAGE_VAR_PORTAINER_KEY=${HOMEPAGE_VAR_PORTAINER_KEY}
       - HOMEPAGE_VAR_MEALIE_KEY=${HOMEPAGE_VAR_MEALIE_KEY}
@@ -24,6 +26,9 @@ services:
       - HOMEPAGE_VAR_RADARR_KEY=${HOMEPAGE_VAR_RADARR_KEY}
       - HOMEPAGE_VAR_SONARR_KEY=${HOMEPAGE_VAR_SONARR_KEY}
       - HOMEPAGE_VAR_PROWLARR_KEY=${HOMEPAGE_VAR_PROWLARR_KEY}
+      - HOMEPAGE_VAR_PVE_USER=${HOMEPAGE_VAR_PVE_USER}
+      - HOMEPAGE_VAR_PVE_PASS=${HOMEPAGE_VAR_PVE_PASS}
+      - HOMEPAGE_VAR_HASS_KEY=${HOMEPAGE_VAR_HASS_KEY}
     configs:
       - source: homepage_settings
         target: /app/config/settings.yaml
@@ -59,7 +64,7 @@ services:
       labels:
         - "traefik.enable=true"
         - "traefik.scope.internal=true"
-        - "traefik.http.routers.homepage.rule=Host(`homepage.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.homepage.rule=Host(`dash.${DOMAIN_PRIVATE}`)"
         - "traefik.http.routers.homepage.entrypoints=websecure"
         - "traefik.http.services.homepage.loadbalancer.server.port=3000"
       mode: replicated

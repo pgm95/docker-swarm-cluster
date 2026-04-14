@@ -2,11 +2,6 @@
 ## https://github.com/gethomepage/homepage/blob/dev/docs/configs/bookmarks.md
 
 - Bookmarks:
-    - Dawarich:
-        - icon: dawarich
-          abbr: DW
-          description: " "
-          href: https://maps.{{HOMEPAGE_VAR_PRIVATE}}
     - Comet:
         - icon: https://static.gl-inet.com/www/images/favicon.ico
           abbr: GL
