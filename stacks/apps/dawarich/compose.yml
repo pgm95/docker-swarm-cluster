@@ -1,0 +1,203 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+include:
+  - secrets.yml
+
+services:
+  app:
+    image: freikin/dawarich:latest
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    entrypoint: web-entrypoint.sh
+    command: ['bin/rails', 'server', '-p', '3000', '-b', '::']
+    environment:
+      # Core
+      - DISABLE_TELEMETRY=true
+      - RAILS_ENV=production
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE_DAWARICH}
+      - RAILS_LOG_TO_STDOUT=true
+      - SELF_HOSTED=true
+      - TIME_ZONE=${GLOBAL_TZ_LOCAL}
+      - APPLICATION_HOSTS=127.0.0.1,maps.${DOMAIN_PRIVATE}
+      - APPLICATION_PROTOCOL=http
+      # Geocoding
+      - PHOTON_API_HOST=photon.dawarich.app
+      - PHOTON_API_KEY=${PHOTON_API_KEY_DAWARICH}
+      - PHOTON_API_USE_HTTPS=true
+      # Database
+      - DATABASE_HOST=database
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=postgres
+      - DATABASE_PASSWORD=${DAWARICH_DB_PASSWORD}
+      - DATABASE_NAME=dawarich_development
+      # Redis
+      - REDIS_URL=redis://redis:6379
+      # App settings
+      - MIN_MINUTES_SPENT_IN_CITY=60
+      - STORE_GEODATA=true
+      - PROMETHEUS_EXPORTER_ENABLED=false
+      - ALLOW_EMAIL_PASSWORD_REGISTRATION=false
+      # OIDC
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID_DAWARICH}
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET_DAWARICH}
+      - OIDC_ISSUER=https://auth.${DOMAIN_PUBLIC}/application/o/dawarich/
+      - OIDC_REDIRECT_URI=https://maps.${DOMAIN_PRIVATE}/users/auth/openid_connect/callback
+      - OIDC_PROVIDER_NAME=Authentik
+      - OIDC_AUTO_REGISTER=true
+    networks:
+      - default
+      - infra_gw-internal
+    volumes:
+      - app-public:/var/app/public
+      - app-watched:/var/app/tmp/imports/watched
+      - app-storage:/var/app/storage
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO - http://127.0.0.1:3000/api/v1/health | grep -q '\"status\"\\s*:\\s*\"ok\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      <<: [*place-vm, *deploy]
+      update_config:
+        order: start-first
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.internal=true"
+        - "traefik.http.routers.dawarich.rule=Host(`maps.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.dawarich.entrypoints=websecure"
+        - "traefik.http.services.dawarich.loadbalancer.server.port=3000"
+        - "homepage.group=Applications"
+        - "homepage.name=Dawarich"
+        - "homepage.icon=dawarich"
+        - "homepage.href=https://maps.${DOMAIN_PRIVATE}"
+        - "homepage.description=Location History"
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-huge
+
+  sidekiq:
+    image: freikin/dawarich:latest
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    entrypoint: sidekiq-entrypoint.sh
+    command: ['sidekiq']
+    environment:
+      # Core
+      - DISABLE_TELEMETRY=true
+      - RAILS_ENV=production
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE_DAWARICH}
+      - RAILS_LOG_TO_STDOUT=true
+      - SELF_HOSTED=true
+      - APPLICATION_HOSTS=127.0.0.1,maps.${DOMAIN_PRIVATE}
+      - APPLICATION_PROTOCOL=http
+      # Database
+      - DATABASE_HOST=database
+      - DATABASE_PORT=5432
+      - DATABASE_USERNAME=postgres
+      - DATABASE_PASSWORD=${DAWARICH_DB_PASSWORD}
+      - DATABASE_NAME=dawarich_development
+      # Redis
+      - REDIS_URL=redis://redis:6379
+      # Background processing
+      - BACKGROUND_PROCESSING_CONCURRENCY=12
+      - STORE_GEODATA=true
+      - PROMETHEUS_EXPORTER_ENABLED=false
+      - PROMETHEUS_EXPORTER_HOST=app
+      - PROMETHEUS_EXPORTER_PORT=9394
+      # Geocoding
+      - PHOTON_API_HOST=photon.dawarich.app
+      - PHOTON_API_KEY=${PHOTON_API_KEY_DAWARICH}
+      - PHOTON_API_USE_HTTPS=true
+    volumes:
+      - app-public:/var/app/public
+      - app-watched:/var/app/tmp/imports/watched
+      - app-storage:/var/app/storage
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f sidekiq"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      <<: [*place-vm, *deploy]
+      update_config:
+        order: stop-first
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-huge
+
+  database:
+    image: postgis/postgis:17-3.5-alpine
+    logging:
+      <<: *logging
+    stop_grace_period: 60s
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD_FILE=/run/secrets/dawarich_db_password
+      - POSTGRES_DB=dawarich_development
+    secrets:
+      - dawarich_db_password
+    volumes:
+      - database-data:/var/lib/postgresql/data
+      - shared:/var/shared
+      - type: tmpfs
+        target: /dev/shm
+        tmpfs:
+          size: 1073741728
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d dawarich_development"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      <<: [*place-vm, *deploy]
+      update_config:
+        order: stop-first
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-huge
+
+  redis:
+    image: redis:7.4-alpine
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    command: >
+      redis-server
+      --save 900 1
+      --save 300 10
+      --appendonly no
+    volumes:
+      - shared:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      <<: [*place-vm, *deploy]
+      update_config:
+        order: stop-first
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-small
+
+volumes:
+  database-data:
+  shared:
+  app-public:
+  app-watched:
+  app-storage:
+
+networks:
+  infra_gw-internal:
+    external: true
