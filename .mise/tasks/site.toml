@@ -1,11 +1,5 @@
 #:schema https://mise.jdx.dev/schema/mise-task.json
 
-["site:deploy"]
-description = "Deploy all stacks"
-depends = ["site:deploy-infra"]
-run = [{ task = "site:deploy-apps" }]
-depends_post = ["status"]
-
 ["site:deploy-infra"]
 alias = "infra"
 description = "Deploy infrastructure stacks in order"
