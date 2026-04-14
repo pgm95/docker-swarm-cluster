@@ -74,6 +74,14 @@ fails to initialize (missing database, broken config), Traefik cannot create ANY
 that entrypoint. Symptom: 404 for all routes, not an error page. Check `docker service logs`
 for the actual error.
 
+## Catch-All Router
+
+Traefik v3 entrypoint-level default middlewares only run on requests that match a router.
+Unmatched requests (direct IP scans, wrong Host header) bypass the middleware chain entirely.
+A low-priority catch-all router in `base.yml` (`PathPrefix(/)`, `priority: 1`, empty backend)
+ensures geoblock and CrowdSec run on all traffic. Allowed unmatched requests get 503;
+blocked requests get 403. This is the [officially recommended pattern](https://doc.traefik.io/traefik/getting-started/faq/).
+
 ## Geoblock Bootstrap
 
 The IP2Location database is required for the geoblock middleware. If missing, the middleware fails and silently breaks all routes (404). The entrypoint wrapper (`config/traefik/entrypoint.sh`) auto-downloads and extracts the DB on first boot using `GEOBLOCK_IP2LOCATION_TOKEN` (env var, not Docker secret). The plugin's `databaseAutoUpdate` handles subsequent refreshes.
