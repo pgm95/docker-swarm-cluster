@@ -86,12 +86,64 @@ Two sed transforms required because `docker stack deploy` rejects:
 
 The `<stack>` argument accepts a bare stack name (`metrics`), a directory name (`40_metrics`), or a full path (`stacks/infra/40_metrics`). `resolve_stack_path()` searches `stacks/infra/` then `stacks/apps/` for a match.
 
-1. **Prepare** (`swarm.deploy`) — resolves stack name, detects versioning, decrypts secrets, validates, creates versioned Docker secrets/configs, builds+pushes custom images. Outputs shell exports for the bash wrapper.
+1. **Prepare** (`swarm.deploy`) — resolves stack name, detects versioning, decrypts stack secrets, validates, creates versioned Docker secrets/configs, builds+pushes custom images. Outputs shell exports for the bash wrapper.
 2. **Compose preprocessing** (`swarm._compose`) — anchor concatenation + `docker compose config` + sed transforms
 3. **Stack deploy** — `docker stack deploy --detach --with-registry-auth -c -`. With `--update`, adds `--resolve-image always` to force Swarm to re-pull mutable tags (`latest`, `release`, etc.)
 4. **Convergence wait** (`swarm.convergence`) — polls until replicas running (default 180s, configurable via `CONVERGE_TIMEOUT`)
 
 The prepare step runs as a Python subprocess. Its stdout contains `export KEY=VALUE` statements that the bash wrapper `eval`s, making decrypted secrets and computed values (STACK_NAME, DEPLOY_VERSION, OCI_TAG_*) available for compose interpolation and the deploy command.
+
+### Secrets Pipeline
+
+Secrets reach containers in two modes: **versioned Swarm secrets** (at `/run/secrets/`) or **env var injection** (compose interpolation). The mode is determined by whether `secrets.yml` uses `${DEPLOY_VERSION}`.
+
+#### Env var injection (no `${DEPLOY_VERSION}`)
+
+Mise decrypts all SOPS files into env vars before any task runs. Compose `${VAR}` references resolve against this environment. No Docker secrets are created.
+
+#### Versioned Swarm secrets (`${DEPLOY_VERSION}` in `secrets.yml`)
+
+The deploy task creates immutable Docker secrets named `<key>_<deploy_version>`. Values are resolved from two sources in priority order:
+
+1. **`secrets.env`** (stack-local) -- SOPS-decrypted at deploy time. Use for secrets scoped to a single stack.
+2. **Environment variables** (global) -- already loaded by mise from `shared.yaml` + `{env}.yaml`. Use for secrets shared across stacks or that differ per environment.
+
+For each entry in `secrets.yml` with `${DEPLOY_VERSION}`, the pipeline extracts the base name (e.g. `global_cf_token` from `name: global_cf_token_${DEPLOY_VERSION}`), looks for a matching key in `secrets.env` first, then falls back to `os.environ`. Stack-local secrets always take precedence over global env vars.
+
+#### Example: global secret as versioned Docker secret
+
+Add the secret to a SOPS secrets file loaded by mise (shared or per-env):
+
+```yaml
+# .secrets/prod.yaml
+GLOBAL_CF_ACME_API_TOKEN_PRIVATE: <token>
+```
+
+Reference it in the stack's `secrets.yml` with the lowercased name:
+
+```yaml
+# secrets.yml
+secrets:
+  cf_token:
+    name: global_cf_acme_api_token_private_${DEPLOY_VERSION}
+    external: true
+```
+
+Mount it in compose:
+
+```yaml
+# compose.yml
+environment:
+  - CF_TOKEN_FILE=/run/secrets/cf_token
+secrets:
+  - cf_token
+```
+
+The deploy pipeline finds `GLOBAL_CF_ACME_API_TOKEN_PRIVATE` in the environment, creates `global_cf_acme_api_token_private_<version>` as a Docker secret, and Swarm mounts it at `/run/secrets/cf_token`.
+
+#### Validation
+
+`validate_required_secrets()` checks that all names referenced in `secrets.yml` exist as either a key in `secrets.env` or an env var (uppercased). Missing secrets fail the deploy before any Docker operations.
 
 ### Custom Image Builds
 
@@ -110,7 +162,7 @@ Infra stacks deploy in `NN_` folder-prefix order (auto-discovered by `find_stack
 
 ### Init Sidecars
 
-Stacks needing external resources use `init-` prefixed sidecar services. These run idempotent setup (DB roles, LDAP users) and exit cleanly. The `*deploy-init` anchor (`condition: on-failure`, `failure_action: continue`, `monitor: 0s`) lets Swarm treat exit 0 as "done" without restart loops or false rollbacks. Provisioner credentials come from `GLOBAL_SECRETS`.
+Stacks needing external resources use `init-` prefixed sidecar services. These run idempotent setup (DB roles, LDAP users) and exit cleanly. The `*deploy-init` anchor (`condition: on-failure`, `failure_action: continue`, `monitor: 0s`) lets Swarm treat exit 0 as "done" without restart loops or false rollbacks. Provisioner credentials come from shared SOPS secrets (env var injection).
 
 ## Python Library
 
@@ -180,10 +232,11 @@ Pre-commit hooks run on every commit (`.config/pre-commit.yaml`):
 
 1. Create `stacks/<namespace>/<stack-name>/compose.yml`
 2. Follow compose conventions (see existing stacks as reference)
-3. Add `secrets.env` if needed → `mise run sops:encrypt`
-4. Add `secrets.yml` / `configs.yml` if using versioned secrets/configs
-5. For infra: prefix folder with `NN_` for deploy ordering
-6. For Postgres consumers: add `init-db` sidecar (see `stacks/infra/60_accounts/compose.yml`)
-7. Validate: `mise run validate`
+3. Add stack-specific secrets to `secrets.env` → `mise run sops:encrypt`
+4. For secrets already in SOPS globals (shared or per-env), reference them directly in `secrets.yml` using the lowercased env var name
+5. Add `secrets.yml` / `configs.yml` if using versioned secrets/configs
+6. For infra: prefix folder with `NN_` for deploy ordering
+7. For Postgres consumers: add `init-db` sidecar (see `stacks/infra/60_accounts/compose.yml`)
+8. Validate: `mise run validate`
 
 App stacks are auto-discovered. A `.nodeploy` file opts out of bulk `site:deploy-apps`.

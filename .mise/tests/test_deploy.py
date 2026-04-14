@@ -165,7 +165,7 @@ class TestPrepare:
         monkeypatch.setattr("swarm.deploy.resolve_stack_path", lambda p: stack)
         monkeypatch.setattr("swarm.deploy.sops_decrypt", lambda f: [("S", "val")])
         monkeypatch.setattr("swarm.deploy.validate_required_secrets", lambda p: None)
-        monkeypatch.setattr("swarm.deploy.create_versioned_secrets", lambda p, v: {"created": 0, "skipped": 0, "filtered": 0})
+        monkeypatch.setattr("swarm.deploy.create_versioned_secrets", lambda p, v: {"created": 0, "skipped": 0})
         monkeypatch.setattr("swarm.deploy.validate_config_files", lambda p: None)
         prepare(str(stack))
         stdout = capsys.readouterr().out

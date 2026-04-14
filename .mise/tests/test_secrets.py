@@ -66,7 +66,7 @@ class TestValidateRequiredSecrets:
 
 
 class TestCreateVersionedSecrets:
-    def test_creates_secrets(self, tmp_stack, monkeypatch):
+    def test_creates_from_secrets_env(self, tmp_stack, monkeypatch):
         stack = tmp_stack(
             secrets_yml="db_pass:\n    name: db_pass_${DEPLOY_VERSION}\n    external: true\n",
             secrets_env="placeholder",
@@ -79,10 +79,37 @@ class TestCreateVersionedSecrets:
         monkeypatch.setattr("swarm.secrets.secret_list", lambda: [])
         monkeypatch.setattr("swarm.secrets.secret_create", lambda name, val: created_secrets.append((name, val)))
 
-        result = create_versioned_secrets(stack, "abc_123", env={"GLOBAL_SECRETS": ""})
+        result = create_versioned_secrets(stack, "abc_123", env={})
         assert result["created"] == 1
-        assert result["filtered"] == 1
         assert created_secrets[0] == ("db_pass_abc_123", "secret123")
+
+    def test_creates_from_env_var(self, tmp_stack, monkeypatch):
+        """Global secrets loaded by mise are picked up from the environment."""
+        stack = tmp_stack(
+            secrets_yml="global_cf_token:\n    name: global_cf_token_${DEPLOY_VERSION}\n    external: true\n",
+        )
+        monkeypatch.setattr("swarm.secrets.secret_list", lambda: [])
+        created_secrets = []
+        monkeypatch.setattr("swarm.secrets.secret_create", lambda name, val: created_secrets.append((name, val)))
+
+        result = create_versioned_secrets(stack, "v1", env={"GLOBAL_CF_TOKEN": "cf-key-123"})
+        assert result["created"] == 1
+        assert created_secrets[0] == ("global_cf_token_v1", "cf-key-123")
+
+    def test_secrets_env_takes_precedence(self, tmp_stack, monkeypatch):
+        """Stack-local secrets.env wins over env vars for the same name."""
+        stack = tmp_stack(
+            secrets_yml="db_pass:\n    name: db_pass_${DEPLOY_VERSION}\n    external: true\n",
+            secrets_env="placeholder",
+        )
+        monkeypatch.setattr("swarm.secrets.sops_decrypt", lambda f: [("DB_PASS", "from-sops")])
+        monkeypatch.setattr("swarm.secrets.secret_list", lambda: [])
+        created_secrets = []
+        monkeypatch.setattr("swarm.secrets.secret_create", lambda name, val: created_secrets.append((name, val)))
+
+        result = create_versioned_secrets(stack, "v1", env={"DB_PASS": "from-env"})
+        assert result["created"] == 1
+        assert created_secrets[0] == ("db_pass_v1", "from-sops")
 
     def test_skips_existing(self, tmp_stack, monkeypatch):
         stack = tmp_stack(
@@ -93,11 +120,11 @@ class TestCreateVersionedSecrets:
         monkeypatch.setattr("swarm.secrets.secret_list", lambda: ["db_pass_abc_123"])
         monkeypatch.setattr("swarm.secrets.secret_create", lambda name, val: None)
 
-        result = create_versioned_secrets(stack, "abc_123", env={"GLOBAL_SECRETS": ""})
+        result = create_versioned_secrets(stack, "abc_123", env={})
         assert result["skipped"] == 1
         assert result["created"] == 0
 
-    def test_filters_unneeded(self, tmp_stack, monkeypatch):
+    def test_ignores_unneeded_in_secrets_env(self, tmp_stack, monkeypatch):
         stack = tmp_stack(
             secrets_yml="db_pass:\n    name: db_pass_${DEPLOY_VERSION}\n    external: true\n",
             secrets_env="placeholder",
@@ -106,14 +133,13 @@ class TestCreateVersionedSecrets:
         monkeypatch.setattr("swarm.secrets.secret_list", lambda: [])
         monkeypatch.setattr("swarm.secrets.secret_create", lambda name, val: None)
 
-        result = create_versioned_secrets(stack, "abc_123", env={"GLOBAL_SECRETS": ""})
-        assert result["filtered"] == 1
+        result = create_versioned_secrets(stack, "abc_123", env={})
         assert result["created"] == 0
 
     def test_no_secrets_yml(self, tmp_stack, monkeypatch):
         stack = tmp_stack()
-        result = create_versioned_secrets(stack, "abc_123", env={"GLOBAL_SECRETS": ""})
-        assert result == {"created": 0, "skipped": 0, "filtered": 0}
+        result = create_versioned_secrets(stack, "abc_123", env={})
+        assert result == {"created": 0, "skipped": 0}
 
     def test_b64_handled(self, tmp_stack, monkeypatch):
         """_B64 suffix should already be resolved by _sops.sops_decrypt."""
@@ -127,7 +153,7 @@ class TestCreateVersionedSecrets:
         monkeypatch.setattr("swarm.secrets.secret_list", lambda: [])
         monkeypatch.setattr("swarm.secrets.secret_create", lambda name, val: created.append((name, val)))
 
-        create_versioned_secrets(stack, "v1", env={"GLOBAL_SECRETS": ""})
+        create_versioned_secrets(stack, "v1", env={})
         assert created[0] == ("oidc_key_v1", "decoded-pem")
 
 

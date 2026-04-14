@@ -48,7 +48,7 @@ def validate_required_secrets(stack_path: Path, env: dict | None = None) -> None
     if missing:
         raise SecretError(
             f"Missing required secrets: {', '.join(missing)}\n"
-            f"Add them to {stack_path}/secrets.env or GLOBAL_SECRETS"
+            f"Add them to {stack_path}/secrets.env or a SOPS secrets file loaded by mise"
         )
 
 
@@ -59,8 +59,10 @@ def create_versioned_secrets(
 ) -> dict:
     """Create versioned Docker secrets for a stack deployment.
 
-    Reads needed secret names from secrets.yml, decrypts secrets.env and
-    GLOBAL_SECRETS, creates Docker secrets for each match.
+    Reads needed secret names from secrets.yml, then resolves values from
+    two sources in order:
+      1. secrets.env (stack-local SOPS file, decrypted here)
+      2. Environment variables (global secrets already loaded by mise)
 
     Args:
         stack_path: Path to the stack directory.
@@ -68,27 +70,27 @@ def create_versioned_secrets(
         env: Environment dict (defaults to os.environ).
 
     Returns:
-        {"created": int, "skipped": int, "filtered": int}
+        {"created": int, "skipped": int}
     """
     needed = parse_versioned_names(stack_path / "secrets.yml")
     if not needed:
-        return {"created": 0, "skipped": 0, "filtered": 0}
+        return {"created": 0, "skipped": 0}
 
     env = env if env is not None else os.environ
-    global_secrets = env.get("GLOBAL_SECRETS", "")
 
     info(f"Creating versioned secrets ({len(needed)} needed)...")
     existing = set(secret_list())
-    created = skipped = filtered = 0
+    created = skipped = 0
+    resolved: set[str] = set()
 
-    for secret_file in [str(stack_path / "secrets.env"), global_secrets]:
-        if not secret_file or not Path(secret_file).is_file():
-            continue
-        for key, value in sops_decrypt(secret_file):
+    # 1. Stack-local secrets from SOPS-encrypted secrets.env
+    secrets_env = str(stack_path / "secrets.env")
+    if Path(secrets_env).is_file():
+        for key, value in sops_decrypt(secrets_env):
             lower_key = key.lower()
             if lower_key not in needed:
-                filtered += 1
                 continue
+            resolved.add(lower_key)
             secret_name = f"{lower_key}_{deploy_version}"
             if secret_name in existing:
                 skipped += 1
@@ -97,8 +99,22 @@ def create_versioned_secrets(
                 info(f"    + {secret_name}")
                 created += 1
 
-    debug(f"    Created: {created}, Skipped: {skipped}, Filtered: {filtered}")
-    return {"created": created, "skipped": skipped, "filtered": filtered}
+    # 2. Remaining needed secrets from environment (global secrets loaded by mise)
+    for name in needed - resolved:
+        value = env.get(name.upper())
+        if value is None:
+            continue
+        resolved.add(name)
+        secret_name = f"{name}_{deploy_version}"
+        if secret_name in existing:
+            skipped += 1
+        else:
+            secret_create(secret_name, value)
+            info(f"    + {secret_name}")
+            created += 1
+
+    debug(f"    Created: {created}, Skipped: {skipped}")
+    return {"created": created, "skipped": skipped}
 
 
 def validate_config_files(stack_path: Path) -> None:
