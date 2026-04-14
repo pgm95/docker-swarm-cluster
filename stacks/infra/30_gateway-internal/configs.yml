@@ -5,6 +5,3 @@ configs:
   traefik_dynamic_hass-private:
     name: traefik_internal_dynamic_hass-private_${DEPLOY_VERSION}
     file: ./config/traefik/dynamic/hass-private.yml
-  traefik_dynamic_jellyfin:
-    name: traefik_internal_dynamic_jellyfin_${DEPLOY_VERSION}
-    file: ./config/traefik/dynamic/jellyfin.yml

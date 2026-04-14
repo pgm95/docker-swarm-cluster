@@ -98,8 +98,6 @@ services:
         target: /etc/traefik/dynamic/geoblock.yml
       - source: traefik_dynamic_hass-public
         target: /etc/traefik/dynamic/hass-public.yml
-      - source: traefik_dynamic_jellyfin
-        target: /etc/traefik/dynamic/jellyfin.yml
     networks:
       - default
       - infra_socket

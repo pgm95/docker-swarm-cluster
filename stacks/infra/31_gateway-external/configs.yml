@@ -17,9 +17,6 @@ configs:
   traefik_dynamic_hass-public:
     name: traefik_external_dynamic_hass-public_${DEPLOY_VERSION}
     file: ./config/traefik/dynamic/hass-public.yml
-  traefik_dynamic_jellyfin:
-    name: traefik_external_dynamic_jellyfin_${DEPLOY_VERSION}
-    file: ./config/traefik/dynamic/jellyfin.yml
   crowdsec_entrypoint:
     name: crowdsec_entrypoint_${DEPLOY_VERSION}
     file: ./config/crowdsec/entrypoint.sh

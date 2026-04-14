@@ -6,33 +6,25 @@ Dual-domain routing via `deploy.labels` (two routers: `jellyfin-external` and `j
 
 ## GPU Passthrough
 
-Docker Swarm does not support `devices:` in service specs (SwarmKit issue #1244, open since 2016, unresolved). Without `--device`, containers lack the cgroup device whitelist needed to access `/dev/dri/*` character devices (major 226). Bind-mounting `/dev/dri:/dev/dri` creates the mount point but the kernel's cgroup device controller blocks access — the device files appear as "No such file or directory" inside the container.
+Docker Swarm does not support `devices:` in service specs (SwarmKit issue #1244, open since 2016, unresolved). On VMs or bare metal, this is a real blocker -- Docker's `--device` flag both creates the device node and adds a cgroup allow rule, and Swarm's bind mount only does the first. The cgroup device controller blocks access even though the device files are visible.
 
-### What Doesn't Work
+On unprivileged LXC (Proxmox), this is a non-issue. Proxmox configures the cgroup device allowlist for the LXC container at creation time. Docker inherits the parent cgroup's permissions via the cgroup v2 hierarchy, so bind-mounting `/dev/dri:/dev/dri` is sufficient -- the eBPF device filter already permits major 226 (DRM) access.
+
+### What Doesn't Work (on LXC)
 
 | Approach | Why It Fails |
 |----------|-------------|
-| `devices:` in compose | Stripped by `docker stack deploy` — not supported in Swarm |
-| `device-cgroup-rules` in daemon.json | Not a valid daemon.json option — Docker rejects it and fails to start |
-| `--default-cgroup-rule` dockerd flag | Does not exist in Docker Engine |
-| CDI (Container Device Interface) | Works with `docker run` only — Swarm has no mechanism to pass CDI device requests |
+| `devices:` in compose | Stripped by `docker stack deploy` -- not supported in Swarm |
+| udev rules | Unprivileged LXC has no udev -- device nodes are managed by the Proxmox host |
 | `privileged: true` | Not supported in Swarm stack files |
-| AMD Container Runtime Toolkit | Targets Instinct datacenter GPUs with ROCm — incompatible with consumer RDNA APUs |
+| CDI (Container Device Interface) | Works with `docker run` only -- Swarm has no mechanism to pass CDI device requests |
+| AMD Container Runtime Toolkit | Targets Instinct datacenter GPUs with ROCm -- incompatible with consumer RDNA APUs |
 
-### Host Node Setup
+### Host Node Setup (Proxmox LXC)
 
-**1. udev rule** — persistent device permissions across reboots:
+**1. Proxmox device passthrough** -- DRI devices must be passed through to the LXC in the Proxmox container config with appropriate GID mapping so the container runtime user (1000:1000) has group-level read/write access.
 
-```
-/etc/udev/rules.d/99-dri.rules
-
-KERNEL=="card[0-9]*", SUBSYSTEM=="drm", MODE="0666"
-KERNEL=="renderD*", SUBSYSTEM=="drm", MODE="0666"
-```
-
-Apply without reboot: `udevadm trigger`
-
-**2. daemon.json** — GPU resource advertising for Swarm scheduler:
+**2. daemon.json** -- GPU resource advertising for Swarm scheduler:
 
 ```json
 {
@@ -40,21 +32,16 @@ Apply without reboot: `udevadm trigger`
 }
 ```
 
-No custom runtime needed. No Docker restart required for the udev change.
-
 ### How It Works
 
-The real blocker is the cgroup device controller, not the bind mount. Docker's `--device` flag does two things: creates the device node AND adds a cgroup allow rule. Swarm's bind mount only does the first. The udev rule sidesteps the second by making the devices world-accessible at the OS level, before Docker's cgroup layer gets involved.
+- Proxmox passes `/dev/dri/*` into the LXC with group ownership matching the container user (GID 1000)
+- Cgroup v2 device permissions are inherited from the LXC's parent cgroup -- Docker's eBPF filter permits DRM access
+- `/dev/dri:/dev/dri` bind mount in compose exposes device nodes inside the container
+- `node-generic-resources` advertises GPU availability to Swarm scheduler
+- `generic_resources` in compose requests GPU from scheduler, prevents oversubscription
+- `*place-gpu` constraint ensures service runs on the GPU node
 
-- udev rule: Makes `/dev/dri/*` world-accessible (`0666`), bypassing cgroup device restrictions
-- `/dev/dri:/dev/dri` bind mount in compose: Exposes device nodes inside the container
-- `node-generic-resources`: Advertises GPU availability to Swarm scheduler
-- `generic_resources` in compose: Requests GPU from scheduler, prevents oversubscription
-- Placement constraint `gpu == true`: Ensures service runs on GPU node
-
-### Security
-
-`MODE="0666"` grants all containers on the GPU node access to `/dev/dri`. Acceptable here because only jellyfin is constrained to the GPU node. If other services are added to that node, evaluate whether GPU access should be restricted.
+`/dev/kfd` (ROCm/HSA kernel interface) is not needed. Rusticl accesses the GPU through the DRM render node (`renderD128`) directly.
 
 ## Custom Image
 
@@ -77,7 +64,7 @@ After installing, the Dockerfile replaces Jellyfin's bundled `radeonsi_drv_video
 
 Mesa 25.2 removed the legacy Clover OpenCL backend. `mesa-opencl-icd` now contains only Rusticl (`libRusticlOpenCL.so`), providing OpenCL 3.0 with image support on radeonsi. Required for `tonemap_opencl` in jellyfin-ffmpeg.
 
-Rusticl requires `RUSTICL_ENABLE=radeonsi` in the container environment to advertise the GPU as an OpenCL device. Without it, no OpenCL platform is registered and ffmpeg's OpenCL init fails.
+`RUSTICL_ENABLE=radeonsi` is required in the container environment. Rusticl supports multiple Gallium drivers but activates none by default -- this env var is a comma-separated opt-in list of which drivers to expose as OpenCL devices. Without it, `clGetPlatformIDs` returns nothing and ffmpeg's `tonemap_opencl` filter fails to initialize.
 
 ## Hardware Acceleration
 
