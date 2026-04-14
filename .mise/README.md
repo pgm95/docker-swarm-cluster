@@ -18,7 +18,7 @@ Task orchestration, deployment pipeline, and development tooling for swarm-clust
   tests/                  # Pytest suite (mocked Docker/SSH, no live cluster needed)
 ```
 
-Mise tasks are thin TOML definitions that delegate to the `swarm` Python package via `python3 -m swarm.<module>`. The one exception is `swarm:deploy`, which uses a short bash wrapper to `eval` Python's export output and pipe compose config through `sed` into `docker stack deploy`.
+Mise tasks are thin TOML definitions that delegate to the `swarm` Python package via `python3 -m swarm.<module>`. The one exception is `swarm:deploy`, which uses a short bash wrapper to `eval` Python's export output and pipe compose config into `docker stack deploy`.
 
 The Python package centralizes all Docker CLI and SSH calls through `_docker.py` and `_ssh.py`, making the logic testable without a live cluster. Mise provides the environment (`PYTHONPATH`, SOPS keys, Docker host) and the task interface (`mise run swarm:deploy ...`).
 
@@ -67,16 +67,17 @@ Docker Swarm doesn't natively support `include:` or cross-file YAML anchors. `co
 stacks/_shared/anchors.yml + <stack>/compose.yml
     → concatenate into temp file
     → docker compose --project-directory <stack-dir> --project-name <name> config
-    → sed: strip 'name:', fix quoted ports
+    → fixup: strip 'name:', unquote stringified integers
     → docker stack deploy -c -
 ```
 
 `--project-name` uses the folder name with `NN_` prefix stripped, so default network names match the Swarm stack name.
 
-Two sed transforms required because `docker stack deploy` rejects:
+`docker compose config` stringifies certain integer fields that `docker stack deploy` requires as raw integers. `_fixup_config()` in `_compose.py` corrects this automatically before returning output. Currently fixes:
 
-- `name:` property at root level
-- Quoted port numbers (`published: "443"` → `published: 443`)
+- `name:` property at root level (rejected by stack deploy)
+- `published: "443"` → `published: 443` (port numbers)
+- `size: "10485760"` → `size: 10485760` (tmpfs size)
 
 **Docker Config note:** `docker compose config` resolves `file:` paths to absolute local paths but does NOT inline contents. `docker stack deploy` reads files from local disk at deploy time. Config file contents cannot be modified by sed/envsubst in the piped output — preprocessing must happen on source files before `docker compose config` runs.
 
@@ -87,7 +88,7 @@ Two sed transforms required because `docker stack deploy` rejects:
 The `<stack>` argument accepts a bare stack name (`metrics`), a directory name (`40_metrics`), or a full path (`stacks/infra/40_metrics`). `resolve_stack_path()` searches `stacks/infra/` then `stacks/apps/` for a match.
 
 1. **Prepare** (`swarm.deploy`) — resolves stack name, detects versioning, decrypts stack secrets, validates, creates versioned Docker secrets/configs, builds+pushes custom images. Outputs shell exports for the bash wrapper.
-2. **Compose preprocessing** (`swarm._compose`) — anchor concatenation + `docker compose config` + sed transforms
+2. **Compose preprocessing** (`swarm._compose`) — anchor concatenation + `docker compose config` + integer fixups
 3. **Stack deploy** — `docker stack deploy --detach --with-registry-auth -c -`. With `--update`, adds `--resolve-image always` to force Swarm to re-pull mutable tags (`latest`, `release`, etc.)
 4. **Convergence wait** (`swarm.convergence`) — polls until replicas running (default 180s, configurable via `CONVERGE_TIMEOUT`)
 
@@ -172,7 +173,7 @@ Task logic lives in the `swarm` Python package at `.mise/lib/swarm/`, invoked by
 
 | Module | Purpose |
 |--------|---------|
-| `_compose` | Compose config preprocessing (anchor concatenation + docker compose config) |
+| `_compose` | Compose config preprocessing (anchor concatenation + docker compose config + stack deploy fixups) |
 | `_docker` | Docker CLI subprocess wrappers — all docker calls go through here |
 | `_ssh` | SSH execution helpers for remote node commands |
 | `_output` | Logging and output formatting (data to stdout, diagnostics to stderr) |
@@ -226,7 +227,7 @@ Pre-commit hooks run on every commit (`.config/pre-commit.yaml`):
 | `compose-validate` | `compose.yml`, `anchors.yml` | Full Swarm compatibility via `swarm:validate` |
 | `gitleaks` | All files | Secret detection |
 
-`compose-validate` runs the full pipeline (anchors + compose config + sed + `docker stack config`) and checks bind mount paths on target nodes.
+`compose-validate` runs the full pipeline (anchors + compose config + fixups + `docker stack config`) and checks bind mount paths on target nodes.
 
 ## Adding a New Stack
 

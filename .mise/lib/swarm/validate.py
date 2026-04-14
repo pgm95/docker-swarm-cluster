@@ -18,22 +18,19 @@ from .nodes import resolve_service_nodes
 def validate_compose(stack_file: Path) -> tuple[bool, str]:
     """Run full Swarm validation pipeline for a single compose file.
 
-    compose_config -> sed transforms -> docker stack config
+    compose_config (includes fixups) -> docker stack config
 
     Returns:
         (success, error_output)
     """
     try:
-        raw = compose_config(str(stack_file))
+        config = compose_config(str(stack_file))
     except Exception as e:
         return False, str(e)
 
-    # Apply the same sed transforms as the deploy pipeline
-    transformed = _sed_transforms(raw)
-
     result = subprocess.run(
         ["docker", "stack", "config", "-c", "-"],
-        input=transformed,
+        input=config,
         capture_output=True,
         text=True,
     )
@@ -242,18 +239,6 @@ def validate(stack_file: str | None = None) -> int:
         print(f"{warnings} warning(s) — missing bind mount paths.")
 
     return 0
-
-
-def _sed_transforms(config: str) -> str:
-    """Apply the same transforms as the deploy pipeline's sed command."""
-    import re
-    lines = []
-    for line in config.splitlines():
-        if line.strip().startswith("name:") and not line.startswith(" "):
-            continue
-        line = re.sub(r'published: "(\d+)"', r"published: \1", line)
-        lines.append(line)
-    return "\n".join(lines)
 
 
 def _find_all_compose() -> list[Path]:

@@ -12,7 +12,7 @@ from ._output import debug, error, info, setup
 from ._sops import sops_decrypt
 
 # Pattern: "name: some_secret_name_${DEPLOY_VERSION}" or similar
-_VERSIONED_NAME_RE = re.compile(r"name:\s*([a-z_]+)_\$\{DEPLOY_VERSION\}")
+_VERSIONED_NAME_RE = re.compile(r"name:\s*([a-z0-9_]+)_\$\{DEPLOY_VERSION\}")
 
 
 def parse_versioned_names(secrets_yml: Path) -> set[str]:

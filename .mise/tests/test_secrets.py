@@ -38,6 +38,18 @@ class TestParseVersionedNames:
         yml.write_text("db_pass:\n    name: db_pass_${DEPLOY_VERSION}\n    external: true\n")
         assert parse_versioned_names(yml) == {"db_pass"}
 
+    def test_names_with_digits(self, tmp_path):
+        yml = tmp_path / "secrets.yml"
+        yml.write_text(
+            "fwd_recipient_1:\n"
+            "    name: fwd_recipient_1_${DEPLOY_VERSION}\n"
+            "    external: true\n"
+            "fwd_recipient_2:\n"
+            "    name: fwd_recipient_2_${DEPLOY_VERSION}\n"
+            "    external: true\n"
+        )
+        assert parse_versioned_names(yml) == {"fwd_recipient_1", "fwd_recipient_2"}
+
 
 class TestValidateRequiredSecrets:
     def test_all_present(self, tmp_stack):

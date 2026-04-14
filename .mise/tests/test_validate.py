@@ -4,8 +4,8 @@ import json
 
 
 from conftest import SAMPLE_NODES, make_completed
+from swarm._compose import _fixup_config
 from swarm.validate import (
-    _sed_transforms,
     check_paths_on_node,
     collect_bind_mounts,
     extract_bind_mounts,
@@ -72,27 +72,32 @@ class TestExtractBindMounts:
         assert extract_bind_mounts({}) == {}
 
 
-class TestSedTransforms:
+class TestFixupConfig:
     def test_removes_root_name(self):
         config = "name: mystack\nservices:\n  web:\n    image: nginx"
-        result = _sed_transforms(config)
+        result = _fixup_config(config)
         assert "name:" not in result.splitlines()[0]
         assert "services:" in result
 
     def test_unquotes_ports(self):
         config = '    published: "443"'
-        result = _sed_transforms(config)
-        assert 'published: 443' in result
+        result = _fixup_config(config)
+        assert "published: 443" in result
 
     def test_preserves_indented_name(self):
         config = "services:\n  web:\n    container_name: myapp"
-        result = _sed_transforms(config)
+        result = _fixup_config(config)
         assert "container_name: myapp" in result
 
     def test_multiple_ports(self):
         config = '    published: "80"\n    published: "443"'
-        result = _sed_transforms(config)
+        result = _fixup_config(config)
         assert '"' not in result
+
+    def test_unquotes_tmpfs_size(self):
+        config = '      tmpfs:\n        size: "10485760"'
+        result = _fixup_config(config)
+        assert "size: 10485760" in result
 
 
 class TestValidateCompose:
