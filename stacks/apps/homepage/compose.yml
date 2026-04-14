@@ -11,7 +11,7 @@ services:
       <<: *logging
     stop_grace_period: 30s
     environment:
-      - HOMEPAGE_ALLOWED_HOSTS=home.${DOMAIN_PRIVATE}
+      - HOMEPAGE_ALLOWED_HOSTS=homepage.${DOMAIN_PRIVATE}
       - LOG_TARGETS=stdout
       - HOMEPAGE_VAR_PRIVATE=${DOMAIN_PRIVATE}
       - HOMEPAGE_VAR_PUBLIC=${DOMAIN_PUBLIC}
@@ -59,7 +59,7 @@ services:
       labels:
         - "traefik.enable=true"
         - "traefik.scope.internal=true"
-        - "traefik.http.routers.homepage.rule=Host(`home.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.homepage.rule=Host(`homepage.${DOMAIN_PRIVATE}`)"
         - "traefik.http.routers.homepage.entrypoints=websecure"
         - "traefik.http.services.homepage.loadbalancer.server.port=3000"
       mode: replicated

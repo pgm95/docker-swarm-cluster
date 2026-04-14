@@ -77,6 +77,7 @@ services:
       - "--entryPoints.websecure.http.encodedCharacters.allowEncodedHash=false"
     environment:
       - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
+      - DOMAIN_TAILNET=${DOMAIN_TAILNET}
       - AUTHENTIK_URL=${AUTHENTIK_URL}
       - TRUSTED_IPS=10.0.0.0/8,127.0.0.0/16,172.16.0.0/12,100.64.0.0/10
       - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/cf_acme_api_token

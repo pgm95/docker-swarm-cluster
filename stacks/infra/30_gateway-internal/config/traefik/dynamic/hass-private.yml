@@ -1,10 +1,10 @@
 ---
-## yaml-language-server: $schema=https://json.schemastore.org/traefik-v3-file-provider.json
+# yaml-language-server: $schema=https://json.schemastore.org/traefik-v3-file-provider.json
 
 http:
   routers:
     hass:
-      rule: 'Host(`hass.{{ env "DOMAIN_PRIVATE" }}`)'
+      rule: 'Host(`home.{{ env "DOMAIN_PRIVATE" }}`)'
       entryPoints:
         - websecure
       service: hass

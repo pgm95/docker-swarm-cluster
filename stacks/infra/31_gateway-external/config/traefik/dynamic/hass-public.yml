@@ -12,4 +12,4 @@ http:
     hass:
       loadBalancer:
         servers:
-          - url: http://hass.home.arpa:8123
+          - url: 'http://hass.{{ env "DOMAIN_TAILNET" }}:8123'
