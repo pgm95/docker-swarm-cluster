@@ -12,7 +12,7 @@ services:
     stop_grace_period: 30s
     environment:
       - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
-      - FILEBROWSER_DATABASE=/quantum/data.db
+      - FILEBROWSER_DATABASE=/quantum/db/data.db
       - FILEBROWSER_CONFIG=/quantum/config.yaml
       - FILEBROWSER_ADMIN_USERNAME=${FILEBROWSER_ADMIN_USERNAME}
       - FILEBROWSER_ADMIN_PASSWORD=${FILEBROWSER_ADMIN_PASSWORD}
@@ -27,9 +27,8 @@ services:
     networks:
       - infra_gw-internal
     volumes:
-      - quantum-data:/quantum
+      - quantum-data:/quantum/db
       - cifs-personal:/mnt/personal
-      # - cifs-apple:/mnt/apple:ro
       - cifs-photos:/mnt/photos
       - cifs-media:/mnt/media
     healthcheck:
@@ -41,7 +40,7 @@ services:
     deploy:
       <<: [*place-vm, *deploy]
       update_config:
-        order: start-first
+        order: stop-first
       labels:
         - "traefik.enable=true"
         - "traefik.scope.internal=true"
@@ -56,7 +55,7 @@ services:
       mode: replicated
       replicas: 1
       resources:
-        <<: *resources-medium
+        <<: *resources-large
 
 volumes:
   quantum-data:
