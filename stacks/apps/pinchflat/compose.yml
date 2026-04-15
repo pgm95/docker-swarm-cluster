@@ -12,6 +12,9 @@ services:
     stop_grace_period: 30s
     environment:
       - PINCHFLAT_OWNER=${GLOBAL_NONROOT_DOCKER}
+      - YT_DLP_WORKER_CONCURRENCY=2
+      - TZ=${GLOBAL_TZ_LOCAL}
+      - JOURNAL_MODE=wal
       - LOG_LEVEL=info
     configs:
       - source: pinchflat_init
@@ -20,22 +23,22 @@ services:
       - infra_gw-internal
     volumes:
       - pinchflat-data:/config
-      - cifs-media:/downloads
+      - cifs-youtube:/downloads
     deploy:
       <<: [*place-vm, *deploy]
       update_config:
-        order: start-first
+        order: stop-first
       labels:
         - "traefik.enable=true"
         - "traefik.scope.internal=true"
-        - "traefik.http.routers.pinchflat.rule=Host(`youtube.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.pinchflat.rule=Host(`pinchflat.${DOMAIN_PRIVATE}`)"
         - "traefik.http.routers.pinchflat.entrypoints=websecure"
         - "traefik.http.services.pinchflat.loadbalancer.server.port=8945"
-        - "homepage.group=Media"
+        - "homepage.group=Applications"
         - "homepage.name=Pinchflat"
         - "homepage.icon=pinchflat"
-        - "homepage.href=https://youtube.${DOMAIN_PRIVATE}"
-        - "homepage.description=YouTube Downloader"
+        - "homepage.href=https://pinchflat.${DOMAIN_PRIVATE}"
+        - "homepage.description=YouTube Media Manager"
       mode: replicated
       replicas: 1
       resources:
@@ -43,11 +46,11 @@ services:
 
 volumes:
   pinchflat-data:
-  cifs-media:
+  cifs-youtube:
     driver: local
     driver_opts:
       type: cifs
-      device: //${GLOBAL_CIFS_HOST}/media
+      device: //${GLOBAL_CIFS_HOST}/media/youtube
       o: "username=${GLOBAL_CIFS_USERNAME},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
 
 networks:
