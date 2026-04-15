@@ -191,6 +191,17 @@ services:
       update_config:
         failure_action: continue
         order: stop-first
+      labels:
+        - "homepage.name=Crowdsec"
+        - "homepage.icon=crowdsec"
+        - "homepage.group=Infrastructure"
+        - "homepage.description=Cyber threat intelligence"
+        - "homepage.href=https://app.crowdsec.net/security-engines"
+        - "homepage.widget.type=crowdsec"
+        - "homepage.widget.username={{HOMEPAGE_VAR_CROWDSEC_USER}}"
+        - "homepage.widget.password={{HOMEPAGE_VAR_CROWDSEC_PASS}}"
+        - "homepage.widget.url=http://crowdsec:8085"
+        - 'homepage.widget.fields=["alerts", "bans"]'
       mode: replicated
       replicas: 1
       resources:

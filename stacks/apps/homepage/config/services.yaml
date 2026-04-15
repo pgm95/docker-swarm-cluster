@@ -1,5 +1,5 @@
 ---
-- Infrastructure:
+- External:
     - Home Assistant:
         href: https://home.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}
         icon: home-assistant.svg

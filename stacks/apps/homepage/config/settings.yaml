@@ -10,7 +10,16 @@ hideVersion: true
 color: neutral
 showStats: false
 fullWidth: true
-statusStyle: "dot"
+# statusStyle: "dot"
+disableCollapse: true
+disableIndexing: true
+disableUpdateCheck: true
+
+quicklaunch:
+  searchDescriptions: true
+  hideInternetSearch: true
+  hideVisitURL: false
+  mobileButtonPosition: null
 
 layout:
   Bookmarks:
@@ -19,15 +28,19 @@ layout:
     columns: 4
     target: _blank
     iconsOnly: false
+  External:
+    header: false
+    style: row
+    columns: 4
   Infrastructure:
     header: false
     style: row
-    columns: 5
+    columns: 4
   Applications:
     header: false
     style: row
-    columns: 5
+    columns: 4
   Media:
     header: false
     style: row
-    columns: 5
+    columns: 4

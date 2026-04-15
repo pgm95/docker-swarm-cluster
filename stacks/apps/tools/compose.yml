@@ -9,7 +9,7 @@ services:
     networks:
       - infra_gw-internal
     deploy:
-      <<: [*place-onprem, *deploy]
+      <<: [*place-vm, *deploy]
       update_config:
         order: start-first
       labels:
@@ -36,7 +36,7 @@ services:
     networks:
       - infra_gw-internal
     deploy:
-      <<: [*place-onprem, *deploy]
+      <<: [*place-vm, *deploy]
       update_config:
         order: start-first
       labels:

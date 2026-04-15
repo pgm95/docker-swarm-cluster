@@ -11,7 +11,7 @@
       - /
 
 - search:
-    provider: [google]
+    provider: []
     showSearchSuggestions: false
 
 - datetime:

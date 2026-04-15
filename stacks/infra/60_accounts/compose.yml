@@ -71,6 +71,16 @@ services:
         # - "traefik.http.routers.authentik-webfinger.middlewares=webfinger-redirect"
         # - "traefik.http.middlewares.webfinger-redirect.redirectregex.regex=^https://[^/]+(/.+)"
         # - "traefik.http.middlewares.webfinger-redirect.redirectregex.replacement=https://auth.${DOMAIN_PUBLIC}$${1}"
+        - "homepage.name=Authentik"
+        - "homepage.icon=authentik"
+        - "homepage.group=Infrastructure"
+        - "homepage.description=Identity Provider"
+        - "homepage.href=https://auth.${DOMAIN_PUBLIC}"
+        - "homepage.widget.type=authentik"
+        - "homepage.widget.version=2"
+        - "homepage.widget.key={{HOMEPAGE_VAR_AUTHENTIK_KEY}}"
+        - "homepage.widget.url=https://auth.${DOMAIN_PUBLIC}"
+        - 'homepage.widget.fields=["users", "loginsLast24H", "failedLoginsLast24H"]'
 
   authentik-worker:
     image: ghcr.io/goauthentik/server:2026.2.1
