@@ -111,7 +111,7 @@ services:
       # Env vars consumed by blueprints via !Env
       - GLOBAL_USERNAME=${GLOBAL_USERNAME}
       - GLOBAL_LDAP_BASE_DN=${GLOBAL_LDAP_BASE_DN}
-      - GLOBAL_LDAP_ADMIN_GROUP=${GLOBAL_LDAP_ADMIN_GROUP}
+      - GLOBAL_ADMIN_GROUP=${GLOBAL_ADMIN_GROUP}
       - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
       - DOMAIN_PRIVATE=${DOMAIN_PRIVATE}
       # Forces container restart on every deploy, triggering fresh blueprint discovery

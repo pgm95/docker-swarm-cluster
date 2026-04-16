@@ -10,7 +10,7 @@ entries:
     id: admin-group
     state: created
     identifiers:
-      name: !Env GLOBAL_LDAP_ADMIN_GROUP
+      name: !Env GLOBAL_ADMIN_GROUP
     attrs:
       is_superuser: false
   - model: authentik_core.user

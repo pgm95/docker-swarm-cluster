@@ -98,7 +98,7 @@ services:
     environment:
       DOMAIN_PRIVATE: ${DOMAIN_PRIVATE}
       OIDC_URL: ${GLOBAL_OIDC_URL}
-      GLOBAL_LDAP_ADMIN_GROUP: ${GLOBAL_LDAP_ADMIN_GROUP}
+      GLOBAL_ADMIN_GROUP: ${GLOBAL_ADMIN_GROUP}
     secrets:
       - grafana_oidc_client
       - grafana_oidc_secret
