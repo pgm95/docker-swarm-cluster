@@ -22,9 +22,6 @@ Only the final `docker stack deploy` command executes over SSH.
   | `*.DOMAIN_PUBLIC` | Cloudflare | A → VPS public IP |
   | `*.DOMAIN_PRIVATE` | Local DNS | A → VM LAN IP (no public records) |
 
-  All swarm nodes must resolve `DOMAIN_PRIVATE` (Tailscale DNS or split DNS for cloud nodes)
-  to reach the private registry.
-
 ### Setup
 
 1. **Clone and bootstrap:**
@@ -48,11 +45,10 @@ Only the final `docker stack deploy` command executes over SSH.
 4. **Deploy:**
 
    ```bash
-   mise run site:deploy      # Deploy everything (infra then apps)
+   mise run site:deploy-infra   # Deploy infrastructure stacks in order
+   mise run site:registry-auth  # Authenticate nodes for custom images
+   mise run site:deploy-apps    # Deploy all application stacks
    ```
-
-   After the registry stack deploys, run `mise run site:registry-auth` to authenticate
-   all nodes before deploying stacks that use custom images.
 
    First deploy may require `docker service update --force <service>` for services that start
    before their dependencies converge.
@@ -90,13 +86,12 @@ Six overlay networks partition traffic by function:
 
 Networks are discovered dynamically from compose files and pre-created before deployment.
 This breaks circular dependencies between stacks that need each other's networks.
-Overlay MTU is set at creation time via `SWARM_OVERLAY_MTU` (default 1230, derived from
-Tailscale MTU 1280 minus 50 bytes VXLAN overhead). Docker's `daemon.json` `"mtu"` only
-affects the default bridge, not overlays -- the `--opt com.docker.network.driver.mtu`
-flag at network creation is required.
-Tailscale provides the encryption layer for the overlays. Docker's IPsec (`--opt encrypted=true`) fails over WireGuard.
+Overlay MTU is set at creation time via [`SWARM_OVERLAY_MTU`](.mise/tasks/swarm.toml#L54).
+Docker subtracts 50 bytes for VXLAN overhead from the configured value, yielding 1230 on the
+VXLAN interface, which produces 1280-byte UDP packets on the wire (exact Tailscale MTU
+fit). Docker's `daemon.json` `"mtu"` only affects the default bridge, not overlays.
 
-#### Dual Gateways
+### Dual Ingress Gateways
 
 Two separate Traefik instances serve different access patterns:
 
@@ -106,15 +101,10 @@ Two separate Traefik instances serve different access patterns:
   Tailscale clients exclusively.
 
 Both use host-mode ports and a unified `websecure` entrypoint on `:443`.
-  The external gateway binds only `:443` (ACME uses DNS-01, no HTTP entrypoint needed).
-  The internal gateway binds `:80` (redirect to HTTPS) and `:443`.
-Routing correctness is via Host rules and DNS, not entrypoint names. Each gateway's Swarm
-provider only discovers services that opt in via scope labels
-(`traefik.scope.internal=true` / `traefik.scope.external=true`).
-
-Both obtain wildcard certs via Let's Encrypt DNS-01 challenge (Cloudflare). Each maintains
-its own cert storage and resolver. The internal gateway obtains certs without exposing
-ports to the internet.
+Services opt in with scope labels (`traefik.scope.internal=true` / `traefik.scope.external=true`).
+Both gateways discover backend services via the socket-proxy on `infra_socket`.
+Both obtain wildcard certs via Let's Encrypt DNS-01 challenge.
+Each maintains its own cert storage and resolver.
 
 See [gateway-external README](stacks/infra/31_gateway-external/README.md) for more details.
 
@@ -138,111 +128,60 @@ versions persist until `swarm:cleanup`.
 
 | Type | Pattern | Delivery |
 |------|---------|----------|
-| Persistent data | `<service>-<purpose>` named volume | Docker volume (Swarm-prefixed) |
+| Persistent data | `<service>-<purpose>` named volume | Docker volume |
 | Configuration | `./config/<service>/` | Docker Configs (versioned, immutable) |
-| Bulk storage (local) | `/mnt/*` | Bind mount (services co-located with storage) |
-| Bulk storage (remote) | `cifs-<share>` named volume | Docker CIFS volume (services on nodes without local storage) |
+| Bulk storage (local) | `/mnt/*` | Bind mount (services needing direct filesystem access) |
+| Bulk storage (remote) | `cifs-<share>` named volume | Docker CIFS volume |
 
 CIFS volumes use Docker's local driver with `type: cifs`, mounting SMB shares directly.
-Credentials come from `GLOBAL_CIFS_*` in shared secrets. CIFS volumes are for bulk
-file access only (media, photos, documents) -- never for database-like workloads.
+Credentials come from `GLOBAL_CIFS_*` in shared secrets.
 
 Services needing non-root volume ownership use entrypoint wrappers (Docker Config init
 scripts) that chown and drop privileges (`setpriv` on Debian, `su` on Alpine).
 
 ### Infrastructure Components
 
-Infra stacks are auto-discovered deploy in `NN_` prefix order
+Infra stacks are auto-discovered and deploy in `NN_` prefix order.
 Each stack's README documents service-level details and operational procedures.
 
 - **Socket Proxy:** Central read-only Docker API gateway for consumers needing node-agnostic Swarm API info.
 - **Postgres:** Central database server.
   All stateful services share one instance via dedicated roles provisioned by init-db sidecars.
-- **Backup:** Borgmatic with borg deduplication and encryption.
+- **Backup:** Borgmatic with scheduled backups, deduplication, and encryption.
   Auto-discovers all Postgres databases, streams dumps directly to the repository.
-  Restore uses superuser credentials passed at restore time.
 - **Dual Gateways:** Two Traefik instances: external (Coupled with CrowdSec WAF + geoblocking
   for public internet), and internal (Internal services accessible only on LAN/Tailscale).
   Both use host-mode ports and DNS-based routing.
 - **Observability:** Node Exporter and cAdvisor for host and per-container metrics.
-  Prometheus scrapes these and all other compatible targets
+  Prometheus scrapes these and all other compatible targets via dockerswarm_sd_configs and static_configs
   Alloy collects logs and Loki stores them. Grafana visualizes everything.
-- **Registry:** private OCI registry for custom-built images.
-  Deploy pipeline pushes content-hash-tagged images; all nodes authenticate via `site:registry-auth`.
+  Uptime Kuma monitors service availability and alerts.
+- **Registry:** private OCI registry for custom images. Nodes authenticate via `site:registry-auth`.
+  Stacks with `build/` directories trigger automatic builds during `swarm:deploy`.
 - **Authentication:** Authentik provides OIDC, user directory, LDAP outpost, and WebFinger.
-  Configuration is declarative via blueprints.
-
-#### Cross-Stack Pipelines
-
-**Request flow:** two paths based on client origin:
-
-```text
-Internet → gateway-external (headers → geoblock → CrowdSec) → service
-LAN/Tailscale → gateway-internal (headers) → service
-```
-
-Both gateways discover backend services via the socket-proxy on `infra_socket`.
-Services opt in with scope labels (`traefik.scope.internal=true` / `traefik.scope.external=true`).
-
-**Auth chain:** OIDC-protected services delegate authentication through:
-
-```text
-Gateway → Authentik (session + OIDC + user directory) → Postgres (persistent storage)
-```
-
-OIDC consumers validate tokens against Authentik directly.
-Group membership (`app_admin`) maps to application-level admin roles.
-
-**Observability:** metrics and logs flow through two parallel pipelines:
-
-```text
-Metrics: Prometheus ← scrapes targets via infra_metrics overlay
-         Global services (node-exporter, cAdvisor, alloy) discovered via dockerswarm_sd_configs
-         Replicated services via static_configs → Grafana dashboards
-
-Logs:    Alloy (global, per-node) → tails local containers via socket-proxy sidecar → Loki
-```
-
-**Backup:** Borgmatic connects to central Postgres with a read-only role, auto-discovers
-all databases, and streams each dump to a local borg repository.
-Restore uses superuser credentials passed at restore time (not stored in the backup stack).
-
-**Custom images:** stacks with `build/` directories trigger automatic builds during
-`swarm:deploy`. Images are tagged by content hash, pushed to the private registry, and
-pulled by Swarm nodes via `--with-registry-auth`. Existing tags are skipped.
+  Group membership (`GLOBAL_ADMIN_GROUP`) maps to application-level admin roles.
 
 ## Nuances and Limitations
 
 ### Deploy and Update
 
-- **`start-first` corrupts exclusive-access volumes.** The default `*deploy` anchor starts a
-  new container before stopping the old one. For databases and services with exclusive-access
-  volumes, use `update_config.order: stop-first`.
+- **`start-first` fails with exclusive-access files**
+  For databases and services with exclusive-access volumes, use stop-first.
 
 - **`start-first` + rollback can silently revert.** If a new task fails (e.g., dependency not
   ready), Swarm auto-rolls back. Deploy appears successful but runs the old version. Fix:
   `docker service update --force <service>`.
 
-- **Restart exhaustion with cross-stack dependencies.** `max_attempts: 3` / `window: 120s`.
-  Services that validate external dependencies at startup stall if those aren't ready. Common
-  during initial `site:deploy`. Fix: `docker service update --force`.
-
-- **Init sidecars show `0/1` replicas.** This is correct, they exit after provisioning.
-  The deploy pipeline and `status` recognize completed tasks.
+- Nodes that need to pull custom images must be able to resolve `DOMAIN_PRIVATE`
+  to reach the private registry.
 
 ### LXC Nodes
 
 Unprivileged LXC containers cannot use IPVS (Docker Swarm's default VIP load balancing).
 Any service that has consumers on LXC must set `endpoint_mode: dnsrr`, regardless of where
-the service itself runs. The IPVS limitation is on the client side -- LXC nodes cannot
+the service itself runs. The IPVS limitation is on the client side: LXC nodes cannot
 translate VIP addresses to task IPs. Services only receiving traffic via Traefik are
-unaffected (VIP resolution happens on the Traefik node).
-
-Overlay networks traversing Tailscale require MTU 1230 (Tailscale 1280 minus VXLAN 50-byte
-overhead). Oversized VXLAN UDP packets are silently dropped, breaking both the data plane
-and Docker's memberlist gossip protocol. Symptoms: cross-node overlay timeouts, `memberlist:
-UDP probes failed` in Docker logs, new overlays failing to initialize while established
-ones appear to work (small packets fit under the limit).
+unaffected, as VIP resolution happens on the Traefik node.
 
 ### Docker Configs
 
@@ -255,10 +194,3 @@ ones appear to work (small packets fit under the limit).
 
 Swarm rejects tasks when bind mount paths don't exist on the target node (unlike Compose, no
 auto-create). `swarm:validate` task warns but does not block.
-
-## Documentation
-
-| Document | Content |
-|----------|---------|
-| `.mise/README.md` | Task reference, deploy pipeline, environment profiles, compose preprocessing |
-| `stacks/namespace/stackname/*.md` | Stack-specific documentation |
