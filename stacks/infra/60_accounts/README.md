@@ -73,11 +73,21 @@ discovery. Cross-blueprint `!Find` references require the target entity to exist
 | `40_` | ldap | -- |
 | `50_` | brand | providers (Tailscale app for WebFinger) |
 
-## Bootstrap Limitations
+## Secret Delivery
 
-`AUTHENTIK_BOOTSTRAP_PASSWORD`, `AUTHENTIK_BOOTSTRAP_TOKEN`, and `AUTHENTIK_BOOTSTRAP_EMAIL`
-cannot use `file://` syntax -- they must be plain env vars. Only read on first startup; subsequent
-deploys ignore them. The `directory.yaml` blueprint creates the real admin user and deactivates
-the default `akadmin` account.
+Three subsystems read secrets three different ways. A single credential value often needs to be
+delivered twice because consumers have incompatible interfaces.
 
-The LDAP outpost's `AUTHENTIK_TOKEN` env var also cannot use `file://` (Go binary limitation).
+| Mode | Consumed by | Form in compose |
+|------|-------------|-----------------|
+| Python config loader (`file://`) | Select `AUTHENTIK_*` keys (secret key, Postgres password, SMTP password) | `KEY=file:///run/secrets/<name>` plus Docker secret mount |
+| Plain env var | Go bootstrap code (`AUTHENTIK_BOOTSTRAP_*`) and Go outpost binaries (`AUTHENTIK_TOKEN`) | `KEY=${VAR}` with value from SOPS-decrypted env |
+| Blueprint `!File` tag | Worker at blueprint apply time (OIDC client secrets, admin passwords, outpost tokens referenced from YAML) | Docker secret mount read by YAML loader |
+
+`GLOBAL_PASSWORD` is the canonical dual-delivery example: it's injected as `AUTHENTIK_BOOTSTRAP_PASSWORD`
+via plain env (Go bootstrap cannot resolve `file://`) and separately mounted as the
+`global_password` secret so the directory blueprint can read it via `!File`. Same value, two
+consumers, two delivery paths.
+
+Bootstrap vars are only read on first startup. Subsequent deploys ignore them; the directory
+blueprint owns the real admin user after that and deactivates the default `akadmin` account.

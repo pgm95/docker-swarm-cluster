@@ -24,14 +24,15 @@ services:
       - AUTHENTIK_EMAIL__PASSWORD=file:///run/secrets/smtp_pass
       - AUTHENTIK_EMAIL__USE_TLS=true
       - AUTHENTIK_EMAIL__FROM=Authentik <noreply@${DOMAIN_PUBLIC}>
-      - AUTHENTIK_BOOTSTRAP_PASSWORD=${GLOBAL_PASSWORD}
-      - AUTHENTIK_BOOTSTRAP_TOKEN=${AUTHENTIK_BOOTSTRAP_TOKEN}
-      - AUTHENTIK_BOOTSTRAP_EMAIL=${GLOBAL_USERNAME}@${DOMAIN_PUBLIC}
       - AUTHENTIK_DISABLE_UPDATE_CHECK=true
       - AUTHENTIK_DISABLE_STARTUP_ANALYTICS=true
       - AUTHENTIK_ERROR_REPORTING__ENABLED=false
       - AUTHENTIK_LOG_LEVEL=info
       - AUTHENTIK_LISTEN__TRUSTED_PROXY_CIDRS=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10
+      ## Bootstrap vars are only read on first startup.
+      # - AUTHENTIK_BOOTSTRAP_PASSWORD=${GLOBAL_PASSWORD}
+      # - AUTHENTIK_BOOTSTRAP_TOKEN=${AUTHENTIK_BOOTSTRAP_TOKEN}
+      # - AUTHENTIK_BOOTSTRAP_EMAIL=${GLOBAL_USERNAME}@${DOMAIN_PUBLIC}
     secrets:
       - authentik_secret_key
       - authentik_postgres_password
@@ -101,9 +102,6 @@ services:
       - AUTHENTIK_EMAIL__PASSWORD=file:///run/secrets/smtp_pass
       - AUTHENTIK_EMAIL__USE_TLS=true
       - AUTHENTIK_EMAIL__FROM=Authentik <noreply@${DOMAIN_PUBLIC}>
-      - AUTHENTIK_BOOTSTRAP_PASSWORD=${GLOBAL_PASSWORD}
-      - AUTHENTIK_BOOTSTRAP_TOKEN=${AUTHENTIK_BOOTSTRAP_TOKEN}
-      - AUTHENTIK_BOOTSTRAP_EMAIL=${GLOBAL_USERNAME}@${DOMAIN_PUBLIC}
       - AUTHENTIK_DISABLE_UPDATE_CHECK=true
       - AUTHENTIK_DISABLE_STARTUP_ANALYTICS=true
       - AUTHENTIK_ERROR_REPORTING__ENABLED=false
@@ -114,26 +112,27 @@ services:
       - GLOBAL_ADMIN_GROUP=${GLOBAL_ADMIN_GROUP}
       - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
       - DOMAIN_PRIVATE=${DOMAIN_PRIVATE}
-      # Forces container restart on every deploy, triggering fresh blueprint discovery
+      # HACK: Forces container restart on every deploy, triggering fresh blueprint discovery
       - DEPLOY_VERSION=${DEPLOY_VERSION}
+      ## Bootstrap vars are only read on first startup.
+      # - AUTHENTIK_BOOTSTRAP_PASSWORD=${GLOBAL_PASSWORD}
+      # - AUTHENTIK_BOOTSTRAP_TOKEN=${AUTHENTIK_BOOTSTRAP_TOKEN}
+      # - AUTHENTIK_BOOTSTRAP_EMAIL=${GLOBAL_USERNAME}@${DOMAIN_PUBLIC}
     secrets:
       - authentik_secret_key
       - authentik_postgres_password
       - smtp_pass
       - global_password
       - authentik_outpost_token
-      - oidc_client_secret_stirlingpdf
+      - authentik_ldap_bind_password
       - oidc_client_secret_paperless
       - oidc_client_secret_mealie
       - oidc_client_secret_dawarich
       - oidc_client_secret_quantum
-      - oidc_client_secret_proxmox
       - oidc_client_secret_immich
       - oidc_client_secret_portainer
       - oidc_client_secret_grafana
       - oidc_client_secret_tailscale
-      - oidc_client_secret_cloudflare
-      - authentik_ldap_bind_password
     configs:
       - source: blueprint_directory
         target: /blueprints/custom/10_directory.yaml
