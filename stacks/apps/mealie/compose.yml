@@ -87,10 +87,7 @@ services:
       mode: replicated
       replicas: 1
       resources:
-        limits:
-          memory: 1024M
-        reservations:
-          memory: 512M
+        <<: *resources-huge
 
   init-db:
     image: postgres:17-alpine

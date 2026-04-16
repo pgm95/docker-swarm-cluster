@@ -1,8 +1,5 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 
-# /mnt/photos/immich must exist on storage node
-# OIDC client configured in Authelia
-
 include:
   - secrets.yml
 
