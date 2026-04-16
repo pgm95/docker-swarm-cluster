@@ -133,7 +133,7 @@ class TestInitNetworks:
 
     def test_mtu_from_env(self, monkeypatch):
         monkeypatch.setattr("swarm.networks.get_infra_networks", lambda: ["infra_metrics"])
-        monkeypatch.setenv("SWARM_OVERLAY_MTU", "1230")
+        monkeypatch.setenv("SWARM_OVERLAY_MTU", "1280")
 
         create_args = []
 
@@ -149,7 +149,7 @@ class TestInitNetworks:
         init_networks()
         assert "--opt" in create_args[0]
         opt_idx = create_args[0].index("--opt")
-        assert create_args[0][opt_idx + 1] == "com.docker.network.driver.mtu=1230"
+        assert create_args[0][opt_idx + 1] == "com.docker.network.driver.mtu=1280"
 
     def test_no_mtu_without_env(self, monkeypatch):
         monkeypatch.setattr("swarm.networks.get_infra_networks", lambda: ["infra_metrics"])

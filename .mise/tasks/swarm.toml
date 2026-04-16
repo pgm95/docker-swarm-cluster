@@ -51,5 +51,5 @@ run = 'python3 -m swarm.cleanup'
 description = "Internal: create overlay networks (idempotent)"
 hide = true
 env.SWARM_INTERNAL_NETWORKS = "infra_socket"
-env.SWARM_OVERLAY_MTU = "1230"
+env.SWARM_OVERLAY_MTU = "1280"
 run = 'python3 -m swarm.networks init'
