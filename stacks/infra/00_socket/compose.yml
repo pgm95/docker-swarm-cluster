@@ -6,7 +6,6 @@ services:
     read_only: true
     user: "65534:989" # GID should be that of the "docker" group on the host
     cap_drop: [ALL]
-    security_opt: [no-new-privileges]
     logging:
       <<: *logging
     stop_grace_period: 30s
@@ -29,13 +28,9 @@ services:
       timeout: 5s
       retries: 3
     deploy:
-      <<: *deploy
+      <<: [*place-vm, *deploy]
       update_config:
         order: start-first
-      placement:
-        constraints:
-          - node.role == manager
-          - node.labels.type == vm
       mode: replicated
       replicas: 1
       resources:
