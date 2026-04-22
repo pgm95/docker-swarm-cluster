@@ -12,6 +12,7 @@ services:
     stop_grace_period: 30s
     environment:
       - JELLYFIN_OWNER=${GLOBAL_NONROOT_DOCKER}
+      - AMD_VISIBLE_DEVICES=all
       - RUSTICL_ENABLE=radeonsi
       - JELLYFIN_CONFIG_DIR=/etc/jellyfin
       - JELLYFIN_LOG_DIR=/var/log/jellyfin
@@ -22,7 +23,6 @@ services:
       - infra_gw-internal
       - infra_ldap
     volumes:
-      - /dev/dri:/dev/dri
       - /mnt/media:/media
       - jellyfin-config:/etc/jellyfin
       - jellyfin-data:/var/lib/jellyfin
@@ -71,10 +71,6 @@ services:
           memory: 4096M
         reservations:
           memory: 1024M
-          generic_resources:
-            - discrete_resource_spec:
-                kind: "gpu"
-                value: 1
 
 volumes:
   jellyfin-config:
