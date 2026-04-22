@@ -69,7 +69,7 @@ def discover_build_dirs(stack_path: Path, stack_nm: str) -> list[dict]:
         service = svc_dir.name
         tag = compute_content_hash(svc_dir)
         image = f"{registry}/{stack_nm}/{service}:{tag}"
-        var_name = f"OCI_TAG_{service.upper()}"
+        var_name = f"OCI_TAG_{service.upper().replace('-', '_')}"
         builds.append({
             "service": service,
             "dir": svc_dir,

@@ -98,6 +98,16 @@ class TestDiscoverBuildDirs:
         assert result[0]["var_name"] == "OCI_TAG_CROWDSEC"
         assert "reg.example.com/gateway-external/crowdsec:" in result[0]["image"]
 
+    def test_hyphenated_service_name(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("GLOBAL_SWARM_OCI_REGISTRY", "reg")
+        d = tmp_path / "build" / "immich-machine-learning"
+        d.mkdir(parents=True)
+        (d / "Dockerfile").write_text("FROM base")
+        result = discover_build_dirs(tmp_path, "immich")
+        assert result[0]["service"] == "immich-machine-learning"
+        assert result[0]["var_name"] == "OCI_TAG_IMMICH_MACHINE_LEARNING"
+        assert "reg/immich/immich-machine-learning:" in result[0]["image"]
+
     def test_no_build_dir(self, tmp_path):
         assert discover_build_dirs(tmp_path, "mystack") == []
 

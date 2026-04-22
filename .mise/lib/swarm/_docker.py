@@ -6,6 +6,7 @@ making them easy to mock in tests.
 
 import json
 import subprocess
+import sys
 
 from . import DockerError
 from ._output import log
@@ -189,13 +190,26 @@ def manifest_exists(image: str) -> bool:
 
 
 def build(tag: str, context_dir: str) -> None:
-    """Build a Docker image."""
-    run("build", "-t", tag, context_dir)
+    """Build a Docker image, streaming output to stderr.
+
+    Stdout is redirected to stderr so the parent shell's command substitution
+    (which captures stdout for export statements) isn't polluted by build logs.
+    """
+    _stream("build", "-t", tag, context_dir)
 
 
 def push(image: str) -> None:
-    """Push a Docker image to a registry."""
-    run("push", image)
+    """Push a Docker image to a registry, streaming output to stderr."""
+    _stream("push", image)
+
+
+def _stream(*args: str) -> None:
+    """Run a docker command streaming stderr to terminal, stdout to stderr."""
+    cmd = ["docker", *args]
+    log.debug("$ %s", " ".join(cmd))
+    result = subprocess.run(cmd, stdout=sys.stderr, check=False)
+    if result.returncode != 0:
+        raise DockerError(cmd, result.returncode, "")
 
 
 def node_inspect_raw() -> tuple[list[str], str]:
