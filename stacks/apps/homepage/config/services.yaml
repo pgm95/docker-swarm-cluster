@@ -15,15 +15,25 @@
               label: Lights On
             - state: vacuum.roomba
               label: Roomba
-    - Proxmox:
+    - Proxmox NUC:
         href: https://proxmox.{{HOMEPAGE_VAR_DOMAIN_PUBLIC}}:8006
         icon: proxmox-light.svg
         description: Proxmox Virtual Environment
         widget:
           type: proxmox
-          url: https://proxmox.{{HOMEPAGE_VAR_DOMAIN_PUBLIC}}:8006
-          username: {{HOMEPAGE_VAR_PVE_USER}}
-          password: {{HOMEPAGE_VAR_PVE_PASS}}
+          url: https://nuc.lan.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}:8006
+          username: {{HOMEPAGE_VAR_PVE_NUC_USER}}
+          password: {{HOMEPAGE_VAR_PVE_NUC_PASS}}
+          fields: ["vms", "lxc", "resources.cpu", "resources.mem"]
+    - Proxmox NAS:
+        href: https://proxmox.{{HOMEPAGE_VAR_DOMAIN_PUBLIC}}:8006
+        icon: proxmox-light.svg
+        description: Proxmox Virtual Environment
+        widget:
+          type: proxmox
+          url: https://nas.lan.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}:8006
+          username: {{HOMEPAGE_VAR_PVE_NAS_USER}}
+          password: {{HOMEPAGE_VAR_PVE_NAS_PASS}}
           fields: ["vms", "lxc", "resources.cpu", "resources.mem"]
     - OpenWRT:
         href: https://luci.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}
@@ -45,3 +55,24 @@
           username: {{HOMEPAGE_VAR_MAIN_USER}}
           password: {{HOMEPAGE_VAR_MAIN_PASS}}
           fields: ["queries", "blocked", "latency"]
+    - qBittorrent:
+        href: https://torrent.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}
+        icon: qbittorrent.svg
+        description: BitTorrent Client
+        widget:
+          type: qbittorrent
+          enableLeechSize: false
+          enableLeechProgress: false
+          username: {{HOMEPAGE_VAR_MAIN_USER}}
+          password: {{HOMEPAGE_VAR_MAIN_PASS}}
+          fields: ["leech", "seed", "download", "upload"]
+          url: https://torrent.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}
+    - Gluetun:
+        icon: gluetun.svg
+        description: Servarr Stack VPN
+        widget:
+          type: gluetun
+          version: 2
+          url: http://docker-lxc:8000
+          fields: ["public_ip", "region", "country"]
+          # key: {{HOMEPAGE_VAR_GLUETUN_KEY}}
