@@ -1,0 +1,4 @@
+configs:
+  immich_server_init:
+    name: immich_server_init_${DEPLOY_VERSION}
+    file: ./config/immich-server/init.sh

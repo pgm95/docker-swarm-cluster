@@ -2,35 +2,69 @@
 
 include:
   - secrets.yml
+  - configs.yml
 
 services:
   immich-server:
     image: ghcr.io/immich-app/immich-server:release
+    entrypoint: ["/bin/sh", "/init.sh"]
     logging:
       <<: *logging
     stop_grace_period: 30s
     environment:
+      - IMMICH_OWNER=${GLOBAL_NONROOT_DOCKER}
+      - AMD_VISIBLE_DEVICES=all
+      - REDIS_HOSTNAME=valkey
       - DB_HOSTNAME=database
       - DB_USERNAME=postgres
       - DB_DATABASE_NAME=immich
       - DB_PASSWORD_FILE=/run/secrets/db_password
-      - REDIS_HOSTNAME=valkey
+      # - IMMICH_IGNORE_MOUNT_CHECK_ERRORS=true
+      # - CREDENTIALS_DIRECTORY=/run/secrets
     secrets:
       - db_password
+    configs:
+      - source: immich_server_init
+        target: /init.sh
     networks:
       - default
       - infra_gw-internal
+    # Originals on the bulk share at /data; cache subdirs overlay as subpath mounts of
+    # server-data to keep generated content off the share. Subpaths need precreation.
     volumes:
-      - /mnt/photos:/data
+      - /etc/localtime:/etc/localtime:ro
+      - /mnt/photos/immich:/data
+      - /mnt/photos/archive:/external/archive
+      - /mnt/photos/wedding:/external/wedding
+      - type: volume
+        source: server-data
+        target: /data/thumbs
+        volume:
+          subpath: thumbs
+      - type: volume
+        source: server-data
+        target: /data/encoded-video
+        volume:
+          subpath: encoded-video
+      - type: volume
+        source: server-data
+        target: /data/profile
+        volume:
+          subpath: profile
+      - type: volume
+        source: server-data
+        target: /data/backups
+        volume:
+          subpath: backups
+    healthcheck:
+      disable: false
+      start_period: 120s
+      interval: 30s
     deploy:
-      <<: [*place-storage, *deploy]
+      <<: [*place-gpu, *deploy]
       update_config:
-        order: start-first
-      restart_policy:
-        condition: any
-        delay: 10s
-        max_attempts: 10
-        window: 120s
+        order: stop-first
+      endpoint_mode: dnsrr
       labels:
         - "traefik.enable=true"
         - "traefik.scope.internal=true"
@@ -51,7 +85,7 @@ services:
       replicas: 1
       resources:
         limits:
-          memory: 2048M
+          memory: 4096M
         reservations:
           memory: 1024M
 
@@ -62,8 +96,10 @@ services:
     stop_grace_period: 30s
     volumes:
       - ml-cache:/cache
+    healthcheck:
+      disable: false
     deploy:
-      <<: [*place-storage, *deploy]
+      <<: [*place-gpu, *deploy]
       update_config:
         order: start-first
       endpoint_mode: dnsrr
@@ -76,7 +112,7 @@ services:
           memory: 1024M
 
   valkey:
-    image: docker.io/valkey/valkey:9@sha256:930b41430fb727f533c5982fe509b6f04233e26d0f7354e04de4b0d5c706e44e
+    image: docker.io/valkey/valkey:9@sha256:3b55fbaa0cd93cf0d9d961f405e4dfcc70efe325e2d84da207a0a8e6d8fde4f9
     logging:
       <<: *logging
     stop_grace_period: 30s
@@ -87,9 +123,9 @@ services:
       retries: 3
       start_period: 5s
     deploy:
-      <<: [*place-storage, *deploy]
+      <<: [*place-gpu, *deploy]
       update_config:
-        order: start-first
+        order: stop-first
       endpoint_mode: dnsrr
       mode: replicated
       replicas: 1
@@ -119,7 +155,7 @@ services:
       retries: 5
       start_period: 30s
     deploy:
-      <<: [*place-storage, *deploy]
+      <<: [*place-gpu, *deploy]
       update_config:
         order: stop-first
       endpoint_mode: dnsrr
@@ -134,6 +170,7 @@ services:
 volumes:
   ml-cache:
   database-data:
+  server-data:
 
 networks:
   infra_gw-internal:
