@@ -15,6 +15,7 @@ import tempfile
 from pathlib import Path
 
 from . import DockerError
+from ._docker import docker_env
 from ._output import log, setup
 from ._stack import stack_name
 
@@ -77,7 +78,7 @@ def compose_config(stack_file: str | Path, *extra_args: str) -> str:
             *extra_args,
         ]
         log.debug("$ %s", " ".join(cmd))
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, env=docker_env())
         if result.returncode != 0:
             raise DockerError(cmd, result.returncode, result.stderr.strip())
         return _fixup_config(result.stdout)

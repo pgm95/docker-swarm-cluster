@@ -21,6 +21,7 @@ unix_default_inline_shell_args = "bash -c -o errexit -o nounset -o pipefail"
 
 [env]
 MISE_ENV = "{{ mise_env | first }}"
+PROJECT_ROOT_DIR = "{{config_root}}"
 PROJECT_CONFIGS_DIR = "{{config_root}}/.config"
 PROJECT_SECRETS_DIR = "{{config_root}}/.secrets"
 

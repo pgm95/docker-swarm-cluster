@@ -5,11 +5,23 @@ making them easy to mock in tests.
 """
 
 import json
+import os
 import subprocess
 import sys
 
 from . import DockerError
 from ._output import log
+
+
+def docker_env() -> dict[str, str]:
+    """Return a subprocess env that maps SWARM_HOST to DOCKER_HOST.
+
+    Keeps DOCKER_HOST out of the user's shell so local Docker contexts stay free.
+    """
+    env = os.environ.copy()
+    if swarm_host := env.get("SWARM_HOST"):
+        env["DOCKER_HOST"] = swarm_host
+    return env
 
 
 def run(
@@ -31,7 +43,7 @@ def run(
     """
     cmd = ["docker", *args]
     log.debug("$ %s", " ".join(cmd))
-    result = subprocess.run(cmd, capture_output=capture, text=True, input=input)
+    result = subprocess.run(cmd, capture_output=capture, text=True, input=input, env=docker_env())
     if check and result.returncode != 0:
         raise DockerError(cmd, result.returncode, result.stderr.strip())
     return result
@@ -207,7 +219,7 @@ def _stream(*args: str) -> None:
     """Run a docker command streaming stderr to terminal, stdout to stderr."""
     cmd = ["docker", *args]
     log.debug("$ %s", " ".join(cmd))
-    result = subprocess.run(cmd, stdout=sys.stderr, check=False)
+    result = subprocess.run(cmd, stdout=sys.stderr, check=False, env=docker_env())
     if result.returncode != 0:
         raise DockerError(cmd, result.returncode, "")
 

@@ -37,10 +37,12 @@ MISE_ENV=prod mise run swarm:deploy socket
 Each profile provides:
 
 - `_.file`: SOPS-encrypted secrets (`PROJECT_SECRETS_DIR/{env}.yaml`)
-- `SWARM_NODE_DEFAULT`: Swarm manager hostname
-- `DOCKER_HOST`: SSH target (derived from `SWARM_NODE_DEFAULT`)
+- `SWARM_HOST`: SSH URL of a manager node (e.g. `ssh://root@swarm-vm`)
+- `SWARM_SSH_USER`: SSH user for non-manager node access
 - `GLOBAL_SWARM_OCI_REGISTRY`: derived from `DOMAIN_PRIVATE`
 - `GLOBAL_ACME_CA_SERVER`: staging CA in dev, production in prod
+
+`DOCKER_HOST` is deliberately NOT exported into the shell — it would pin the local Docker CLI and IDE integrations to the remote Swarm. Instead, `SWARM_HOST` is the source of truth; the swarm Python library (`_docker.docker_env()`) maps it to `DOCKER_HOST` on each subprocess invocation. The `swarm:deploy` bash wrapper does the same with an `export` scoped to its shell. Local `docker context` stays free to switch between daemons.
 
 ### Processing Order
 
@@ -53,7 +55,7 @@ This is why `GLOBAL_SWARM_OCI_REGISTRY` (uses `DOMAIN_PRIVATE` from SOPS) lives 
 | Variable | Source | Location |
 |----------|--------|----------|
 | `DOMAIN_PUBLIC`, `DOMAIN_PRIVATE`, `GLOBAL_OIDC_URL`, `GLOBAL_LDAP_BASE_DN` | SOPS | `PROJECT_SECRETS_DIR/{env}.yaml` |
-| `SWARM_NODE_DEFAULT`, `DOCKER_HOST`, `SWARM_SSH_USER` | Plaintext | `.mise/config.{env}.toml` |
+| `SWARM_HOST`, `SWARM_SSH_USER` | Plaintext | `.mise/config.{env}.toml` |
 | `GLOBAL_SWARM_OCI_REGISTRY` | Derived | `.mise/config.{env}.toml` |
 | `GLOBAL_SMTP_*`, `REGISTRY_*`, `GLOBAL_LDAP_ADDRESS` | SOPS | `PROJECT_SECRETS_DIR/shared.yaml` |
 | `GLOBAL_CIFS_HOST`, `GLOBAL_CIFS_USERNAME`, `GLOBAL_CIFS_PASSWORD` | SOPS | `PROJECT_SECRETS_DIR/shared.yaml` |

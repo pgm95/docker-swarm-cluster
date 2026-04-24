@@ -8,7 +8,7 @@ from pathlib import Path
 
 from . import SwarmError
 from ._compose import compose_config
-from ._docker import inspect_nodes
+from ._docker import docker_env, inspect_nodes
 from ._output import error, setup
 from ._ssh import ssh_node
 from .deploy import compute_content_hash
@@ -33,6 +33,7 @@ def validate_compose(stack_file: Path) -> tuple[bool, str]:
         input=config,
         capture_output=True,
         text=True,
+        env=docker_env(),
     )
     if result.returncode != 0:
         return False, result.stderr.strip()

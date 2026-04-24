@@ -34,7 +34,7 @@ Only the final `docker stack deploy` command executes over SSH.
 
 2. **Configure environment:** Dev and prod each have their own config
    (`.mise/config.dev.toml`, `.mise/config.prod.toml`). Dev is the default profile.
-   You must set `SWARM_NODE_DEFAULT` (any manager node hostname) and `SWARM_SSH_USER` (defaults to root)
+   You must set `SWARM_HOST` (SSH URL of a manager node, e.g. `ssh://root@swarm-vm`) and `SWARM_SSH_USER` (defaults to root).
    See [`.mise/README.md`](.mise/README.md) for all variable sources.
 
 3. **Configure secrets:** Populate SOPS-encrypted secrets files:
