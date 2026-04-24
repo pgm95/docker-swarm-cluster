@@ -42,7 +42,7 @@ services:
       mode: replicated
       replicas: 1
       resources:
-        <<: *resources-large
+        <<: *resources-huge
 
 volumes:
   pinchflat-data:
