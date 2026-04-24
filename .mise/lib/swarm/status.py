@@ -1,5 +1,6 @@
 """Cluster status display."""
 
+import os
 import sys
 
 from . import SwarmError
@@ -146,7 +147,8 @@ def status() -> int:
         else:
             unhealthy_count += 1
 
-    table(["STACK", "STATUS", "NODE", "SERVICES"], rows)
+    wrap = int(os.environ.get("STATUS_SERVICE_WRAP", "3"))
+    table(["STACK", "STATUS", "NODE", "SERVICES"], rows, wrap_width=wrap)
     print()
 
     if not_deployed:

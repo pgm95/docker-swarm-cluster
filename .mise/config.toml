@@ -74,4 +74,5 @@ run = [
 
 [tasks."status"]
 description = " " # Show cluster nodes and health status of all deployed stacks
+env.STATUS_SERVICE_WRAP = "2"
 run = 'python3 -m swarm.status'

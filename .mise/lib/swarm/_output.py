@@ -38,8 +38,8 @@ def error(msg: str) -> None:
     log.error("ERROR: %s", msg)
 
 
-def table(headers: list[str], rows: list[list[str]]) -> None:
-    """Print an aligned table to stdout."""
+def table(headers: list[str], rows: list[list[str]], wrap_width: int = 3) -> None:
+    """Print an aligned table to stdout. Last column wraps at `wrap_width` words per line."""
     if not rows and not headers:
         return
     col_widths = [len(h) for h in headers]
@@ -62,9 +62,9 @@ def table(headers: list[str], rows: list[list[str]]) -> None:
         padded = [str(row[i]) if i < len(row) else "" for i in range(len(col_widths))]
         last = padded[-1]
         words = last.split()
-        if len(words) > 3:
-            for i in range(0, len(words), 3):
-                chunk = " ".join(words[i:i + 3])
+        if len(words) > wrap_width:
+            for i in range(0, len(words), wrap_width):
+                chunk = " ".join(words[i:i + wrap_width])
                 if i == 0:
                     padded[-1] = chunk
                     print(fmt.format(*padded))
