@@ -3,7 +3,7 @@
 
 - Bookmarks:
     - Comet:
-        - icon: https://static.gl-inet.com/www/images/favicon.ico
+        - icon: glinet-dark
           abbr: GL
           description: " "
           href: https://comet.home.arpa
@@ -22,3 +22,18 @@
           abbr: PI
           description: " "
           href: http://pigm:8123
+    - Tailscale:
+        - icon: tailscale-light
+          abbr: TS
+          description: " "
+          href: https://login.tailscale.com/admin/machines
+    - Cloudflare:
+        - icon: cloudflare
+          abbr: CF
+          description: " "
+          href: https://dash.cloudflare.com
+    - RackNerd:
+        - icon: racknerd-dark
+          abbr: RN
+          description: " "
+          href: https://nerdvm.racknerd.com/login.php

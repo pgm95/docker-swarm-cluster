@@ -55,6 +55,19 @@
           username: {{HOMEPAGE_VAR_MAIN_USER}}
           password: {{HOMEPAGE_VAR_MAIN_PASS}}
           fields: ["queries", "blocked", "latency"]
+
+- Applications:
+    - Gluetun:
+        icon: gluetun.svg
+        description: Servarr Stack VPN
+        widget:
+          type: gluetun
+          version: 2
+          url: http://docker-lxc:8000
+          fields: ["public_ip", "region", "country"]
+          # key: {{HOMEPAGE_VAR_GLUETUN_KEY}}
+
+- Media:
     - qBittorrent:
         href: https://torrent.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}
         icon: qbittorrent.svg
@@ -67,12 +80,3 @@
           password: {{HOMEPAGE_VAR_MAIN_PASS}}
           fields: ["leech", "seed", "download", "upload"]
           url: https://torrent.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}
-    - Gluetun:
-        icon: gluetun.svg
-        description: Servarr Stack VPN
-        widget:
-          type: gluetun
-          version: 2
-          url: http://docker-lxc:8000
-          fields: ["public_ip", "region", "country"]
-          # key: {{HOMEPAGE_VAR_GLUETUN_KEY}}

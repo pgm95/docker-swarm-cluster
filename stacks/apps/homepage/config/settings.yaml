@@ -5,7 +5,7 @@ favicon: https://www.svgrepo.com/show/410412/home.svg
 title: Homepage
 useEqualHeights: true
 headerStyle: boxed
-target: _self
+target: _blank
 hideVersion: true
 color: neutral
 showStats: false
@@ -25,22 +25,22 @@ layout:
   Bookmarks:
     header: false
     style: row
-    columns: 4
+    columns: 7
     target: _blank
     iconsOnly: false
   External:
     header: false
-    style: row
-    columns: 4
+    style: columns
+    # columns: 4
   Infrastructure:
     header: false
-    style: row
-    columns: 4
+    style: columns
+    # columns: 4
   Applications:
     header: false
-    style: row
-    columns: 4
+    style: columns
+    # columns: 4
   Media:
     header: false
-    style: row
-    columns: 4
+    style: columns
+    # columns: 4

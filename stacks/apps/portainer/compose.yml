@@ -26,7 +26,7 @@ services:
         - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAIN_PRIVATE}`)"
         - "traefik.http.routers.portainer.entrypoints=websecure"
         - "traefik.http.services.portainer.loadbalancer.server.port=9000"
-        - "homepage.group=Infrastructure"
+        - "homepage.group=External"
         - "homepage.name=Portainer"
         - "homepage.icon=portainer"
         - "homepage.href=https://portainer.${DOMAIN_PRIVATE}"
