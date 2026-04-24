@@ -28,7 +28,7 @@ configs:
     file: ./config/grafana/dashboards/syncthing-metrics.json
   grafana_dashboard_borgmatic:
     name: grafana_dashboard_borgmatic_${DEPLOY_VERSION}
-    file: ./config/grafana/dashboards/borgamatic-logs.json
+    file: ./config/grafana/dashboards/borgmatic-logs.json
   grafana_dashboard_uptimekuma:
     name: grafana_dashboard_uptimekuma_${DEPLOY_VERSION}
     file: ./config/grafana/dashboards/uptime-kuma.json

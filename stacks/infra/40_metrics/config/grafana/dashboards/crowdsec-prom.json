@@ -11,7 +11,7 @@
   ],
   "refresh": "",
   "time": {
-    "from": "now-24h",
+    "from": "now-3d",
     "to": "now"
   },
   "timepicker": {
@@ -34,7 +34,7 @@
       {
         "builtIn": 1,
         "datasource": {
-          "type": "datasource",
+          "type": "grafana",
           "uid": "grafana"
         },
         "enable": true,

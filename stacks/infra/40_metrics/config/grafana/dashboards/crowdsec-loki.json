@@ -11,9 +11,9 @@
     "loki"
   ],
   "liveNow": true,
-  "refresh": "5m",
+  "refresh": "30s",
   "time": {
-    "from": "now-24h",
+    "from": "now-3d",
     "to": "now"
   },
   "timepicker": {},
@@ -23,7 +23,7 @@
       {
         "builtIn": 1,
         "datasource": {
-          "type": "datasource",
+          "type": "grafana",
           "uid": "grafana"
         },
         "enable": true,
@@ -1377,7 +1377,7 @@
       },
       "gridPos": {
         "h": 9,
-        "w": 14,
+        "w": 11,
         "x": 0,
         "y": 0
       },
@@ -1415,11 +1415,11 @@
           "exemplar": false,
           "format": "table",
           "refId": "A",
-          "expr": "sum by (instance, country, asname, asnumber, iprange, ip, type) (count_over_time({job=\"crowdsec\", instance=~\"${host:raw}\"} | country != \"\" | keep instance, country, asname, asnumber, iprange, ip, type [$__range]))",
+          "expr": "sum by (country, asname, asnumber, ip) (count_over_time({job=\"crowdsec\", instance=~\"${host:raw}\"} | country != \"\" | keep country, asname, asnumber, ip [30d]))",
           "queryType": "instant"
         }
       ],
-      "title": "Cyberthreats Summary",
+      "title": "Cyberthreats Summary (30d)",
       "transformations": [
         {
           "id": "organize",
@@ -1435,27 +1435,22 @@
             "includeByName": {},
             "indexByName": {
               "Time": 0,
-              "asname": 4,
-              "asnumber": 3,
-              "country": 2,
-              "instance": 1,
-              "ip": 6,
-              "iprange": 5,
-              "type": 7
+              "country": 1,
+              "asnumber": 2,
+              "asname": 3,
+              "ip": 4,
+              "Value #A": 5
             },
             "renameByName": {
-              "Trend #A": "Count",
+              "Value #A": "Count",
               "Value": "Count",
+              "Trend #A": "Count",
               "asname": "AS Name",
               "asnumber": "ASN",
               "country": "Country",
-              "duration": "Duration",
-              "instance": "Affected Host",
               "ip": "IP",
-              "iprange": "Subnet",
               "scenario": "Scenario",
-              "scope": "Scope",
-              "type": "Decision"
+              "scope": "Scope"
             }
           }
         }
@@ -1493,7 +1488,7 @@
       "gridPos": {
         "h": 9,
         "w": 4,
-        "x": 14,
+        "x": 11,
         "y": 0
       },
       "id": 4,
@@ -1531,11 +1526,11 @@
           "exemplar": false,
           "format": "time_series",
           "refId": "A",
-          "expr": "topk(10, sum by (country) (count_over_time({job=\"crowdsec\", instance=~\"${host:raw}\"} | country != \"\" | keep country [$__range])))",
+          "expr": "sort_desc(topk(10, sum by (country) (count_over_time({job=\"crowdsec\", instance=~\"${host:raw}\"} | country != \"\" | keep country [30d]))))",
           "queryType": "instant"
         }
       ],
-      "title": "Top 10 Cyberthreat Countries",
+      "title": "Top 10 Countries (30d)",
       "type": "piechart"
     },
     {
@@ -1571,8 +1566,8 @@
       },
       "gridPos": {
         "h": 9,
-        "w": 6,
-        "x": 18,
+        "w": 9,
+        "x": 15,
         "y": 0
       },
       "id": 1,
@@ -1672,11 +1667,11 @@
           "exemplar": false,
           "format": "table",
           "refId": "A",
-          "expr": "sum by (country, longitude, latitude) (count_over_time({job=\"crowdsec\", instance=~\"${host:raw}\"} | country != \"\" | keep country, longitude, latitude [$__range]))",
+          "expr": "sum by (country, longitude, latitude) (count_over_time({job=\"crowdsec\", instance=~\"${host:raw}\"} | country != \"\" | keep country, longitude, latitude [30d]))",
           "queryType": "instant"
         }
       ],
-      "title": "Cyberthreats Map",
+      "title": "Cyberthreats Map (30d)",
       "transformations": [
         {
           "id": "organize",
@@ -3044,7 +3039,7 @@
         ]
       },
       "gridPos": {
-        "h": 10,
+        "h": 15,
         "w": 24,
         "x": 0,
         "y": 9
@@ -3084,7 +3079,7 @@
           "queryType": "range"
         }
       ],
-      "title": "Realtime Cyberthreats: ${__from:date:YYYY-MM-DD HH:mm:ss} - ${__to:date:YYYY-MM-DD HH:mm:ss} / Granularity: $__interval",
+      "title": "Realtime Cyberthreats: ${__from:date:MM-DD HH:mm} - ${__to:date:MM-DD HH:mm}",
       "transformations": [
         {
           "id": "extractFields",
@@ -3109,7 +3104,9 @@
               "iprange": false,
               "latitude": true,
               "longitude": true,
-              "scope": true
+              "scope": true,
+              "instance": true,
+              "service_name": true
             },
             "includeByName": {},
             "indexByName": {

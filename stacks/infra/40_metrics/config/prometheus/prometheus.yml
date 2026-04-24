@@ -120,15 +120,14 @@ scrape_configs:
         target_label: instance
 
   # Uptime Kuma metrics
-  # Requires WebUI credentials or API key
-  # Once API key is created, basic_auth login is permanently disabled.
-  # Metrics: monitor_status, monitor_response_time, monitor_cert_days_remaining
-  # - job_name: uptime-kuma
-  #   scrape_interval: 30s
-  #   metrics_path: /metrics
-  #   static_configs:
-  #     - targets:
-  #       - uptime-kuma:3001
-  #   basic_auth:
-  #     username: "" # Leave blank if using API key
-  #     password_file: /run/secrets/uptime_kuma_api_key_or_password
+  # Auth: API key passed as basic_auth password with empty username.
+  # Creating the API key permanently disables basic_auth with web credentials.
+  - job_name: uptime-kuma
+    scrape_interval: 30s
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+        - uptime-kuma:3001
+    basic_auth:
+      username: ""
+      password_file: /run/secrets/uptime_kuma_api_key

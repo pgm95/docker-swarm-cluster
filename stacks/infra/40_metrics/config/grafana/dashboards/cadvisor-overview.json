@@ -7,7 +7,6 @@
   "editable": true,
   "graphTooltip": 1,
   "tags": [
-    "cadvisor",
     "prometheus"
   ],
   "refresh": "30s",
@@ -22,7 +21,7 @@
       {
         "builtIn": 1,
         "datasource": {
-          "type": "datasource",
+          "type": "grafana",
           "uid": "grafana"
         },
         "enable": true,
