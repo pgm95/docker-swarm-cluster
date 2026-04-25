@@ -11,14 +11,13 @@ alias = "apps"
 description = "Deploy all application stacks"
 run = 'python3 -m swarm.site deploy-apps'
 
-["site:reset"]
+["site:drain"]
 description = "Remove all stacks in reverse order"
-usage = 'flag "--volumes" help="Also remove all named volumes from nodes"'
 confirm = "This will remove ALL stacks, secrets, configs, and networks. Continue?"
 depends_post = ["swarm:cleanup"]
-run = 'python3 -m swarm.site reset'
+run = 'python3 -m swarm.site drain'
 
-["site:registry-auth"]
+["site:registry"]
 description = "Login all swarm nodes to the private registry"
 usage = 'flag "--local" help="Also login the local dev machine"'
 run = 'python3 -m swarm.registry_auth'

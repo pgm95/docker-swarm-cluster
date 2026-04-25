@@ -1,7 +1,6 @@
 """Site-wide orchestration — deploy infra/apps, reset."""
 
 import argparse
-import os
 import subprocess
 import sys
 import time
@@ -9,10 +8,8 @@ import time
 from . import SwarmError
 from ._docker import run as docker_run
 from ._output import error, info, setup
-from ._ssh import ssh_node
 from ._stack import find_stacks
 from .networks import get_infra_networks
-from .nodes import get_swarm_nodes
 
 
 def _mise_run(task: str, *args: str) -> bool:
@@ -75,7 +72,7 @@ def deploy_apps() -> int:
     return 1 if failed else 0
 
 
-def reset(volumes: bool = False) -> int:
+def drain() -> int:
     # Remove app stacks
     info("--- Removing app stacks ---")
     for stack in find_stacks("stacks/apps"):
@@ -86,19 +83,6 @@ def reset(volumes: bool = False) -> int:
     info("--- Removing infra stacks ---")
     for stack in find_stacks("stacks/infra", reverse=True):
         _mise_run("swarm:remove", str(stack))
-
-    # Optional: remove volumes from all nodes
-    if volumes:
-        info("")
-        info("--- Removing volumes ---")
-        for node in get_swarm_nodes():
-            hostname = node["hostname"]
-            try:
-                out = ssh_node(hostname, "docker volume prune -af", check=False)
-                count = sum(1 for line in out.stdout.splitlines() if line[:1] in "0123456789abcdef")
-                info(f"  {hostname}: {count} removed")
-            except Exception:
-                info(f"  {hostname}: unreachable")
 
     # Remove overlay networks
     info("")
@@ -120,7 +104,7 @@ def main() -> int:
 
     sub.add_parser("deploy-infra", help="Deploy infrastructure stacks in order")
     sub.add_parser("deploy-apps", help="Deploy all application stacks")
-    sub.add_parser("reset", help="Remove all stacks in reverse order")
+    sub.add_parser("drain", help="Remove all stacks in reverse order")
 
     args = parser.parse_args()
     if not args.command:
@@ -132,9 +116,8 @@ def main() -> int:
             return deploy_infra()
         elif args.command == "deploy-apps":
             return deploy_apps()
-        elif args.command == "reset":
-            volumes = os.environ.get("usage_volumes") == "true"
-            return reset(volumes)
+        elif args.command == "drain":
+            return drain()
     except SwarmError as e:
         error(str(e))
         return 1

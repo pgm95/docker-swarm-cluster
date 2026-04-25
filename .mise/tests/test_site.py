@@ -1,7 +1,7 @@
 """Tests for swarm.site — site-wide orchestration."""
 
 
-from swarm.site import deploy_apps, deploy_infra, reset
+from swarm.site import deploy_apps, deploy_infra, drain
 
 
 class TestDeployInfra:
@@ -33,7 +33,7 @@ class TestDeployInfra:
 
         deploy_infra()
         assert "registry:auth" not in tasks_run
-        assert "site:registry-auth" not in tasks_run
+        assert "site:registry" not in tasks_run
 
     def test_collects_failures(self, tmp_path, monkeypatch):
         (tmp_path / "00_socket").mkdir()
@@ -93,7 +93,7 @@ class TestDeployApps:
         assert result == 1
 
 
-class TestReset:
+class TestDrain:
     def test_removes_apps_then_infra_reversed(self, tmp_path, monkeypatch):
         apps = tmp_path / "apps"
         infra = tmp_path / "infra"
@@ -118,7 +118,7 @@ class TestReset:
         removed = []
         monkeypatch.setattr("swarm.site._mise_run", lambda task, *a: (removed.append((task, a)), True)[1])
 
-        reset()
+        drain()
         # Apps removed first, then infra in reverse
         tasks = [t for t, _ in removed]
         assert all(t == "swarm:remove" for t in tasks)
@@ -126,40 +126,6 @@ class TestReset:
         assert "mealie" in str(paths[0])
         assert "10_postgres" in str(paths[1])  # reverse order
         assert "00_socket" in str(paths[2])
-
-    def test_volumes_flag_prunes_nodes(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("swarm.site.find_stacks", lambda ns, **kw: [])
-        monkeypatch.setattr("swarm.site.get_infra_networks", lambda: [])
-
-        from conftest import make_completed
-        monkeypatch.setattr("swarm.site.docker_run", lambda *a, **kw: make_completed())
-        monkeypatch.setattr("swarm.site.get_swarm_nodes", lambda: [{"hostname": "node1"}])
-
-        ssh_calls = []
-        monkeypatch.setattr(
-            "swarm.site.ssh_node",
-            lambda h, c, **kw: (ssh_calls.append((h, c)), make_completed(stdout="abc123\n"))[1],
-        )
-
-        reset(volumes=True)
-        assert len(ssh_calls) == 1
-        assert "volume prune" in ssh_calls[0][1]
-
-    def test_no_volumes_skips_prune(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("swarm.site.find_stacks", lambda ns, **kw: [])
-        monkeypatch.setattr("swarm.site.get_infra_networks", lambda: [])
-
-        from conftest import make_completed
-        monkeypatch.setattr("swarm.site.docker_run", lambda *a, **kw: make_completed())
-
-        ssh_calls = []
-        monkeypatch.setattr(
-            "swarm.site.ssh_node",
-            lambda h, c, **kw: (ssh_calls.append(h), make_completed())[1],
-        )
-
-        reset(volumes=False)
-        assert len(ssh_calls) == 0
 
     def test_removes_networks(self, monkeypatch):
         monkeypatch.setattr("swarm.site.find_stacks", lambda ns, **kw: [])
@@ -176,5 +142,5 @@ class TestReset:
 
         monkeypatch.setattr("swarm.site.docker_run", fake_docker)
 
-        reset()
+        drain()
         assert removed_nets == ["infra_socket", "infra_gw-internal"]

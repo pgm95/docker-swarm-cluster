@@ -46,7 +46,7 @@ Only the final `docker stack deploy` command executes over SSH.
 
    ```bash
    mise run site:deploy-infra   # Deploy infrastructure stacks in order
-   mise run site:registry-auth  # Authenticate nodes for custom images
+   mise run site:registry       # Authenticate nodes for custom images
    mise run site:deploy-apps    # Deploy all application stacks
    ```
 
@@ -156,7 +156,7 @@ Each stack's README documents service-level details and operational procedures.
   Prometheus scrapes these and all other compatible targets via dockerswarm_sd_configs and static_configs
   Alloy collects logs and Loki stores them. Grafana visualizes everything.
   Uptime Kuma monitors service availability and alerts.
-- **Registry:** private OCI registry for custom images. Nodes authenticate via `site:registry-auth`.
+- **Registry:** private OCI registry for custom images. Nodes authenticate via `site:registry`.
   Stacks with `build/` directories trigger automatic builds during `swarm:deploy`.
 - **Authentication:** Authentik provides OIDC, user directory, LDAP outpost, and WebFinger.
   Group membership (`GLOBAL_ADMIN_GROUP`) maps to application-level admin roles.

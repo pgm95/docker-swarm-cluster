@@ -59,7 +59,7 @@ The init script (`config/borgmatic/init.sh`) wraps the stock entrypoint: waits f
 
 ### Deploy ordering
 
-`site:deploy-infra` deploys backup immediately after postgres. `site:reset` removes backup before postgres (reverse order).
+`site:deploy-infra` deploys backup immediately after postgres. `site:drain` removes backup before postgres (reverse order).
 
 ## Restore Procedures
 

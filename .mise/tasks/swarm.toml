@@ -44,8 +44,7 @@ run = 'python3 -m swarm.remove "${usage_stack}"'
 
 ["swarm:cleanup"]
 alias = "cleanup"
-description = "Remove unused versioned secrets, configs, dead containers, and dangling images"
-usage = 'flag "--prune-images" help="Also prune all unused images on every node"'
+description = "Remove unused versioned secrets/configs and run docker system prune on every node"
 run = 'python3 -m swarm.cleanup'
 
 ["swarm:init-networks"]
