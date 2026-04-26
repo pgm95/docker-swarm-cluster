@@ -11,6 +11,7 @@
 .stversions
 *_LOCALDEV*
 .nodeploy
+.miserc.toml
 
 # Python
 *.egg
