@@ -1,0 +1,21 @@
+key_file = "" # Empty placeholder to avoid warnings, we are using seed file instead
+verbose = false
+ldap_host = "0.0.0.0"
+ldap_port = 389
+http_host = "0.0.0.0"
+http_port = 17170
+force_ldap_user_pass_reset = "always" # Resets admin password on every startup
+ignored_user_attributes = []
+ignored_group_attributes = []
+
+[smtp_options]
+port = 465
+smtp_encryption = "TLS"
+enable_password_reset = true # Password reset via email
+
+[ldaps_options]
+enabled = false
+
+[healthcheck_options]
+http_host = "127.0.0.1"
+ldap_host = "127.0.0.1"

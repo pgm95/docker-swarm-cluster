@@ -24,6 +24,17 @@ psql -v ON_ERROR_STOP=1 <<-EOSQL
     GRANT authentik TO ${PROVISIONER_USER};
     SELECT 'CREATE DATABASE authentik OWNER authentik'
     WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'authentik')\gexec
+
+    DO \$\$
+    BEGIN
+        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'lldap') THEN
+            EXECUTE format('CREATE ROLE lldap LOGIN PASSWORD %L', '${LLDAP_DB_PASSWORD}');
+        END IF;
+    END
+    \$\$;
+    GRANT lldap TO ${PROVISIONER_USER};
+    SELECT 'CREATE DATABASE lldap OWNER lldap'
+    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'lldap')\gexec
 EOSQL
 
 echo "Database provisioning complete."

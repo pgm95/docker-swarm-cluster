@@ -158,7 +158,7 @@ Each stack's README documents service-level details and operational procedures.
   Uptime Kuma monitors service availability and alerts.
 - **Registry:** private OCI registry for custom images. Nodes authenticate via `site:registry`.
   Stacks with `build/` directories trigger automatic builds during `swarm:deploy`.
-- **Authentication:** Authentik provides OIDC, user directory, LDAP outpost, and WebFinger.
+- **Authentication:** Authentik provides OIDC and WebFinger; Syncs with lldap as LDAP source.
   Group membership (`GLOBAL_ADMIN_GROUP`) maps to application-level admin roles.
 
 ## Nuances and Limitations

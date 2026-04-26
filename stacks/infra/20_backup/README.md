@@ -100,7 +100,7 @@ borgmatic-exec restore --archive <archive-name> \
 ### Full cluster restore (volume lost)
 
 1. Redeploy postgres — fresh volume, `init.sh` creates provisioner with `pg_read_all_data` admin
-2. Deploy all stacks (`site:deploy-infra` + `site:deploy-apps`) — init-db sidecars create roles and empty databases. Applications auto-initialize their schemas on first startup (authelia, lldap, grafana, crowdsec, immich all run migrations against empty databases)
+2. Deploy all stacks (`site:deploy-infra` + `site:deploy-apps`) — init-db sidecars create roles and empty databases. Applications auto-initialize their schemas on first startup against the empty databases.
 3. Restore all databases — `pg_restore --clean` drops the auto-initialized schemas and replaces them with backup data:
 
 ```sh

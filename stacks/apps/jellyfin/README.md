@@ -50,34 +50,32 @@ Full investigation and reproducer in `.local/gpu-kernel/REPORT.md` (local only, 
 
 ## LDAP
 
-Jellyfin does not support OIDC. Authentication goes through the Authentik LDAP outpost on the `infra_ldap` overlay. The outpost uses `endpoint_mode: dnsrr` for LXC compatibility.
-
-Install the LDAP Authentication plugin in Jellyfin admin, then configure:
+Jellyfin does not support OIDC. Authentication binds directly to the lldap service in the `accounts` stack, reachable cross-stack on the `infra_ldap` overlay. Install the LDAP Authentication plugin in Jellyfin admin, then configure via the plugin UI (settings live in Jellyfin's own DB, not in compose).
 
 ### Connection
 
 | Setting | Value |
 |---|---|
-| LDAP Server | `accounts_ldap-outpost` |
-| LDAP Port | `3389` |
-| Secure LDAP | unchecked (Tailscale encrypts the overlay) |
-| LDAP Bind User | `cn=ldapservice,ou=users,GLOBAL_LDAP_BASE_DN` |
-| LDAP Bind Password | from `secrets.env` (`AUTHENTIK_LDAP_BIND_PASSWORD`) |
+| LDAP Server | `lldap` (alias on `infra_ldap` overlay) |
+| LDAP Port | `389` |
+| Secure LDAP | unchecked (Tailscale encrypts the underlay) |
+| LDAP Bind User | `uid=_bind_jellyfin,ou=people,GLOBAL_LDAP_BASE_DN` |
+| LDAP Bind Password | from accounts stack `secrets.env` (`JELLYFIN_BIND_PASS`); seeded by `init-ldap` into `lldap_password_manager` |
 | LDAP Base DN | `GLOBAL_LDAP_BASE_DN` |
 
 ### Users
 
 | Setting | Value |
 |---|---|
-| LDAP Search Filter | `(objectClass=user)` |
+| LDAP Search Filter | `(objectClass=person)` |
 | LDAP Search Attributes | `uid, cn, mail, displayName` |
 | LDAP Uid Attribute | `uid` |
-| LDAP Username Attribute | `cn` |
+| LDAP Username Attribute | `uid` |
 | LDAP Password Attribute | *(empty)* |
 | Enable case insensitive username | checked |
 | Enable user creation | checked |
-| Allow password change | unchecked |
-| Password Reset URL | `https://auth.DOMAIN_PUBLIC/if/user/#/settings` |
+| Allow password change | checked (lldap accepts RFC 3062 modify from the bind user) |
+| Password Reset URL | `https://lldap.DOMAIN_PRIVATE` |
 
 ### Administrators
 
@@ -87,8 +85,4 @@ Install the LDAP Authentication plugin in Jellyfin admin, then configure:
 | LDAP Admin Filter | `(memberOf=cn=app_admin,ou=groups,GLOBAL_LDAP_BASE_DN)` |
 | Enable Admin Filter memberUid mode | unchecked |
 
-### Limitations
-
-Authentik's LDAP outpost is read-only. Password changes and profile images are managed in Authentik directly, not via LDAP. Users change passwords through the Password Reset URL above.
-
-`GLOBAL_LDAP_BASE_DN` and `DOMAIN_PUBLIC` vary by environment. LDAP plugin configuration lives in Jellyfin's database (set once through the plugin UI, not in compose).
+`GLOBAL_LDAP_BASE_DN` and `DOMAIN_PRIVATE` vary by environment.

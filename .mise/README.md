@@ -10,7 +10,7 @@ Task orchestration, deployment pipeline, and development tooling for swarm-clust
   config.{dev,prod}.toml  # Per-environment secrets, nodes, domains
   tasks/                  # Task definitions (TOML) — what to run
     swarm.toml            #   Stack operations: deploy, remove, cleanup, validate
-    site.toml             #   Cluster-wide: deploy-infra, deploy-apps, reset, registry:auth
+    site.toml             #   Cluster-wide: deploy-infra, deploy-apps, drain, registry
     sops.toml             #   Secrets: init, encrypt, edit, status
   lib/swarm/              # Python package — how tasks work
     _*.py                 #   Internal: docker CLI, SSH, SOPS, compose, output, stack resolution
@@ -191,7 +191,7 @@ Task logic lives in the `swarm` Python package at `.mise/lib/swarm/`, invoked by
 | `remove` | `swarm:remove` | Stack removal with drain wait |
 | `status` | `status` | Cluster node and stack health display |
 | `validate` | `swarm:validate` | Compose validation and bind mount path checks |
-| `cleanup` | `swarm:cleanup` | Orphaned secret/config removal, node pruning |
+| `cleanup` | `swarm:cleanup` | Removes orphaned versioned secrets/configs, runs `docker system prune --all --volumes --force` on every node |
 | `networks` | `swarm:init-networks` | Overlay network discovery and creation. `SWARM_INTERNAL_NETWORKS` (space-separated) controls which get `--internal`. `SWARM_OVERLAY_MTU` sets the VXLAN MTU at creation time |
 | `nodes` | (library) | Swarm node discovery and placement constraint matching |
 | `secrets` | (library) | Secret parsing, validation, and versioned creation |

@@ -29,6 +29,7 @@ services:
       - AUTHENTIK_ERROR_REPORTING__ENABLED=false
       - AUTHENTIK_LOG_LEVEL=info
       - AUTHENTIK_LISTEN__TRUSTED_PROXY_CIDRS=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10
+      - AUTHENTIK_AVATARS=attributes.avatar,initials
       ## Bootstrap vars are only read on first startup.
       # - AUTHENTIK_BOOTSTRAP_PASSWORD=${GLOBAL_PASSWORD}
       # - AUTHENTIK_BOOTSTRAP_TOKEN=${AUTHENTIK_BOOTSTRAP_TOKEN}
@@ -39,8 +40,8 @@ services:
       - smtp_pass
     networks:
       - default
-      - infra_gw-external
       - infra_postgres
+      - infra_gw-external
     volumes:
       - authentik-data:/data
     healthcheck:
@@ -106,14 +107,13 @@ services:
       - AUTHENTIK_DISABLE_STARTUP_ANALYTICS=true
       - AUTHENTIK_ERROR_REPORTING__ENABLED=false
       - AUTHENTIK_LOG_LEVEL=info
+      - AUTHENTIK_AVATARS=attributes.avatar,initials
       # Env vars consumed by blueprints via !Env
       - GLOBAL_USERNAME=${GLOBAL_USERNAME}
       - GLOBAL_LDAP_BASE_DN=${GLOBAL_LDAP_BASE_DN}
       - GLOBAL_ADMIN_GROUP=${GLOBAL_ADMIN_GROUP}
       - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
       - DOMAIN_PRIVATE=${DOMAIN_PRIVATE}
-      # HACK: Forces container restart on every deploy, triggering fresh blueprint discovery
-      - DEPLOY_VERSION=${DEPLOY_VERSION}
       ## Bootstrap vars are only read on first startup.
       # - AUTHENTIK_BOOTSTRAP_PASSWORD=${GLOBAL_PASSWORD}
       # - AUTHENTIK_BOOTSTRAP_TOKEN=${AUTHENTIK_BOOTSTRAP_TOKEN}
@@ -123,8 +123,7 @@ services:
       - authentik_postgres_password
       - smtp_pass
       - global_password
-      - authentik_outpost_token
-      - authentik_ldap_bind_password
+      - authentik_bind_pass
       - oidc_client_secret_paperless
       - oidc_client_secret_mealie
       - oidc_client_secret_dawarich
@@ -140,8 +139,8 @@ services:
         target: /blueprints/custom/20_scope-mappings.yaml
       - source: blueprint_providers
         target: /blueprints/custom/30_providers.yaml
-      - source: blueprint_ldap
-        target: /blueprints/custom/40_ldap.yaml
+      - source: blueprint_ldap_source
+        target: /blueprints/custom/25_ldap-source.yaml
       - source: blueprint_brand
         target: /blueprints/custom/50_brand.yaml
     networks:
@@ -165,25 +164,40 @@ services:
       resources:
         <<: *resources-huge
 
-  ldap-outpost:
-    image: ghcr.io/goauthentik/ldap:2026.2.1
+  lldap:
+    image: lldap/lldap:2026-03-04-debian-rootless
     logging:
       <<: *logging
     stop_grace_period: 30s
     environment:
-      - AUTHENTIK_HOST=http://authentik-server:9000
-      - AUTHENTIK_TOKEN=${AUTHENTIK_OUTPOST_TOKEN}
-      - AUTHENTIK_INSECURE=true
-      - DEPLOY_VERSION=${DEPLOY_VERSION}
+      - LLDAP_JWT_SECRET_FILE=/run/secrets/lldap_jwt_secret
+      - LLDAP_KEY_SEED_FILE=/run/secrets/lldap_key_seed
+      - LLDAP_LDAP_USER_DN=${GLOBAL_USERNAME}
+      - LLDAP_LDAP_USER_EMAIL=${GLOBAL_USERNAME}@${DOMAIN_PUBLIC}
+      - LLDAP_LDAP_USER_PASS_FILE=/run/secrets/global_password
+      - LLDAP_LDAP_BASE_DN=${GLOBAL_LDAP_BASE_DN}
+      - LLDAP_HTTP_URL=https://lldap.${DOMAIN_PRIVATE}
+      - LLDAP_DATABASE_URL=postgres://lldap:${LLDAP_POSTGRES_PASSWORD}@postgres:5432/lldap
+      - LLDAP_SMTP_OPTIONS__USER=${GLOBAL_SMTP_USER}
+      - LLDAP_SMTP_OPTIONS__SERVER=${GLOBAL_SMTP_HOST}
+      - LLDAP_SMTP_OPTIONS__PASSWORD=${GLOBAL_SMTP_PASS}
+      - LLDAP_SMTP_OPTIONS__FROM=Accounts <noreply@${DOMAIN_PUBLIC}>
+    secrets:
+      - lldap_jwt_secret
+      - lldap_key_seed
+      - global_password
+    configs:
+      - source: lldap_config
+        target: /data/lldap_config.toml
     networks:
-      - default
-      - infra_ldap
+      default: {}
+      infra_postgres: {}
+      infra_gw-internal: {}
+      infra_ldap:
+        aliases:
+          - lldap # Authentik refuses hostnames with underscores (RFC 1035)
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:9300/outpost.goauthentik.io/ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
-      start_period: 15s
+      disable: false
     deploy:
       <<: [*place-vm, *deploy]
       update_config:
@@ -192,7 +206,18 @@ services:
       mode: replicated
       replicas: 1
       resources:
-        <<: *resources-small
+        <<: *resources-medium
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.internal=true"
+        - "traefik.http.routers.lldap.rule=Host(`lldap.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.lldap.entrypoints=websecure"
+        - "traefik.http.services.lldap.loadbalancer.server.port=17170"
+        - "homepage.group=Infrastructure"
+        - "homepage.name=LLDAP"
+        - "homepage.icon=lldap-dark"
+        - "homepage.href=https://lldap.${DOMAIN_PRIVATE}"
+        - "homepage.description=LDAP Server"
 
   init-db:
     image: postgres:17-alpine
@@ -204,11 +229,47 @@ services:
       - PROVISIONER_USER=${GLOBAL_POSTGRES_PROVISIONER_USER}
       - PROVISIONER_PASSWORD=${GLOBAL_POSTGRES_PROVISIONER_PASSWORD}
       - AUTHENTIK_DB_PASSWORD=${AUTHENTIK_POSTGRES_PASSWORD}
+      - LLDAP_DB_PASSWORD=${LLDAP_POSTGRES_PASSWORD}
     configs:
       - source: init_db_entrypoint
         target: /init-db-entrypoint.sh
     networks:
       - infra_postgres
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      <<: [*place-vm, *deploy-init]
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-tiny
+
+  init-ldap:
+    image: lldap/lldap:2026-03-04-debian-rootless
+    entrypoint: ["/bin/sh", "/init-ldap-entrypoint.sh"]
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    environment:
+      - LLDAP_URL=http://lldap:17170
+      - LLDAP_ADMIN_USERNAME=${GLOBAL_USERNAME}
+      - LLDAP_ADMIN_PASSWORD_FILE=/run/secrets/global_password
+      - GLOBAL_ADMIN_GROUP=${GLOBAL_ADMIN_GROUP}
+      - AUTHENTIK_BIND_USER=_bind_authentik
+      - AUTHENTIK_BIND_PASSWORD_FILE=/run/secrets/authentik_bind_pass
+      - JELLYFIN_BIND_USER=_bind_jellyfin
+      - JELLYFIN_BIND_PASSWORD_FILE=/run/secrets/jellyfin_bind_pass
+      - USER_CONFIGS_DIR=/tmp/bootstrap/user-configs
+      - GROUP_CONFIGS_DIR=/tmp/bootstrap/group-configs
+    secrets:
+      - global_password
+      - authentik_bind_pass
+      - jellyfin_bind_pass
+    configs:
+      - source: init_ldap_entrypoint
+        target: /init-ldap-entrypoint.sh
+    networks:
+      - default
     healthcheck:
       test: ["NONE"]
     deploy:
@@ -224,6 +285,8 @@ volumes:
 
 networks:
   infra_gw-external:
+    external: true
+  infra_gw-internal:
     external: true
   infra_postgres:
     external: true

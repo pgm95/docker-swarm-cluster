@@ -1,4 +1,5 @@
 # yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+
 version: 1
 metadata:
   name: Brand Configuration
@@ -15,5 +16,9 @@ entries:
     identifiers:
       default: true
     attrs:
+      domain: authentik-default
       branding_title: Authentik
       default_application: !Find [authentik_core.application, [slug, tailscale]]
+  # Avatar resolution chain (attributes.avatar then initials) is set at first
+  # boot via AUTHENTIK_AVATARS on the server/worker. The authentik_tenants.tenant
+  # model is not allowed for blueprint manipulation in 2026.2.
