@@ -1,16 +1,13 @@
 {
   "mcpServers": {
-    "loki-mcp-server": {
-      "command": "docker",
-      "args": ["run", "--rm", "-i",
-               "-e", "LOKI_URL=https://loki.${DOMAIN_PRIVATE}:443",
-               "loki-mcp-server:latest"],
+    "grafana": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["mcp-grafana", "--disable-write"],
       "env": {
-        "DOCKER_HOST": "unix://${HOME}/.colima/default/docker.sock",
-        "DOMAIN_PRIVATE": "${DOMAIN_PRIVATE}"
-      },
-      "disabled": false,
-      "autoApprove": ["loki_query"]
+        "GRAFANA_URL": "https://grafana.${DOMAIN_PRIVATE}",
+        "GRAFANA_SERVICE_ACCOUNT_TOKEN": "${GRAFANA_MCP_TOKEN}"
+      }
     }
   }
 }
