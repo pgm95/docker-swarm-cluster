@@ -2,6 +2,7 @@
 
 include:
   - secrets.yml
+  - configs.yml
 
 services:
   mariadb:
@@ -20,6 +21,9 @@ services:
       - mariadb_db_password
     volumes:
       - mariadb-data:/var/lib/mysql
+    networks:
+      - default
+      - infra_backup
     healthcheck:
       test: ["CMD", "mariadb-admin", "ping", "-h", "127.0.0.1"]
       interval: 10s
@@ -34,6 +38,27 @@ services:
       replicas: 1
       resources:
         <<: *resources-medium
+
+  init-backup:
+    image: mariadb:11.8
+    entrypoint: ["/bin/sh", "/init-backup-entrypoint.sh"]
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    secrets:
+      - mariadb_root_password
+      - uptime_kuma_backup_db_password
+    configs:
+      - source: init_backup_entrypoint
+        target: /init-backup-entrypoint.sh
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      <<: [*place-vm, *deploy-init]
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-tiny
 
   uptime-kuma:
     image: louislam/uptime-kuma:2-slim-rootless
@@ -92,4 +117,6 @@ networks:
   infra_gw-internal:
     external: true
   infra_socket:
+    external: true
+  infra_backup:
     external: true

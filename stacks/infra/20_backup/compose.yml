@@ -13,13 +13,12 @@ services:
     stop_grace_period: 60s
     environment:
       - TZ=${GLOBAL_TZ}
-      - PGHOST=postgres
-      - PGPORT=5432
-      - PGUSER=${BACKUP_DB_USER}
-      - PGPASSWORD=${BACKUP_DB_PASSWORD}
-      - FILE__BORG_PASSPHRASE=/run/secrets/borg_passphrase
     secrets:
       - borg_passphrase
+      - postgres_backup_db_password
+      - immich_backup_db_password
+      - dawarich_backup_db_password
+      - uptime_kuma_backup_db_password
     configs:
       - source: borgmatic_config
         target: /etc/borgmatic.d/config.yaml
@@ -34,6 +33,7 @@ services:
       - borg-cache:/root/.cache/borg
     networks:
       - infra_postgres
+      - infra_backup
     healthcheck:
       test: ["NONE"]
     deploy:
@@ -43,22 +43,22 @@ services:
       mode: replicated
       replicas: 1
       resources:
-        <<: *resources-small
+        <<: *resources-large
 
-  init-db:
+  init-backup:
     image: postgres:17-alpine
-    entrypoint: ["/bin/sh", "/init-db-entrypoint.sh"]
+    entrypoint: ["/bin/sh", "/init-backup-entrypoint.sh"]
     logging:
       <<: *logging
     stop_grace_period: 30s
     environment:
       - PROVISIONER_USER=${GLOBAL_POSTGRES_PROVISIONER_USER}
       - PROVISIONER_PASSWORD=${GLOBAL_POSTGRES_PROVISIONER_PASSWORD}
-      - BACKUP_DB_USER=${BACKUP_DB_USER}
-      - BACKUP_DB_PASSWORD=${BACKUP_DB_PASSWORD}
+    secrets:
+      - postgres_backup_db_password
     configs:
-      - source: init_db_entrypoint
-        target: /init-db-entrypoint.sh
+      - source: init_backup_entrypoint
+        target: /init-backup-entrypoint.sh
     networks:
       - infra_postgres
     healthcheck:
@@ -78,4 +78,6 @@ volumes:
 
 networks:
   infra_postgres:
+    external: true
+  infra_backup:
     external: true

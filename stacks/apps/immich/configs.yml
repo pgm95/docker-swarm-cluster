@@ -2,3 +2,6 @@ configs:
   immich_server_init:
     name: immich_server_init_${DEPLOY_VERSION}
     file: ./config/immich-server/init.sh
+  init_backup_entrypoint:
+    name: immich_init_backup_entrypoint_${DEPLOY_VERSION}
+    file: ./config/bootstrap/init-backup.sh

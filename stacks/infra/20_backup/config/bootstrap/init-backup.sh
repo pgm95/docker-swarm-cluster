@@ -6,6 +6,7 @@ PGPORT="5432"
 PGUSER="${PROVISIONER_USER}"
 PGDATABASE="postgres"
 PGPASSWORD="${PROVISIONER_PASSWORD}"
+BACKUP_PASSWORD="$(cat /run/secrets/postgres_backup_db_password)"
 export PGHOST PGPORT PGUSER PGDATABASE PGPASSWORD
 
 echo "Waiting for PostgreSQL..."
@@ -16,14 +17,14 @@ done
 psql -v ON_ERROR_STOP=1 <<-EOSQL
     DO \$\$
     BEGIN
-        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${BACKUP_DB_USER}') THEN
-            EXECUTE format('CREATE ROLE %I LOGIN PASSWORD %L', '${BACKUP_DB_USER}', '${BACKUP_DB_PASSWORD}');
+        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'backup') THEN
+            EXECUTE format('CREATE ROLE backup LOGIN PASSWORD %L', '${BACKUP_PASSWORD}');
         ELSE
-            EXECUTE format('ALTER ROLE %I PASSWORD %L', '${BACKUP_DB_USER}', '${BACKUP_DB_PASSWORD}');
+            EXECUTE format('ALTER ROLE backup PASSWORD %L', '${BACKUP_PASSWORD}');
         END IF;
     END
     \$\$;
-    GRANT pg_read_all_data TO ${BACKUP_DB_USER};
+    GRANT pg_read_all_data TO backup;
 EOSQL
 
 echo "Backup role provisioning complete."

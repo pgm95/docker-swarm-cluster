@@ -148,6 +148,9 @@ services:
       - /dev/shm:size=134217728
     volumes:
       - database-data:/var/lib/postgresql/data
+    networks:
+      - default
+      - infra_backup
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d immich -U postgres"]
       interval: 10s
@@ -167,6 +170,27 @@ services:
         reservations:
           memory: 512M
 
+  init-backup:
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+    entrypoint: ["/bin/sh", "/init-backup-entrypoint.sh"]
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    secrets:
+      - db_password
+      - immich_backup_db_password
+    configs:
+      - source: init_backup_entrypoint
+        target: /init-backup-entrypoint.sh
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      <<: [*place-gpu, *deploy-init]
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-tiny
+
 volumes:
   ml-cache:
   database-data:
@@ -174,4 +198,6 @@ volumes:
 
 networks:
   infra_gw-internal:
+    external: true
+  infra_backup:
     external: true

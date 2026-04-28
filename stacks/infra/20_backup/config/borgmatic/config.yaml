@@ -4,15 +4,74 @@ repositories:
   - path: /mnt/borg-repository
     label: local
 
-postgresql_databases:
-  - name: all
-    hostname: postgres
-    port: 5432
-    format: custom
-    compression: none
+encryption_passphrase: "{credential container borg_passphrase}"
 
+archive_name_format: "swarm-cluster-{now:%Y-%m-%dT%H-%M-%S}"
+
+# Reliability
+retries: 3
+retry_wait: 30
+lock_wait: 60
+checkpoint_interval: 300
+
+# Performance and repo health
+compression: zstd,3
+compact_threshold: 20
+
+# Retention
 keep_daily: 7
 keep_weekly: 4
 keep_monthly: 6
 
-compression: zstd,3
+# Integrity checks
+checks:
+  - name: repository
+    frequency: 1 week
+  - name: archives
+    frequency: 2 weeks
+  - name: extract
+    frequency: 1 month
+    only_run_on: [Sunday]
+
+# Output
+statistics: true
+
+# Monitoring
+# uptime_kuma:
+#   push_url: https://status.${DOMAIN_PRIVATE}/api/push/<MONITOR_ID>
+#   states: [start, finish, fail]
+
+postgresql_databases:
+  - name: all
+    hostname: postgres
+    port: 5432
+    username: backup
+    password: "{credential container postgres_backup_db_password}"
+    format: custom
+    compression: none
+    no_owner: true
+  - name: all
+    hostname: immich_database
+    port: 5432
+    username: backup
+    password: "{credential container immich_backup_db_password}"
+    format: custom
+    compression: none
+    no_owner: true
+  - name: all
+    hostname: dawarich_database
+    port: 5432
+    username: backup
+    password: "{credential container dawarich_backup_db_password}"
+    format: custom
+    compression: none
+    no_owner: true
+
+mariadb_databases:
+  - name: all
+    hostname: uptime-kuma_mariadb
+    port: 3306
+    username: backup
+    password: "{credential container uptime_kuma_backup_db_password}"
+    format: sql
+    options: "--single-transaction --skip-lock-tables"

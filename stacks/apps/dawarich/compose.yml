@@ -2,6 +2,7 @@
 
 include:
   - secrets.yml
+  - configs.yml
 
 services:
   app:
@@ -45,6 +46,10 @@ services:
       - OIDC_REDIRECT_URI=https://maps.${DOMAIN_PRIVATE}/users/auth/openid_connect/callback
       - OIDC_PROVIDER_NAME=Authentik
       - OIDC_AUTO_REGISTER=true
+      # 2FA
+      - OTP_ENCRYPTION_PRIMARY_KEY=${OTP_ENCRYPTION_PRIMARY_KEY}
+      - OTP_ENCRYPTION_DETERMINISTIC_KEY=${OTP_ENCRYPTION_DETERMINISTIC_KEY}
+      - OTP_ENCRYPTION_KEY_DERIVATION_SALT=${OTP_ENCRYPTION_KEY_DERIVATION_SALT}
     networks:
       - default
       - infra_gw-internal
@@ -112,6 +117,10 @@ services:
       - PHOTON_API_HOST=photon.dawarich.app
       - PHOTON_API_KEY=${PHOTON_API_KEY_DAWARICH}
       - PHOTON_API_USE_HTTPS=true
+      # 2FA
+      - OTP_ENCRYPTION_PRIMARY_KEY=${OTP_ENCRYPTION_PRIMARY_KEY}
+      - OTP_ENCRYPTION_DETERMINISTIC_KEY=${OTP_ENCRYPTION_DETERMINISTIC_KEY}
+      - OTP_ENCRYPTION_KEY_DERIVATION_SALT=${OTP_ENCRYPTION_KEY_DERIVATION_SALT}
     volumes:
       - app-public:/var/app/public
       - app-watched:/var/app/tmp/imports/watched
@@ -149,6 +158,9 @@ services:
         target: /dev/shm
         tmpfs:
           size: 1073741728
+    networks:
+      - default
+      - infra_backup
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d dawarich_development"]
       interval: 10s
@@ -163,6 +175,27 @@ services:
       replicas: 1
       resources:
         <<: *resources-huge
+
+  init-backup:
+    image: postgis/postgis:17-3.5-alpine
+    entrypoint: ["/bin/sh", "/init-backup-entrypoint.sh"]
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    secrets:
+      - dawarich_db_password
+      - dawarich_backup_db_password
+    configs:
+      - source: init_backup_entrypoint
+        target: /init-backup-entrypoint.sh
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      <<: [*place-vm, *deploy-init]
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-tiny
 
   redis:
     image: redis:7.4-alpine
@@ -200,4 +233,6 @@ volumes:
 
 networks:
   infra_gw-internal:
+    external: true
+  infra_backup:
     external: true

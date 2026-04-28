@@ -1,0 +1,4 @@
+configs:
+  init_backup_entrypoint:
+    name: uptime_kuma_init_backup_entrypoint_${DEPLOY_VERSION}
+    file: ./config/bootstrap/init-backup.sh

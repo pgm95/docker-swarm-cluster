@@ -148,7 +148,8 @@ Each stack's README documents service-level details and operational procedures.
 - **Postgres:** Central database server.
   All stateful services share one instance via dedicated roles provisioned by init-db sidecars.
 - **Backup:** Borgmatic with scheduled backups, deduplication, and encryption.
-  Auto-discovers all Postgres databases, streams dumps directly to the repository.
+  Targets multiple database instances across Postgres and MariaDB.
+  Streams dumps directly to the repository.
 - **Dual Gateways:** Two Traefik instances: external (Coupled with CrowdSec WAF + geoblocking
   for public internet), and internal (Internal services accessible only on LAN/Tailscale).
   Both use host-mode ports and DNS-based routing.
