@@ -7,6 +7,10 @@ cat > "${GROUP_CONFIGS_DIR}/${GLOBAL_ADMIN_GROUP}.json" <<EOF
 {"name": "${GLOBAL_ADMIN_GROUP}"}
 EOF
 
+cat > "${GROUP_CONFIGS_DIR}/${GLOBAL_USER_GROUP}.json" <<EOF
+{"name": "${GLOBAL_USER_GROUP}"}
+EOF
+
 cat > "${USER_CONFIGS_DIR}/${AUTHENTIK_BIND_USER}.json" <<EOF
 {
   "id": "${AUTHENTIK_BIND_USER}",
@@ -22,6 +26,15 @@ cat > "${USER_CONFIGS_DIR}/${JELLYFIN_BIND_USER}.json" <<EOF
   "email": "jellyfin@service.internal",
   "password_file": "${JELLYFIN_BIND_PASSWORD_FILE}",
   "groups": ["lldap_password_manager"]
+}
+EOF
+
+cat > "${USER_CONFIGS_DIR}/${TEST_USER}.json" <<EOF
+{
+  "id": "${TEST_USER}",
+  "email": "test@service.internal",
+  "password_file": "${TEST_USER_PASSWORD_FILE}",
+  "groups": ["${GLOBAL_USER_GROUP}"]
 }
 EOF
 

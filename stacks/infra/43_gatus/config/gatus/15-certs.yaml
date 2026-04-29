@@ -1,0 +1,20 @@
+endpoints:
+  - name: "TLS ${DOMAIN_PUBLIC}"
+    group: certs
+    url: "https://auth.${DOMAIN_PUBLIC}"
+    interval: 1h
+    client:
+      proxy-url: "${GATUS_PROXY_URL}"
+    conditions:
+      - "[CERTIFICATE_EXPIRATION] > 336h"
+    alerts:
+      - type: homeassistant
+
+  - name: "TLS ${DOMAIN_PRIVATE}"
+    group: certs
+    url: "https://gatus.${DOMAIN_PRIVATE}"
+    interval: 1h
+    conditions:
+      - "[CERTIFICATE_EXPIRATION] > 336h"
+    alerts:
+      - type: homeassistant

@@ -1,0 +1,564 @@
+{
+  "title": "Gatus",
+  "uid": "gatus",
+  "id": null,
+  "version": 1,
+  "schemaVersion": 38,
+  "description": "Gatus endpoint health, SLA, and latency, grouped by Gatus endpoint group.",
+  "editable": true,
+  "graphTooltip": 0,
+  "tags": ["prometheus"],
+  "refresh": "30s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {"type": "grafana", "uid": "grafana"},
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {"limit": 100, "matchAny": false, "tags": [], "type": "dashboard"},
+        "type": "dashboard"
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "definition": "label_values(gatus_results_endpoint_success, group)",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "group",
+        "options": [],
+        "query": {
+          "query": "label_values(gatus_results_endpoint_success, group)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "title": "Total Endpoints",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 3, "w": 4, "x": 0, "y": 0},
+      "id": 1,
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]},
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "editorMode": "code",
+          "expr": "count(gatus_results_endpoint_success) + (count(gatus_suite_results_success) or on() vector(0))",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Online",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 3, "w": 4, "x": 4, "y": 0},
+      "id": 2,
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "editorMode": "code",
+          "expr": "count(gatus_results_endpoint_success == 1) + (count(gatus_suite_results_success == 1) or on() vector(0))",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Offline",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 3, "w": 4, "x": 8, "y": 0},
+      "id": 3,
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "red", "value": 1}
+            ]
+          },
+          "unit": "none",
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "editorMode": "code",
+          "expr": "count(gatus_results_endpoint_success == 0) + (count(gatus_suite_results_success == 0) or on() vector(0))",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Avg Response (15m)",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 3, "w": 4, "x": 12, "y": 0},
+      "id": 4,
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]},
+          "unit": "s",
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "editorMode": "code",
+          "expr": "avg(avg_over_time(gatus_results_duration_seconds[15m]) or avg_over_time(gatus_suite_results_duration_seconds[15m]))",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Avg Response (2h)",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 3, "w": 4, "x": 16, "y": 0},
+      "id": 5,
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]},
+          "unit": "s",
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "editorMode": "code",
+          "expr": "avg(avg_over_time(gatus_results_duration_seconds[2h]) or avg_over_time(gatus_suite_results_duration_seconds[2h]))",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Avg Response (24h)",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 3, "w": 4, "x": 20, "y": 0},
+      "id": 6,
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]},
+          "unit": "s",
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "editorMode": "code",
+          "expr": "avg(avg_over_time(gatus_results_duration_seconds[24h]) or avg_over_time(gatus_suite_results_duration_seconds[24h]))",
+          "instant": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "SLA",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 7, "w": 24, "x": 0, "y": 3},
+      "id": 7,
+      "interval": "15s",
+      "maxDataPoints": 30000,
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+            "lineInterpolation": "stepAfter",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {"type": "linear"},
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {"group": "A", "mode": "none"},
+            "thresholdsStyle": {"mode": "off"}
+          },
+          "decimals": 2,
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {"calcs": ["mean"], "displayMode": "list", "placement": "right", "showLegend": true},
+        "tooltip": {"mode": "single", "sort": "none"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "editorMode": "code",
+          "expr": "(0*(gatus_results_endpoint_success{group=~\"$group\"}!=1)) or (gatus_results_endpoint_success{group=~\"$group\"}*100)",
+          "legendFormat": "{{group}} / {{name}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "editorMode": "code",
+          "expr": "(0*(gatus_suite_results_success{group=~\"$group\"}!=1)) or (gatus_suite_results_success{group=~\"$group\"}*100)",
+          "legendFormat": "{{group}} / {{name}}",
+          "range": true,
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "id": 100,
+      "title": "$group",
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 10},
+      "panels": [],
+      "repeat": "group",
+      "repeatDirection": "h"
+    },
+    {
+      "title": "Status",
+      "type": "stat",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 11},
+      "id": 101,
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [
+            {
+              "options": {
+                "0": {"index": 1, "text": "OFFLINE"},
+                "1": {"index": 0, "text": "ONLINE"}
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "green", "value": 1}
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byType", "options": "number"},
+            "properties": [{"id": "displayName", "value": "${__field.labels.name}"}]
+          }
+        ]
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "editorMode": "code",
+          "expr": "gatus_results_endpoint_success{group=\"$group\"}",
+          "instant": true,
+          "legendFormat": "{{name}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "editorMode": "code",
+          "expr": "gatus_suite_results_success{group=\"$group\"}",
+          "instant": true,
+          "legendFormat": "{{name}}",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "title": "SLA",
+      "type": "gauge",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 11},
+      "id": 102,
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "decimals": 2,
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {"color": "semi-dark-red", "value": null},
+              {"color": "red", "value": 95},
+              {"color": "yellow", "value": 99},
+              {"color": "orange", "value": 99.5},
+              {"color": "light-green", "value": 99.9},
+              {"color": "semi-dark-green", "value": 99.95}
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byType", "options": "number"},
+            "properties": [{"id": "displayName", "value": "${__field.labels.name}"}]
+          }
+        ]
+      },
+      "options": {
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["mean"], "fields": "", "values": false},
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "editorMode": "code",
+          "expr": "avg_over_time(gatus_results_endpoint_success{group=\"$group\"}[$__range]) * 100",
+          "legendFormat": "{{name}}",
+          "instant": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "editorMode": "code",
+          "expr": "avg_over_time(gatus_suite_results_success{group=\"$group\"}[$__range]) * 100",
+          "legendFormat": "{{name}}",
+          "instant": true,
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "title": "Latency",
+      "type": "bargauge",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 6, "x": 12, "y": 11},
+      "id": 103,
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "continuous-GrYlRd"},
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "s",
+          "min": 0,
+          "max": 2,
+          "decimals": 3
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byType", "options": "number"},
+            "properties": [{"id": "displayName", "value": "${__field.labels.name}"}]
+          }
+        ]
+      },
+      "options": {
+        "displayMode": "gradient",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "orientation": "horizontal",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "showUnfilled": true,
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "editorMode": "code",
+          "expr": "gatus_results_duration_seconds{group=\"$group\"}",
+          "legendFormat": "{{name}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "editorMode": "code",
+          "expr": "gatus_suite_results_duration_seconds{group=\"$group\"}",
+          "legendFormat": "{{name}}",
+          "range": true,
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "title": "Latency Trend",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 6, "w": 6, "x": 18, "y": 11},
+      "id": 104,
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {"type": "linear"},
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {"group": "A", "mode": "none"},
+            "thresholdsStyle": {"mode": "off"}
+          },
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]},
+          "unit": "s",
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {"calcs": ["mean"], "displayMode": "list", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "single", "sort": "none"}
+      },
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "editorMode": "code",
+          "expr": "gatus_results_duration_seconds{group=\"$group\"}",
+          "legendFormat": "{{name}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "editorMode": "code",
+          "expr": "gatus_suite_results_duration_seconds{group=\"$group\"}",
+          "legendFormat": "{{name}}",
+          "range": true,
+          "refId": "B"
+        }
+      ]
+    }
+  ]
+}

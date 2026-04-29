@@ -18,7 +18,6 @@ Borgmatic dumps from four database instances, each reached via the `infra_backup
 | Central | Postgres 17 | `postgres` (via `infra_postgres`) | `infra/20_backup` (this stack) |
 | Immich | Postgres 14 + vchord + pgvector | `immich_database` | `apps/immich` |
 | Dawarich | Postgres 17 + PostGIS 3.5 | `dawarich_database` | `apps/dawarich` |
-| Uptime-Kuma | MariaDB 11.8 | `uptime-kuma_mariadb` | `infra/43_uptime-kuma` |
 
 The `backup` role on each instance is locally scoped — it doesn't see other instances' data, only its own.
 
@@ -51,18 +50,16 @@ For the central Postgres, the provisioner has `pg_read_all_data WITH ADMIN OPTIO
 | `infra/20_backup/secrets.env` | `POSTGRES_BACKUP_DB_PASSWORD` | Borgmatic auth as `backup` against central Postgres; init-backup sidecar in this stack provisions the matching role |
 | `infra/20_backup/secrets.env` | `IMMICH_BACKUP_DB_PASSWORD` | Borgmatic auth as `backup` against immich DB |
 | `infra/20_backup/secrets.env` | `DAWARICH_BACKUP_DB_PASSWORD` | Borgmatic auth as `backup` against dawarich DB |
-| `infra/20_backup/secrets.env` | `UPTIME_KUMA_BACKUP_DB_PASSWORD` | Borgmatic auth as `backup` against uptime-kuma MariaDB |
 | `apps/immich/secrets.env` | `IMMICH_BACKUP_DB_PASSWORD` | init-backup sidecar provisions matching role |
 | `apps/dawarich/secrets.env` | `DAWARICH_BACKUP_DB_PASSWORD` | init-backup sidecar provisions matching role |
-| `infra/43_uptime-kuma/secrets.env` | `UPTIME_KUMA_BACKUP_DB_PASSWORD` | init-backup sidecar provisions matching user |
 
-For the per-target passwords (immich, dawarich, uptime-kuma), the same value must appear in both the backup stack's secrets and the target stack's secrets. Alternatively, promote them to `GLOBAL_SECRETS` to keep one source of truth.
+For the per-target passwords (immich, dawarich,), the same value must appear in both the backup stack's secrets and the target stack's secrets. Alternatively, promote them to `GLOBAL_SECRETS` to keep one source of truth.
 
 ### Backup behavior
 
 `name: all` per target auto-discovers non-template databases and dumps each individually — pg_dump for Postgres targets in `--format=custom`, mariadb-dump for MariaDB with `--single-transaction --skip-lock-tables` (online InnoDB-safe). Dumps stream directly to borg via named pipe — no intermediate disk usage. pg_dump compression is disabled (`compression: none`); borg handles compression with `zstd,3`. Uncompressed dumps deduplicate significantly better across daily archives. `no_owner: true` is set on every Postgres target so dumps restore portably without requiring the original owner role to exist on the target instance.
 
-The central Postgres entry uses libpq env vars (`PGUSER`, `PGPASSWORD`) from compose, since the central instance pre-dates this stack's broader credential refactor. Per-instance backup passwords (immich, dawarich, uptime-kuma) are delivered as Docker secrets and referenced in `config.yaml` via borgmatic's native `{credential container <name>}` syntax — no env-var leakage in the borgmatic container's environment, and password values stay file-resident at `/run/secrets/`.
+The central Postgres entry uses libpq env vars (`PGUSER`, `PGPASSWORD`) from compose, since the central instance pre-dates this stack's broader credential refactor. Per-instance backup passwords (immich, dawarich) are delivered as Docker secrets and referenced in `config.yaml` via borgmatic's native `{credential container <name>}` syntax — no env-var leakage in the borgmatic container's environment, and password values stay file-resident at `/run/secrets/`.
 
 Targets are dumped serially. A failure on one target (e.g., a stack that hasn't deployed yet) doesn't abort the run — borgmatic logs the failure and continues to the next target. The borg archive still gets created with whatever dumps succeeded. `retries: 3` with `retry_wait: 30` smooths over transient cross-overlay network blips.
 
@@ -82,8 +79,6 @@ Borgmatic runs scheduled consistency checks on the borg repo (independent from t
 
 `statistics: true` adds per-archive size and dedup figures to every run's stdout. Container stdout is captured by Alloy and shipped to Loki — the existing log pipeline. No native borgmatic Loki push hook is configured; Alloy capture covers the same ground without adding a runtime dependency on Loki being reachable from borgmatic at backup time.
 
-The `uptime_kuma:` block is wired up in `config.yaml` but commented out — to enable, create a Push monitor in Uptime-Kuma's UI, paste its push URL into the config, and redeploy.
-
 ### Schedule and retention
 
 Backup scheduling is configured in `config/borgmatic/crontab.txt`.
@@ -99,7 +94,6 @@ Every credential the borgmatic container needs is mounted as a Docker secret at 
 | Central Postgres `backup` role | `/run/secrets/postgres_backup_db_password` | `password: "{credential container postgres_backup_db_password}"` on the central entry; same file is read by the init-backup sidecar's role-creation script |
 | Immich Postgres `backup` role | `/run/secrets/immich_backup_db_password` | Same pattern, immich entry |
 | Dawarich Postgres `backup` role | `/run/secrets/dawarich_backup_db_password` | Same pattern, dawarich entry |
-| Uptime-Kuma MariaDB `backup` user | `/run/secrets/uptime_kuma_backup_db_password` | Same pattern, mariadb entry |
 
 ### Repository initialization
 
@@ -122,7 +116,6 @@ Get each instance's superuser password from its owning stack's `secrets.env`:
 | Central Postgres | `postgres` | `infra/10_postgres/secrets.env` |
 | Immich Postgres | `postgres` | `apps/immich/secrets.env` (DB_PASSWORD) |
 | Dawarich Postgres | `postgres` | `apps/dawarich/secrets.env` (DAWARICH_DB_PASSWORD) |
-| Uptime-Kuma MariaDB | `root` | `infra/43_uptime-kuma/secrets.env` (MARIADB_ROOT_PASSWORD) |
 
 ### Per-host restore syntax
 
@@ -147,9 +140,6 @@ docker exec <borgmatic> borgmatic restore --archive latest \
   --original-port 5432 \
   --username postgres --password <dawarich-superuser-password>
 
-# Restore the MariaDB target (no --original-port needed):
-docker exec <borgmatic> borgmatic restore --archive latest --hostname uptime-kuma_mariadb \
-  --username root --password <mariadb-root-password>
 ```
 
 `--original-port 5432` is required for single-database Postgres restores due to a [borgmatic bug](#borgmatic-port-matching-bug). Not needed when restoring all databases or for MariaDB.

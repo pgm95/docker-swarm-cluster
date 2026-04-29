@@ -1,0 +1,19 @@
+configs:
+  init_db_entrypoint:
+    name: gatus_init_db_entrypoint_${DEPLOY_VERSION}
+    file: ./config/bootstrap/init-db.sh
+  gatus_config_global:
+    name: gatus_config_global_${DEPLOY_VERSION}
+    file: ./config/gatus/00-global.yaml
+  gatus_config_infra:
+    name: gatus_config_infra_${DEPLOY_VERSION}
+    file: ./config/gatus/10-infra.yaml
+  gatus_config_certs:
+    name: gatus_config_certs_${DEPLOY_VERSION}
+    file: ./config/gatus/15-certs.yaml
+  gatus_config_apps:
+    name: gatus_config_apps_${DEPLOY_VERSION}
+    file: ./config/gatus/20-apps.yaml
+  gatus_config_external:
+    name: gatus_config_external_${DEPLOY_VERSION}
+    file: ./config/gatus/30-external.yaml

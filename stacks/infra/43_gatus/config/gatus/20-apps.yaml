@@ -1,0 +1,48 @@
+endpoints:
+  - name: Jellyfin
+    group: jellyfin
+    url: "https://stream.${DOMAIN_PUBLIC}/health"
+    interval: 60s
+    client:
+      proxy-url: "${GATUS_PROXY_URL}"
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY] == pat(*Healthy*)"
+    alerts:
+      - type: homeassistant
+
+suites:
+  - name: Jellyfin LDAP Auth
+    group: jellyfin
+    interval: 10m
+    timeout: 1m
+    endpoints:
+      - name: login
+        url: "https://stream.${DOMAIN_PUBLIC}/Users/AuthenticateByName"
+        method: POST
+        headers:
+          Content-Type: application/json
+          X-Emby-Authorization: 'MediaBrowser Client="Gatus", Device="Gatus", DeviceId="gatus-healthcheck", Version="1.0.0"'
+        body: '{"Username":"_test_user","Pw":"${JELLYFIN_HEALTHCHECK_PASSWORD}"}'
+        client:
+          proxy-url: "${GATUS_PROXY_URL}"
+        store:
+          accessToken: "[BODY].AccessToken"
+        conditions:
+          - "[STATUS] == 200"
+          - "len([BODY].AccessToken) > 0"
+          - "[BODY].User.Name == _test_user"
+        alerts:
+          - type: homeassistant
+      - name: logout
+        url: "https://stream.${DOMAIN_PUBLIC}/Sessions/Logout"
+        method: POST
+        headers:
+          Authorization: 'MediaBrowser Token="[CONTEXT].accessToken"'
+        client:
+          proxy-url: "${GATUS_PROXY_URL}"
+        always-run: false
+        conditions:
+          - "[STATUS] == 204"
+        alerts:
+          - type: homeassistant

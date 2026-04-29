@@ -36,11 +36,6 @@ checks:
 # Output
 statistics: true
 
-# Monitoring
-# uptime_kuma:
-#   push_url: https://status.${DOMAIN_PRIVATE}/api/push/<MONITOR_ID>
-#   states: [start, finish, fail]
-
 postgresql_databases:
   - name: all
     hostname: postgres
@@ -66,12 +61,3 @@ postgresql_databases:
     format: custom
     compression: none
     no_owner: true
-
-mariadb_databases:
-  - name: all
-    hostname: uptime-kuma_mariadb
-    port: 3306
-    username: backup
-    password: "{credential container uptime_kuma_backup_db_password}"
-    format: sql
-    options: "--single-transaction --skip-lock-tables"

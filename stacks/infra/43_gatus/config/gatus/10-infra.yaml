@@ -1,0 +1,49 @@
+endpoints:
+  - name: Authentik
+    group: infra
+    url: "https://auth.${DOMAIN_PUBLIC}/-/health/ready/"
+    interval: 60s
+    client:
+      proxy-url: "${GATUS_PROXY_URL}"
+    conditions:
+      - "[STATUS] == 200"
+    alerts:
+      - type: homeassistant
+
+  - name: CrowdSec
+    group: infra
+    url: "http://crowdsec:8085/health"
+    interval: 60s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY] == pat(*\"up\"*)"
+    alerts:
+      - type: homeassistant
+
+  - name: WebFinger
+    group: infra
+    enabled: false
+    url: "https://${DOMAIN_PUBLIC}/.well-known/webfinger?resource=acct%3Awebfinger%40${DOMAIN_PUBLIC}"
+    interval: 1h
+    client:
+      proxy-url: "${GATUS_PROXY_URL}"
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].subject == acct:webfinger@${DOMAIN_PUBLIC}"
+      - "[BODY].links[0].href == https://auth.${DOMAIN_PUBLIC}"
+    alerts:
+      - type: homeassistant
+
+  - name: Prometheus
+    group: infra
+    url: "http://prometheus:9090/api/v1/query?query=up==0"
+    interval: 60s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == success"
+      - "len([BODY].data.result) == 0"
+    alerts:
+      - type: homeassistant
+
+    ui:
+      resolve-successful-conditions: true

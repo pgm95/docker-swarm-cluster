@@ -1,0 +1,33 @@
+metrics: true
+
+storage:
+  type: postgres
+  path: "postgres://gatus:${GATUS_DB_PASSWORD}@postgres:5432/gatus?sslmode=disable"
+  caching: true
+
+connectivity:
+  checker:
+    target: 1.1.1.1:53
+    interval: 60s
+
+alerting:
+  homeassistant:
+    url: "https://home.${DOMAIN_PRIVATE}"
+    token: "${GATUS_HASS_TOKEN}"
+    default-alert:
+      enabled: true
+      send-on-resolved: true
+      failure-threshold: 3
+      success-threshold: 2
+      minimum-reminder-interval: 5m
+
+ui:
+  header: "Gatus"
+  title: "Gatus"
+  description: " "
+  dashboard-heading: " "
+  dashboard-subheading: " "
+  default-sort-by: group
+  custom-css: |
+    header { display: none !important; }
+    footer { display: none !important; }

@@ -29,9 +29,9 @@ configs:
   grafana_dashboard_borgmatic:
     name: grafana_dashboard_borgmatic_${DEPLOY_VERSION}
     file: ./config/grafana/dashboards/borgmatic-logs.json
-  grafana_dashboard_uptimekuma:
-    name: grafana_dashboard_uptimekuma_${DEPLOY_VERSION}
-    file: ./config/grafana/dashboards/uptime-kuma.json
+  grafana_dashboard_gatus:
+    name: grafana_dashboard_gatus_${DEPLOY_VERSION}
+    file: ./config/grafana/dashboards/gatus.json
   grafana_dashboard_registry:
     name: grafana_dashboard_registry_${DEPLOY_VERSION}
     file: ./config/grafana/dashboards/docker-registry.json

@@ -17,7 +17,6 @@ services:
       - "--web.enable-lifecycle"
     secrets:
       - syncthing_api_key
-      - uptime_kuma_api_key
     configs:
       - source: prometheus_config
         target: /etc/prometheus/prometheus.yml
@@ -122,8 +121,8 @@ services:
         target: /etc/grafana/dashboards/syncthing-metrics.json
       - source: grafana_dashboard_borgmatic
         target: /etc/grafana/dashboards/borgmatic-logs.json
-      - source: grafana_dashboard_uptimekuma
-        target: /etc/grafana/dashboards/uptime-kuma.json
+      - source: grafana_dashboard_gatus
+        target: /etc/grafana/dashboards/gatus.json
       - source: grafana_dashboard_registry
         target: /etc/grafana/dashboards/docker-registry.json
       - source: grafana_dashboard_node_exporter

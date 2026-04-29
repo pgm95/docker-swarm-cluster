@@ -155,8 +155,8 @@ Each stack's README documents service-level details and operational procedures.
   Both use host-mode ports and DNS-based routing.
 - **Observability:** Node Exporter and cAdvisor for host and per-container metrics.
   Prometheus scrapes these and all other compatible targets via dockerswarm_sd_configs and static_configs
-  Alloy collects logs and Loki stores them. Grafana visualizes everything.
-  Uptime Kuma monitors service availability and alerts.
+  Loki/Alloy for log collection and processing. Grafana is central metrics hub.
+  Gatus monitors service availability and alerts.
 - **Registry:** private OCI registry for custom images. Nodes authenticate via `site:registry`.
   Stacks with `build/` directories trigger automatic builds during `swarm:deploy`.
 - **Authentication:** Authentik provides OIDC and WebFinger; Syncs with lldap as LDAP source.

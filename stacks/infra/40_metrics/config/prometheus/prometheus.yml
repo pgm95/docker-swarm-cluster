@@ -119,15 +119,9 @@ scrape_configs:
       - source_labels: [__meta_dockerswarm_node_hostname]
         target_label: instance
 
-  # Uptime Kuma metrics
-  # Auth: API key passed as basic_auth password with empty username.
-  # Creating the API key permanently disables basic_auth with web credentials.
-  - job_name: uptime-kuma
-    scrape_interval: 30s
+  # Gatus metrics (infra/gatus)
+  - job_name: gatus
     metrics_path: /metrics
     static_configs:
       - targets:
-        - uptime-kuma:3001
-    basic_auth:
-      username: ""
-      password_file: /run/secrets/uptime_kuma_api_key
+        - gatus:8080

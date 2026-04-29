@@ -255,16 +255,20 @@ services:
       - LLDAP_ADMIN_USERNAME=${GLOBAL_USERNAME}
       - LLDAP_ADMIN_PASSWORD_FILE=/run/secrets/global_password
       - GLOBAL_ADMIN_GROUP=${GLOBAL_ADMIN_GROUP}
+      - GLOBAL_USER_GROUP=${GLOBAL_USER_GROUP}
       - AUTHENTIK_BIND_USER=_bind_authentik
       - AUTHENTIK_BIND_PASSWORD_FILE=/run/secrets/authentik_bind_pass
       - JELLYFIN_BIND_USER=_bind_jellyfin
       - JELLYFIN_BIND_PASSWORD_FILE=/run/secrets/jellyfin_bind_pass
+      - TEST_USER=_test_user
+      - TEST_USER_PASSWORD_FILE=/run/secrets/test_user_pass
       - USER_CONFIGS_DIR=/tmp/bootstrap/user-configs
       - GROUP_CONFIGS_DIR=/tmp/bootstrap/group-configs
     secrets:
       - global_password
       - authentik_bind_pass
       - jellyfin_bind_pass
+      - test_user_pass
     configs:
       - source: init_ldap_entrypoint
         target: /init-ldap-entrypoint.sh

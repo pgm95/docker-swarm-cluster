@@ -1,0 +1,90 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+include:
+  - configs.yml
+
+services:
+  gatus:
+    image: ghcr.io/twin/gatus:latest
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    environment:
+      - GATUS_CONFIG_PATH=/etc/gatus
+      - GATUS_LOG_LEVEL=INFO
+      - GATUS_DB_PASSWORD=${GATUS_DB_PASSWORD}
+      - GATUS_HASS_TOKEN=${GATUS_HASS_TOKEN}
+      - GATUS_PROXY_URL=${GATUS_PROXY_URL}
+      - JELLYFIN_HEALTHCHECK_PASSWORD=${JELLYFIN_HEALTHCHECK_PASSWORD}
+      - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
+      - DOMAIN_PRIVATE=${DOMAIN_PRIVATE}
+    configs:
+      - source: gatus_config_global
+        target: /etc/gatus/00-global.yaml
+      - source: gatus_config_infra
+        target: /etc/gatus/10-infra.yaml
+      - source: gatus_config_certs
+        target: /etc/gatus/15-certs.yaml
+      - source: gatus_config_apps
+        target: /etc/gatus/20-apps.yaml
+      - source: gatus_config_external
+        target: /etc/gatus/30-external.yaml
+    networks:
+      - infra_postgres
+      - infra_metrics
+      - infra_gw-internal
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      <<: [*place-vm, *deploy]
+      update_config:
+        order: stop-first
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-small
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.internal=true"
+        - "traefik.http.routers.gatus.rule=Host(`status.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.gatus.entrypoints=websecure"
+        - "traefik.http.services.gatus.loadbalancer.server.port=8080"
+        - "homepage.group=Infrastructure"
+        - "homepage.name=Gatus"
+        - "homepage.icon=gatus"
+        - "homepage.href=https://status.${DOMAIN_PRIVATE}"
+        - "homepage.description=Status & Monitoring"
+
+  init-db:
+    image: postgres:17-alpine
+    entrypoint: ["/bin/sh", "/init-db-entrypoint.sh"]
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    environment:
+      - PROVISIONER_USER=${GLOBAL_POSTGRES_PROVISIONER_USER}
+      - PROVISIONER_PASSWORD=${GLOBAL_POSTGRES_PROVISIONER_PASSWORD}
+      - GATUS_DB_PASSWORD=${GATUS_DB_PASSWORD}
+    configs:
+      - source: init_db_entrypoint
+        target: /init-db-entrypoint.sh
+    networks:
+      - infra_postgres
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      <<: [*place-vm, *deploy-init]
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-tiny
+
+networks:
+  infra_postgres:
+    external: true
+  infra_metrics:
+    external: true
+  infra_gw-internal:
+    external: true
+  infra_ldap:
+    external: true
