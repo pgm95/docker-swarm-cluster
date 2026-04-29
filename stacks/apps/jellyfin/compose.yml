@@ -72,6 +72,28 @@ services:
         reservations:
           memory: 1024M
 
+  jellyfin-cleanup:
+    image: alpine/sqlite:3.51.2
+    entrypoint: ["/bin/sh", "/cleanup.sh"]
+    user: "1000:1000"
+    logging:
+      <<: *logging
+    stop_grace_period: 10s
+    environment:
+      - CLEANUP_USERNAME=_test_user
+      - CLEANUP_INTERVAL=3600
+    volumes:
+      - jellyfin-data:/data
+    configs:
+      - source: jellyfin_cleanup
+        target: /cleanup.sh
+    deploy:
+      <<: [*place-gpu, *deploy]
+      update_config:
+        order: start-first
+      resources:
+        <<: *resources-tiny
+
 volumes:
   jellyfin-config:
   jellyfin-data:

@@ -2,3 +2,6 @@ configs:
   jellyfin_init:
     name: jellyfin_init_${DEPLOY_VERSION}
     file: ./config/init.sh
+  jellyfin_cleanup:
+    name: jellyfin_cleanup_${DEPLOY_VERSION}
+    file: ./config/cleanup/cleanup.sh
