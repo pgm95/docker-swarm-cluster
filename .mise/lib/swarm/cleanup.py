@@ -1,26 +1,42 @@
-"""Cluster cleanup — versioned secrets/configs and node-wide docker system prune."""
+"""Cluster cleanup — versioned secrets/configs, orphaned networks, node-wide prune.
+
+Three layers, matching the three resource scopes:
+
+1. Cluster state managed by Swarm (secrets, configs, overlay networks): list
+   from the manager, attempt removal of each, let Docker's "in use" check
+   enforce safety.
+2. Per-node Docker daemon state (containers, images, volumes, build cache):
+   ``docker system prune --all --volumes --force`` over SSH on each node.
+   Output is not parsed — exit code only.
+
+Strict I/O: per-resource summaries on stderr, no machine-readable output.
+"""
 
 import re
 import sys
 
-from . import SwarmError
-from ._docker import config_list, config_rm, secret_list, secret_rm
-from ._output import error, info, setup
-from ._ssh import ssh_node
+from ._cli import cli_main
+from ._docker import (
+    config_list,
+    config_rm,
+    network_list,
+    network_rm,
+    secret_list,
+    secret_rm,
+)
+from ._output import info
+from ._ssh import parallel_run, ssh_node
 from .nodes import get_swarm_nodes
 
-VERSIONED_PATTERN = re.compile(r"_[a-f0-9]+_\d+$")
-SECTION_HEADER = re.compile(
-    r"^Deleted (Containers|Networks|Volumes|Images|build cache objects):\s*$",
-    re.IGNORECASE,
-)
-SECTION_KEY = {
-    "containers": "containers",
-    "networks": "networks",
-    "volumes": "volumes",
-    "images": "image_layers",
-    "build cache objects": "build_cache",
-}
+# Versioned secrets/configs follow the naming convention
+# ``<base>_<git-sha>_<epoch>``, e.g. ``authentik_secret_key_4711029_1777558235``.
+# The pattern requires exactly 7 hex chars (git short SHA) and 10 digits
+# (Unix epoch seconds, current values are 10 digits and will be through 2286).
+# This avoids false-positives on user-named items like ``aws_iam_2024_01``.
+VERSIONED_PATTERN = re.compile(r"_[a-f0-9]{7}_\d{10}$")
+
+# Swarm's built-in load-balancer overlay. Never remove.
+SYSTEM_NETWORKS = frozenset({"ingress"})
 
 
 def cleanup_versioned_items(item_type: str) -> int:
@@ -41,91 +57,77 @@ def cleanup_versioned_items(item_type: str) -> int:
     return len(removed)
 
 
-def parse_prune_output(stdout: str) -> dict:
-    """Parse `docker system prune` output into per-type counts and reclaimed space.
+def cleanup_orphaned_networks() -> int:
+    """Remove swarm-scoped overlay networks that are no longer in use.
 
-    Image layers count = lines starting with `deleted: sha256:` (deterministic and
-    aligns with reclaimed bytes). Other sections are 1:1 with their line count.
+    Lists all swarm-scoped networks on the cluster (excluding the built-in
+    ``ingress``) and attempts removal of each. Docker refuses to remove
+    networks with active service/container attachments — those failures
+    are silently skipped via ``network_rm`` returning False, mirroring the
+    secret/config cleanup pattern.
+
+    Genuinely orphaned networks (no attachments, no longer referenced by any
+    deployed stack) are removed.
     """
-    counts = {"containers": 0, "networks": 0, "volumes": 0, "image_layers": 0, "build_cache": 0}
-    reclaimed = "0B"
-    section = None
-    for raw in stdout.splitlines():
-        line = raw.rstrip()
-        m = SECTION_HEADER.match(line)
-        if m:
-            section = SECTION_KEY[m.group(1).lower()]
-            continue
-        if line.lower().startswith("total reclaimed space:"):
-            reclaimed = line.split(":", 1)[-1].strip()
-            section = None
-            continue
-        if not line:
-            section = None
-            continue
-        if section == "image_layers":
-            if line.startswith("deleted: sha256:"):
-                counts["image_layers"] += 1
-        elif section:
-            counts[section] += 1
-    return {**counts, "reclaimed": reclaimed}
+    candidates = [
+        n for n in network_list(filters=["scope=swarm"])
+        if n not in SYSTEM_NETWORKS
+    ]
+    removed = [n for n in candidates if network_rm(n)]
+
+    info("--- Networks ---")
+    if removed:
+        for name in removed:
+            info(f"  {name}")
+        info(f"  ({len(removed)} removed)")
+    else:
+        info("  none")
+    return len(removed)
 
 
-def system_prune(nodes: list[str]) -> dict[str, dict | None]:
-    """Run `docker system prune --all --volumes --force` on each node.
+def _prune_one(node: str) -> bool:
+    """Run ``docker system prune --all --volumes --force`` on one node.
 
-    Returns per-node stats dict, or None if the node was unreachable.
+    Returns True on exit code 0, False on any failure (including SSH errors).
+    Output is not parsed — Docker's progress messages stream to whatever
+    stderr the SSH session inherits and are dropped.
     """
-    result = {}
-    for node in nodes:
-        try:
-            out = ssh_node(node, "docker system prune --all --volumes --force", check=False)
-            result[node] = parse_prune_output(out.stdout)
-        except Exception:
-            result[node] = None
-    return result
+    try:
+        result = ssh_node(node, "docker system prune --all --volumes --force", check=False)
+        return result.returncode == 0
+    except Exception:
+        return False
 
 
-_LABELS = [
-    ("containers", "containers"),
-    ("image_layers", "image layers"),
-    ("volumes", "volumes"),
-    ("networks", "networks"),
-    ("build_cache", "build cache"),
-]
+def node_prune(nodes: list[str]) -> dict[str, bool]:
+    """Run ``docker system prune`` on each node in parallel.
 
-
-def _format_node_summary(stats: dict) -> str:
-    parts = [f"{stats[k]} {label}" for k, label in _LABELS if stats[k]]
-    summary = ", ".join(parts) if parts else "nothing"
-    return f"{summary} ({stats['reclaimed']})"
+    Returns a per-node mapping of hostname to True (success) or False
+    (unreachable / non-zero exit).
+    """
+    return parallel_run(nodes, _prune_one)
 
 
 def cleanup() -> None:
     """Full cleanup orchestration."""
     cleanup_versioned_items("secret")
     cleanup_versioned_items("config")
+    cleanup_orphaned_networks()
 
     nodes = [n["hostname"] for n in get_swarm_nodes()]
-    info("--- System prune ---")
-    for node, stats in system_prune(nodes).items():
-        if stats is None:
-            info(f"  {node}: unreachable")
-        else:
-            info(f"  {node}: {_format_node_summary(stats)}")
+    info("--- Node prune ---")
+    for node, ok in node_prune(nodes).items():
+        info(f"  {node}: {'ok' if ok else 'failed'}")
 
     info("")
     info("Cleanup complete.")
 
 
 def main() -> int:
-    setup()
-    try:
+    def run() -> int:
         cleanup()
-    except SwarmError as e:
-        error(str(e))
-        return 1
-    return 0
+        return 0
+    return cli_main(run)
 
 
 if __name__ == "__main__":

@@ -1,46 +1,38 @@
 #:schema https://mise.jdx.dev/schema/mise-task.json
 
 ["swarm:deploy"]
-description = "Deploy a stack with automatic secret management"
+description = "Deploy one or more stacks"
 usage = '''
-arg "<stack>" help="Stack name or path"
+arg "<stacks>..." help="Stack name(s) or path(s)"
 flag "--update" help="Re-resolve mutable image tags (e.g. latest, release) against the registry"
 '''
+depends = ["swarm:init-networks"]
 env.CONVERGE_TIMEOUT = "180"
-env.CONVERGE_INTERVAL = "2"
+env.CONVERGE_MAX_INTERVAL = "15"
 run = '''
+{% raw %}
 #!/usr/bin/env bash
-export DOCKER_HOST="${SWARM_HOST}"
-prepare_out=$(python3 -m swarm.deploy prepare "${usage_stack}") || exit 1
-eval "${prepare_out}"
-RESOLVE_IMAGE="--resolve-image changed" # prevents docker's default resolving on redeploys and ensures images are only resolved when --update is used
-[[ "${usage_update:-}" == "true" ]] && RESOLVE_IMAGE="--resolve-image always"
-echo "Deploying: ${STACK_NAME}"
-if ! python3 -m swarm._compose "${STACK_PATH}/compose.yml" | docker stack deploy --detach --prune --with-registry-auth ${RESOLVE_IMAGE} -c - "${STACK_NAME}"; then
-    echo "ERROR: Deploy command failed"
-    [[ -n "${DEPLOY_VERSION:-}" ]]
-    exit 1
-fi
-echo ""
-python3 -m swarm.convergence wait "${STACK_NAME}" --timeout "${CONVERGE_TIMEOUT}" --interval "${CONVERGE_INTERVAL}"
-python3 -m swarm.convergence check "${STACK_NAME}"
-echo ""
-docker stack services "${STACK_NAME}"
-if [[ -n "${DEPLOY_VERSION:-}" ]]; then
-    echo ""
-    echo "Deployed with DEPLOY_VERSION=${DEPLOY_VERSION}"
-fi
+failed=()
+for s in $usage_stacks; do
+    python3 -m swarm.deploy "$s" ${usage_update:+--update} || failed+=("$s")
+done
+[[ ${#failed[@]} -eq 0 ]] || { echo "Failed: ${failed[*]}" >&2; exit 1; }
+{% endraw %}
 '''
 
-["swarm:validate"]
-description = "Internal: validate all compose files for Swarm compatibility"
-hide = true
-run = 'python3 -m swarm.validate'
-
 ["swarm:remove"]
-description = "Remove a deployed stack and wait for services to drain"
-usage = 'arg "<stack>" help="Stack name or path"'
-run = 'python3 -m swarm.remove "${usage_stack}"'
+description = "Remove one or more stacks and wait for services to drain"
+usage = 'arg "<stacks>..." help="Stack name(s) or path(s)"'
+run = '''
+{% raw %}
+#!/usr/bin/env bash
+failed=()
+for s in $usage_stacks; do
+    python3 -m swarm.remove "$s" || failed+=("$s")
+done
+[[ ${#failed[@]} -eq 0 ]] || { echo "Failed: ${failed[*]}" >&2; exit 1; }
+{% endraw %}
+'''
 
 ["swarm:cleanup"]
 alias = "cleanup"
@@ -53,3 +45,8 @@ hide = true
 env.SWARM_INTERNAL_NETWORKS = "infra_socket"
 env.SWARM_OVERLAY_MTU = "1280"
 run = 'python3 -m swarm.networks init'
+
+["swarm:validate"]
+description = "Internal: validate all compose files for Swarm compatibility"
+hide = true
+run = 'python3 -m swarm.validate'

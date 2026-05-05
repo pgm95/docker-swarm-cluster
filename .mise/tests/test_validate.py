@@ -1,11 +1,9 @@
 """Tests for swarm.validate — compose validation and bind mount checks."""
 
-import json
-
-
 from conftest import SAMPLE_NODES, make_completed
 from swarm._compose import _fixup_config
 from swarm.validate import (
+    _set_oci_tags,
     check_paths_on_node,
     collect_bind_mounts,
     extract_bind_mounts,
@@ -101,17 +99,13 @@ class TestFixupConfig:
 
 
 class TestValidateCompose:
-    def test_valid(self, monkeypatch):
+    def test_valid(self, mock_docker, monkeypatch):
         monkeypatch.setattr(
             "swarm.validate.compose_config",
             lambda *a: "name: test\nservices:\n  web:\n    image: nginx\n",
         )
-        monkeypatch.setattr(
-            "subprocess.run",
-            lambda *a, **kw: make_completed(),
-        )
         from pathlib import Path
-        valid, err = validate_compose(Path("stacks/infra/00_socket/compose.yml"))
+        valid, err = validate_compose(Path("fake/ns/fake-stack/compose.yml"))
         assert valid is True
         assert err == ""
 
@@ -120,28 +114,63 @@ class TestValidateCompose:
             raise Exception("bad yaml")
         monkeypatch.setattr("swarm.validate.compose_config", fail)
         from pathlib import Path
-        valid, err = validate_compose(Path("stacks/infra/00_socket/compose.yml"))
+        valid, err = validate_compose(Path("fake/ns/fake-stack/compose.yml"))
         assert valid is False
         assert "bad yaml" in err
 
-    def test_invalid_stack_config(self, monkeypatch):
+    def test_invalid_stack_config(self, mock_docker, monkeypatch):
         monkeypatch.setattr(
             "swarm.validate.compose_config",
             lambda *a: "services:\n  web:\n    image: nginx\n",
         )
-        monkeypatch.setattr(
-            "subprocess.run",
-            lambda *a, **kw: make_completed(returncode=1, stderr="invalid config"),
-        )
+        mock_docker.set_response(("stack", "config"), returncode=1, stderr="invalid config")
         from pathlib import Path
-        valid, err = validate_compose(Path("stacks/infra/00_socket/compose.yml"))
+        valid, err = validate_compose(Path("fake/ns/fake-stack/compose.yml"))
         assert valid is False
         assert "invalid config" in err
+
+    def test_reuses_yaml_when_provided(self, mock_docker, monkeypatch):
+        """When yaml_text is passed in, compose_config is not called."""
+        called = []
+        monkeypatch.setattr(
+            "swarm.validate.compose_config",
+            lambda *a: called.append(a) or "should-not-be-called",
+        )
+        from pathlib import Path
+        valid, _ = validate_compose(
+            Path("fake/ns/fake-stack/compose.yml"),
+            yaml_text="services:\n  web:\n    image: nginx\n",
+        )
+        assert valid is True
+        assert called == []
+
+
+class TestSetOciTags:
+    def test_hyphenated_service_name(self, tmp_path, monkeypatch):
+        """Validate must use the same OCI_TAG formula as deploy: hyphens → underscores."""
+        d = tmp_path / "build" / "foo-bar-baz"
+        d.mkdir(parents=True)
+        (d / "Dockerfile").write_text("FROM base")
+        # Clear any pre-existing env from earlier tests
+        monkeypatch.delenv("OCI_TAG_FOO_BAR_BAZ", raising=False)
+        monkeypatch.delenv("OCI_TAG_FOO-BAR-BAZ", raising=False)
+        _set_oci_tags(tmp_path)
+        import os
+        assert "OCI_TAG_FOO_BAR_BAZ" in os.environ
+        # The buggy old formula would have created OCI_TAG_FOO-BAR-BAZ
+        assert "OCI_TAG_FOO-BAR-BAZ" not in os.environ
+
+    def test_no_build_dir_is_noop(self, tmp_path, monkeypatch):
+        """Stacks without a build/ directory should leave OCI_TAG_* env untouched."""
+        monkeypatch.setattr("os.environ", {})
+        _set_oci_tags(tmp_path)
+        import os
+        assert not any(k.startswith("OCI_TAG_") for k in os.environ)
 
 
 class TestCollectBindMounts:
     def test_collects_paths_by_node(self, monkeypatch):
-        compose_json = {
+        compose_doc = {
             "services": {
                 "web": {
                     "volumes": [{"type": "bind", "source": "/mnt/data", "target": "/data"}],
@@ -149,29 +178,32 @@ class TestCollectBindMounts:
                 },
             },
         }
-        monkeypatch.setattr("swarm.validate.compose_config", lambda *a: json.dumps(compose_json))
+        monkeypatch.setattr("swarm.validate.compose_json", lambda *a: compose_doc)
         from pathlib import Path
-        result = collect_bind_mounts(Path("stacks/apps/test/compose.yml"), SAMPLE_NODES)
+        result = collect_bind_mounts(Path("fake/ns/fake-stack/compose.yml"), SAMPLE_NODES)
         assert "swarm-vm" in result
         assert "/mnt/data" in result["swarm-vm"]
 
     def test_no_bind_mounts(self, monkeypatch):
-        monkeypatch.setattr("swarm.validate.compose_config", lambda *a: json.dumps({"services": {"web": {"image": "nginx"}}}))
+        monkeypatch.setattr(
+            "swarm.validate.compose_json",
+            lambda *a: {"services": {"web": {"image": "nginx"}}},
+        )
         from pathlib import Path
-        result = collect_bind_mounts(Path("stacks/apps/test/compose.yml"), SAMPLE_NODES)
+        result = collect_bind_mounts(Path("fake/ns/fake-stack/compose.yml"), SAMPLE_NODES)
         assert result == {}
 
     def test_no_constraints_matches_first_node(self, monkeypatch):
-        compose_json = {
+        compose_doc = {
             "services": {
                 "web": {
                     "volumes": [{"type": "bind", "source": "/mnt/data", "target": "/data"}],
                 },
             },
         }
-        monkeypatch.setattr("swarm.validate.compose_config", lambda *a: json.dumps(compose_json))
+        monkeypatch.setattr("swarm.validate.compose_json", lambda *a: compose_doc)
         from pathlib import Path
-        result = collect_bind_mounts(Path("stacks/apps/test/compose.yml"), SAMPLE_NODES)
+        result = collect_bind_mounts(Path("fake/ns/fake-stack/compose.yml"), SAMPLE_NODES)
         # No constraints = matches first node
         assert len(result) == 1
         assert "/mnt/data" in list(result.values())[0]
@@ -181,7 +213,7 @@ class TestCheckPathsOnNode:
     def test_missing_path(self, monkeypatch):
         monkeypatch.setattr(
             "swarm.validate.ssh_node",
-            lambda h, c, **kw: make_completed(stdout="MISSING /mnt/data"),
+            lambda h, c, **kw: make_completed(stdout="MISSING"),
         )
         results = check_paths_on_node("swarm-vm", {"/mnt/data"})
         assert len(results) == 1
@@ -191,12 +223,13 @@ class TestCheckPathsOnNode:
     def test_ok_path(self, monkeypatch):
         monkeypatch.setattr(
             "swarm.validate.ssh_node",
-            lambda h, c, **kw: make_completed(stdout="drwxr-xr-x root:root /mnt/data"),
+            lambda h, c, **kw: make_completed(stdout="drwxr-xr-x:root:root"),
         )
         results = check_paths_on_node("swarm-vm", {"/mnt/data"})
         assert len(results) == 1
         assert results[0]["status"] == "ok"
         assert results[0]["path"] == "/mnt/data"
+        assert results[0]["permissions"] == "drwxr-xr-x:root:root"
 
     def test_unreachable(self, monkeypatch):
         def fail(*a, **kw):
@@ -204,3 +237,45 @@ class TestCheckPathsOnNode:
         monkeypatch.setattr("swarm.validate.ssh_node", fail)
         results = check_paths_on_node("swarm-vm", {"/mnt/data"})
         assert results[0]["status"] == "unreachable"
+
+    def test_results_aligned_with_path_order(self, monkeypatch):
+        """Multi-path SSH command order matches output line order."""
+        monkeypatch.setattr(
+            "swarm.validate.ssh_node",
+            lambda h, c, **kw: make_completed(stdout="drwxr-xr-x:root:root\nMISSING"),
+        )
+        # sorted(): /a comes first, /b second
+        results = check_paths_on_node("swarm-vm", {"/b", "/a"})
+        # Find by path
+        by_path = {r["path"]: r for r in results}
+        assert by_path["/a"]["status"] == "ok"
+        assert by_path["/b"]["status"] == "missing"
+
+    def test_path_with_single_quote(self, monkeypatch):
+        """shlex.quote handles paths with single quotes safely."""
+        captured = {}
+        def capture(host, cmd, **kw):
+            captured["cmd"] = cmd
+            return make_completed(stdout="drwxr-xr-x:root:root")
+        monkeypatch.setattr("swarm.validate.ssh_node", capture)
+        check_paths_on_node("swarm-vm", {"/mnt/foo's-data"})
+        # The quoted path must not break the shell command (shlex.quote
+        # produces something safe)
+        assert "/mnt/foo" in captured["cmd"]
+        # Should be quoted using shell-safe quoting
+        assert "'" in captured["cmd"]
+
+    def test_truncated_output_marks_tail_unreachable(self, monkeypatch):
+        """If the shell chain produces fewer output lines than input paths
+        (e.g., chain aborted mid-execution), unmatched tail paths must NOT
+        be silently dropped — they're reported as unreachable."""
+        # Two paths in, only one output line
+        monkeypatch.setattr(
+            "swarm.validate.ssh_node",
+            lambda h, c, **kw: make_completed(stdout="drwxr-xr-x:root:root"),
+        )
+        results = check_paths_on_node("swarm-vm", {"/a", "/b"})
+        # sorted: /a then /b
+        by_path = {r["path"]: r for r in results}
+        assert by_path["/a"]["status"] == "ok"
+        assert by_path["/b"]["status"] == "unreachable"

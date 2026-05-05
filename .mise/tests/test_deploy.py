@@ -1,18 +1,18 @@
-"""Tests for swarm.deploy — deploy preparation, content hashing, image builds."""
+"""Tests for swarm.deploy — content hashing, image builds, full pipeline."""
 
 import re
-import shlex
+from pathlib import Path
 
 import pytest
 
+from swarm import SwarmError
 from swarm.deploy import (
-    _emit_export,
+    _prepare_stack,
     build_and_push,
     compute_content_hash,
-    detect_versioning,
+    deploy_stack,
     discover_build_dirs,
     generate_deploy_version,
-    prepare,
 )
 
 
@@ -52,22 +52,19 @@ class TestComputeContentHash:
         h2 = compute_content_hash(tmp_path)
         assert h1 != h2
 
+    def test_mode_bits_matter(self, tmp_path):
+        """chmod +x on an entrypoint script must invalidate the cache.
+        Docker's COPY preserves the executable bit, so two contexts with
+        identical content but different perms produce different images."""
+        import os
 
-class TestDetectVersioning:
-    def test_has_deploy_version(self, tmp_path):
-        (tmp_path / "secrets.yml").write_text("name: secret_${DEPLOY_VERSION}")
-        assert detect_versioning(tmp_path) is True
-
-    def test_no_deploy_version(self, tmp_path):
-        (tmp_path / "compose.yml").write_text("services: {}")
-        assert detect_versioning(tmp_path) is False
-
-    def test_no_yml_files(self, tmp_path):
-        assert detect_versioning(tmp_path) is False
-
-    def test_in_configs_yml(self, tmp_path):
-        (tmp_path / "configs.yml").write_text("name: cfg_${DEPLOY_VERSION}")
-        assert detect_versioning(tmp_path) is True
+        script = tmp_path / "entrypoint.sh"
+        script.write_text("#!/bin/sh\necho hi")
+        h1 = compute_content_hash(tmp_path)
+        # Add executable bit to owner
+        os.chmod(script, script.stat().st_mode | 0o100)
+        h2 = compute_content_hash(tmp_path)
+        assert h1 != h2
 
 
 class TestGenerateDeployVersion:
@@ -89,24 +86,24 @@ class TestGenerateDeployVersion:
 class TestDiscoverBuildDirs:
     def test_finds_builds(self, tmp_path, monkeypatch):
         monkeypatch.setenv("GLOBAL_SWARM_OCI_REGISTRY", "reg.example.com")
-        build_dir = tmp_path / "build" / "crowdsec"
+        build_dir = tmp_path / "build" / "alpha"
         build_dir.mkdir(parents=True)
-        (build_dir / "Dockerfile").write_text("FROM crowdsec")
-        result = discover_build_dirs(tmp_path, "gateway-external")
+        (build_dir / "Dockerfile").write_text("FROM alpine")
+        result = discover_build_dirs(tmp_path, "fakestack")
         assert len(result) == 1
-        assert result[0]["service"] == "crowdsec"
-        assert result[0]["var_name"] == "OCI_TAG_CROWDSEC"
-        assert "reg.example.com/gateway-external/crowdsec:" in result[0]["image"]
+        assert result[0]["service"] == "alpha"
+        assert result[0]["var_name"] == "OCI_TAG_ALPHA"
+        assert "reg.example.com/fakestack/alpha:" in result[0]["image"]
 
     def test_hyphenated_service_name(self, tmp_path, monkeypatch):
         monkeypatch.setenv("GLOBAL_SWARM_OCI_REGISTRY", "reg")
-        d = tmp_path / "build" / "immich-machine-learning"
+        d = tmp_path / "build" / "foo-bar-baz"
         d.mkdir(parents=True)
         (d / "Dockerfile").write_text("FROM base")
-        result = discover_build_dirs(tmp_path, "immich")
-        assert result[0]["service"] == "immich-machine-learning"
-        assert result[0]["var_name"] == "OCI_TAG_IMMICH_MACHINE_LEARNING"
-        assert "reg/immich/immich-machine-learning:" in result[0]["image"]
+        result = discover_build_dirs(tmp_path, "fakestack")
+        assert result[0]["service"] == "foo-bar-baz"
+        assert result[0]["var_name"] == "OCI_TAG_FOO_BAR_BAZ"
+        assert "reg/fakestack/foo-bar-baz:" in result[0]["image"]
 
     def test_no_build_dir(self, tmp_path):
         assert discover_build_dirs(tmp_path, "mystack") == []
@@ -124,7 +121,7 @@ class TestDiscoverBuildDirs:
 class TestBuildAndPush:
     def test_skips_existing(self, monkeypatch):
         monkeypatch.setattr("swarm.deploy.manifest_exists", lambda img: True)
-        built = build_and_push("reg/img:tag", "/tmp/build")
+        built = build_and_push("reg/img:tag", Path("/tmp/build"))
         assert built is False
 
     def test_builds_new(self, monkeypatch):
@@ -133,57 +130,151 @@ class TestBuildAndPush:
         pushes = []
         monkeypatch.setattr("swarm.deploy.build", lambda tag, ctx: builds.append(tag))
         monkeypatch.setattr("swarm.deploy.push", lambda img: pushes.append(img))
-        built = build_and_push("reg/img:tag", "/tmp/build")
+        built = build_and_push("reg/img:tag", Path("/tmp/build"))
         assert built is True
         assert builds == ["reg/img:tag"]
         assert pushes == ["reg/img:tag"]
 
 
-class TestEmitExport:
-    def test_simple_value(self, capsys):
-        _emit_export("KEY", "value")
-        assert capsys.readouterr().out == "export KEY=value\n"
+class TestPrepareStack:
+    """_prepare_stack renders the compose, then drives discovery off the result.
+    Tests stub the rendering helpers to control the payload."""
 
-    def test_quotes_special_chars(self, capsys):
-        _emit_export("KEY", "hello world $var")
-        output = capsys.readouterr().out.strip()
-        assert output.startswith("export KEY=")
-        # Value must be properly quoted
-        val = output.split("=", 1)[1]
-        assert shlex.split(val) == ["hello world $var"]
+    def _stub_compose(self, monkeypatch, *, secrets: dict | None = None, configs: dict | None = None):
+        """Make compose_config return YAML and compose_json return the parsed dict.
 
+        `_prepare_stack` calls both helpers — `compose_config` for the YAML
+        text passed to `docker stack deploy`, `compose_json` for the parsed
+        document used in discovery. The two are imported into deploy.py so
+        we patch them on `swarm.deploy.<name>`.
+        """
+        rendered = {"services": {}, "secrets": secrets or {}, "configs": configs or {}}
+        monkeypatch.setattr("swarm.deploy.compose_config", lambda p, *a: "services: {}\n")
+        monkeypatch.setattr("swarm.deploy.compose_json", lambda p: rendered)
 
-class TestPrepare:
-    def test_outputs_exports(self, tmp_stack, monkeypatch, capsys):
-        stack = tmp_stack(
-            compose="services: {}\n",
-        )
-        monkeypatch.setenv("SOPS_AGE_KEY_FILE", str(stack / "compose.yml"))  # just needs to exist
-        monkeypatch.setattr("swarm.deploy.resolve_stack_path", lambda p: stack)
-        prepare(str(stack))
-        stdout = capsys.readouterr().out
-        assert "export STACK_NAME=" in stdout
-        assert "export STACK_PATH=" in stdout
-
-    def test_versioned_stack(self, tmp_stack, monkeypatch, capsys):
-        stack = tmp_stack(
-            compose="services: {}\n",
-            secrets_yml="s:\n    name: s_${DEPLOY_VERSION}\n    external: true\n",
-            secrets_env="placeholder",
-        )
+    def test_returns_context_no_versioning(self, tmp_stack, monkeypatch):
+        stack = tmp_stack(compose="services: {}\n")
         monkeypatch.setenv("SOPS_AGE_KEY_FILE", str(stack / "compose.yml"))
-        monkeypatch.setattr("swarm.deploy.resolve_stack_path", lambda p: stack)
+        self._stub_compose(monkeypatch)  # empty secrets/configs
+        ctx = _prepare_stack(stack)
+        assert ctx["stack_name"] == "test-stack"
+        assert ctx["stack_path"] == stack
+        # No versioned secrets discovered → deploy_version blanked out
+        assert ctx["deploy_version"] == ""
+        assert ctx["stack_secrets"] == []
+        assert ctx["builds"] == []
+        # Rendered compose carried forward in ctx for re-use
+        assert "services" in ctx["compose_yaml"]
+        assert ctx["compose_json"]["secrets"] == {}
+
+    def test_versioned_stack_returns_deploy_version(self, tmp_stack, monkeypatch):
+        stack = tmp_stack(compose="services: {}\n", secrets_env="placeholder")
+        monkeypatch.setenv("SOPS_AGE_KEY_FILE", str(stack / "compose.yml"))
         monkeypatch.setattr("swarm.deploy.sops_decrypt", lambda f: [("S", "val")])
-        monkeypatch.setattr("swarm.deploy.validate_required_secrets", lambda p: None)
-        monkeypatch.setattr("swarm.deploy.create_versioned_secrets", lambda p, v: {"created": 0, "skipped": 0})
-        monkeypatch.setattr("swarm.deploy.validate_config_files", lambda p: None)
-        prepare(str(stack))
-        stdout = capsys.readouterr().out
-        assert "export DEPLOY_VERSION=" in stdout
+        # Render contains a versioned secret keyed off the (yet unknown) deploy_version.
+        # Patch generate_deploy_version to a known value, then render with that suffix.
+        monkeypatch.setattr("swarm.deploy.generate_deploy_version", lambda: "abc1234_1700000000")
+        self._stub_compose(monkeypatch, secrets={
+            "s": {"name": "s_abc1234_1700000000", "external": True},
+        })
+        monkeypatch.setattr("swarm.deploy.create_versioned_secrets", lambda *a, **kw: {"created": 1, "skipped": 0})
+
+        ctx = _prepare_stack(stack)
+        assert ctx["deploy_version"] == "abc1234_1700000000"
+        assert ctx["stack_secrets"] == [("S", "val")]
+
+    def test_decrypts_secrets_only_once(self, tmp_stack, monkeypatch):
+        """secrets.env is decrypted once and the pairs feed both env-export
+        and create_versioned_secrets."""
+        stack = tmp_stack(compose="services: {}\n", secrets_env="placeholder")
+        monkeypatch.setenv("SOPS_AGE_KEY_FILE", str(stack / "compose.yml"))
+        sops_calls = []
+        monkeypatch.setattr(
+            "swarm.deploy.sops_decrypt",
+            lambda f: sops_calls.append(f) or [("DB_PASS", "secret")],
+        )
+        monkeypatch.setattr("swarm.deploy.generate_deploy_version", lambda: "v1")
+        self._stub_compose(monkeypatch, secrets={
+            "db_pass": {"name": "db_pass_v1", "external": True},
+        })
+        captured = {}
+        monkeypatch.setattr(
+            "swarm.deploy.create_versioned_secrets",
+            lambda compose_json, version, stack_secrets=None: captured.setdefault("pairs", stack_secrets) or {"created": 1, "skipped": 0},
+        )
+        _prepare_stack(stack)
+        assert len(sops_calls) == 1
+        assert captured["pairs"] == [("DB_PASS", "secret")]
 
     def test_no_compose_raises(self, tmp_path, monkeypatch):
-        from swarm import SwarmError
         monkeypatch.setenv("SOPS_AGE_KEY_FILE", "/dev/null")
-        monkeypatch.setattr("swarm.deploy.resolve_stack_path", lambda p: tmp_path)
         with pytest.raises(SwarmError, match="compose.yml not found"):
-            prepare(str(tmp_path))
+            _prepare_stack(tmp_path)
+
+    def test_missing_sops_key_raises(self, tmp_stack, monkeypatch):
+        stack = tmp_stack(compose="services: {}\n")
+        monkeypatch.setenv("SOPS_AGE_KEY_FILE", "")
+        with pytest.raises(SwarmError, match="SOPS_AGE_KEY_FILE"):
+            _prepare_stack(stack)
+
+
+class TestDeployStack:
+    """Full deploy pipeline orchestration. Each phase mocked at its boundary."""
+
+    def _setup_happy(self, monkeypatch, stack):
+        monkeypatch.setenv("SOPS_AGE_KEY_FILE", str(stack / "compose.yml"))
+        monkeypatch.setattr(
+            "swarm.deploy._prepare_stack",
+            lambda p: {
+                "stack_name": "test-stack",
+                "stack_path": p,
+                "deploy_version": "",
+                "stack_secrets": [],
+                "builds": [],
+                "compose_yaml": "services: {}\n",
+                "compose_json": {"services": {}},
+            },
+        )
+        monkeypatch.setattr("swarm.deploy._docker_stack_deploy", lambda *a, **kw: 0)
+        monkeypatch.setattr("swarm.deploy._convergence.verify", lambda *a, **kw: (True, []))
+        monkeypatch.setattr("swarm.deploy.stack_services", lambda s: [])
+
+    def test_happy_path_returns_zero(self, tmp_stack, monkeypatch):
+        stack = tmp_stack(compose="services: {}\n")
+        self._setup_happy(monkeypatch, stack)
+        assert deploy_stack(stack) == 0
+
+    def test_prepare_failure_returns_one(self, tmp_stack, monkeypatch, caplog):
+        stack = tmp_stack(compose="services: {}\n")
+        def bad_prepare(p):
+            raise SwarmError("missing secret AUTHENTIK_SECRET_KEY")
+        monkeypatch.setattr("swarm.deploy._prepare_stack", bad_prepare)
+        rc = deploy_stack(stack)
+        assert rc == 1
+        assert "AUTHENTIK_SECRET_KEY" in caplog.text
+
+    def test_stack_deploy_failure_returns_one(self, tmp_stack, monkeypatch):
+        stack = tmp_stack(compose="services: {}\n")
+        self._setup_happy(monkeypatch, stack)
+        monkeypatch.setattr("swarm.deploy._docker_stack_deploy", lambda *a, **kw: 1)
+        assert deploy_stack(stack) == 1
+
+    def test_convergence_timeout_returns_one(self, tmp_stack, monkeypatch, caplog):
+        stack = tmp_stack(compose="services: {}\n")
+        self._setup_happy(monkeypatch, stack)
+        monkeypatch.setattr("swarm.deploy._convergence.verify", lambda *a, **kw: (False, []))
+        rc = deploy_stack(stack)
+        assert rc == 1
+        assert "Convergence timeout" in caplog.text
+
+    def test_post_converge_unhealthy_returns_one(self, tmp_stack, monkeypatch, caplog):
+        stack = tmp_stack(compose="services: {}\n")
+        self._setup_happy(monkeypatch, stack)
+        monkeypatch.setattr(
+            "swarm.deploy._convergence.verify",
+            lambda *a, **kw: (True, [{"name": "test-stack_web", "replicas": "0/1"}]),
+        )
+        rc = deploy_stack(stack)
+        assert rc == 1
+        assert "Unhealthy services" in caplog.text
+        assert "test-stack_web" in caplog.text

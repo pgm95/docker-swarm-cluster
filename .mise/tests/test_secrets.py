@@ -1,198 +1,173 @@
-"""Tests for swarm.secrets — secret validation and versioned creation."""
+"""Tests for swarm.secrets — compose-JSON-driven secret/config validation."""
 
 import pytest
 
 from swarm import SecretError, ValidationError
 from swarm.secrets import (
     create_versioned_secrets,
-    parse_versioned_names,
+    referenced_config_files,
+    required_versioned_secrets,
     validate_config_files,
     validate_required_secrets,
 )
 
 
-class TestParseVersionedNames:
-    def test_extracts_names(self, tmp_path):
-        yml = tmp_path / "secrets.yml"
-        yml.write_text(
-            "authelia_jwt_secret:\n"
-            "    name: authelia_jwt_secret_${DEPLOY_VERSION}\n"
-            "    external: true\n"
-            "lldap_ldap_user_pass:\n"
-            "    name: lldap_ldap_user_pass_${DEPLOY_VERSION}\n"
-            "    external: true\n"
-        )
-        result = parse_versioned_names(yml)
-        assert result == {"authelia_jwt_secret", "lldap_ldap_user_pass"}
+def _compose(secrets: dict | None = None, configs: dict | None = None) -> dict:
+    """Build a fake `docker compose config --format json` payload."""
+    return {"services": {}, "secrets": secrets or {}, "configs": configs or {}}
 
-    def test_no_deploy_version(self, tmp_path):
-        yml = tmp_path / "secrets.yml"
-        yml.write_text("some_secret:\n    external: true\n")
-        assert parse_versioned_names(yml) == set()
 
-    def test_no_file(self, tmp_path):
-        assert parse_versioned_names(tmp_path / "nonexistent.yml") == set()
+class TestRequiredVersionedSecrets:
+    def test_picks_up_versioned_suffix(self):
+        compose = _compose(secrets={
+            "db_pass": {"name": "db_pass_abc1234_1700000000", "external": True},
+            "static": {"name": "static_unrelated", "external": True},
+            "lldap_jwt": {"name": "lldap_jwt_abc1234_1700000000", "external": True},
+        })
+        assert required_versioned_secrets(compose, "abc1234_1700000000") == {"db_pass", "lldap_jwt"}
 
-    def test_single_secret(self, tmp_path):
-        yml = tmp_path / "secrets.yml"
-        yml.write_text("db_pass:\n    name: db_pass_${DEPLOY_VERSION}\n    external: true\n")
-        assert parse_versioned_names(yml) == {"db_pass"}
+    def test_no_secrets_block(self):
+        assert required_versioned_secrets({"services": {}}, "v1") == set()
 
-    def test_names_with_digits(self, tmp_path):
-        yml = tmp_path / "secrets.yml"
-        yml.write_text(
-            "fwd_recipient_1:\n"
-            "    name: fwd_recipient_1_${DEPLOY_VERSION}\n"
-            "    external: true\n"
-            "fwd_recipient_2:\n"
-            "    name: fwd_recipient_2_${DEPLOY_VERSION}\n"
-            "    external: true\n"
-        )
-        assert parse_versioned_names(yml) == {"fwd_recipient_1", "fwd_recipient_2"}
+    def test_none_match_version(self):
+        compose = _compose(secrets={"db_pass": {"name": "db_pass_other_version", "external": True}})
+        assert required_versioned_secrets(compose, "abc_123") == set()
+
+    def test_secrets_value_can_be_none(self):
+        # docker compose config sometimes emits {} for an external-only entry
+        compose = _compose(secrets={"x": None})
+        assert required_versioned_secrets(compose, "v1") == set()
+
+
+class TestReferencedConfigFiles:
+    def test_collects_file_paths(self):
+        compose = _compose(configs={
+            "conf_a": {"file": "/abs/path/a.conf"},
+            "conf_b": {"file": "config/b.yml"},
+            "no_file": {"name": "external_thing", "external": True},
+        })
+        result = referenced_config_files(compose)
+        assert sorted(result) == ["/abs/path/a.conf", "config/b.yml"]
+
+    def test_no_configs_block(self):
+        assert referenced_config_files({}) == []
 
 
 class TestValidateRequiredSecrets:
-    def test_all_present(self, tmp_stack):
-        stack = tmp_stack(
-            secrets_yml="db_pass:\n    name: db_pass_${DEPLOY_VERSION}\n    external: true\n",
+    def test_all_present_in_stack_secrets(self):
+        compose = _compose(secrets={"db_pass": {"name": "db_pass_v1", "external": True}})
+        validate_required_secrets(
+            compose, "v1",
+            stack_secrets=[("DB_PASS", "secret")],
+            env={},
         )
-        env = {"DB_PASS": "secret123"}
-        validate_required_secrets(stack, env=env)
 
-    def test_missing_raises(self, tmp_stack):
-        stack = tmp_stack(
-            secrets_yml="db_pass:\n    name: db_pass_${DEPLOY_VERSION}\n    external: true\n",
+    def test_all_present_in_env(self):
+        compose = _compose(secrets={"global_token": {"name": "global_token_v1", "external": True}})
+        validate_required_secrets(
+            compose, "v1",
+            stack_secrets=[],
+            env={"GLOBAL_TOKEN": "abc"},
         )
+
+    def test_missing_raises(self):
+        compose = _compose(secrets={"db_pass": {"name": "db_pass_v1", "external": True}})
         with pytest.raises(SecretError, match="DB_PASS"):
-            validate_required_secrets(stack, env={})
+            validate_required_secrets(compose, "v1", stack_secrets=[], env={})
 
-    def test_no_secrets_yml(self, tmp_stack):
-        stack = tmp_stack()
-        validate_required_secrets(stack, env={})
-
-    def test_no_versioned_secrets(self, tmp_stack):
-        stack = tmp_stack(
-            secrets_yml="some_secret:\n    external: true\n",
-        )
-        validate_required_secrets(stack, env={})
+    def test_no_versioned_secrets_is_noop(self):
+        validate_required_secrets({"services": {}}, "v1", stack_secrets=[], env={})
 
 
 class TestCreateVersionedSecrets:
-    def test_creates_from_secrets_env(self, tmp_stack, monkeypatch):
-        stack = tmp_stack(
-            secrets_yml="db_pass:\n    name: db_pass_${DEPLOY_VERSION}\n    external: true\n",
-            secrets_env="placeholder",
-        )
-        monkeypatch.setattr(
-            "swarm.secrets.sops_decrypt",
-            lambda f: [("DB_PASS", "secret123"), ("OTHER_KEY", "ignored")],
-        )
-        created_secrets = []
+    def test_creates_from_stack_secrets(self, monkeypatch):
+        compose = _compose(secrets={"db_pass": {"name": "db_pass_v1", "external": True}})
         monkeypatch.setattr("swarm.secrets.secret_list", lambda: [])
-        monkeypatch.setattr("swarm.secrets.secret_create", lambda name, val: created_secrets.append((name, val)))
-
-        result = create_versioned_secrets(stack, "abc_123", env={})
-        assert result["created"] == 1
-        assert created_secrets[0] == ("db_pass_abc_123", "secret123")
-
-    def test_creates_from_env_var(self, tmp_stack, monkeypatch):
-        """Global secrets loaded by mise are picked up from the environment."""
-        stack = tmp_stack(
-            secrets_yml="global_cf_token:\n    name: global_cf_token_${DEPLOY_VERSION}\n    external: true\n",
+        created = []
+        monkeypatch.setattr("swarm.secrets.secret_create", lambda n, v: created.append((n, v)))
+        result = create_versioned_secrets(
+            compose, "v1",
+            stack_secrets=[("DB_PASS", "secret")],
+            env={},
         )
+        assert result["created"] == 1
+        assert created == [("db_pass_v1", "secret")]
+
+    def test_creates_from_env(self, monkeypatch):
+        compose = _compose(secrets={"global_cf": {"name": "global_cf_v1", "external": True}})
         monkeypatch.setattr("swarm.secrets.secret_list", lambda: [])
-        created_secrets = []
-        monkeypatch.setattr("swarm.secrets.secret_create", lambda name, val: created_secrets.append((name, val)))
-
-        result = create_versioned_secrets(stack, "v1", env={"GLOBAL_CF_TOKEN": "cf-key-123"})
-        assert result["created"] == 1
-        assert created_secrets[0] == ("global_cf_token_v1", "cf-key-123")
-
-    def test_secrets_env_takes_precedence(self, tmp_stack, monkeypatch):
-        """Stack-local secrets.env wins over env vars for the same name."""
-        stack = tmp_stack(
-            secrets_yml="db_pass:\n    name: db_pass_${DEPLOY_VERSION}\n    external: true\n",
-            secrets_env="placeholder",
+        created = []
+        monkeypatch.setattr("swarm.secrets.secret_create", lambda n, v: created.append((n, v)))
+        result = create_versioned_secrets(
+            compose, "v1",
+            stack_secrets=[],
+            env={"GLOBAL_CF": "tokenval"},
         )
-        monkeypatch.setattr("swarm.secrets.sops_decrypt", lambda f: [("DB_PASS", "from-sops")])
+        assert result["created"] == 1
+        assert created == [("global_cf_v1", "tokenval")]
+
+    def test_stack_secrets_take_precedence(self, monkeypatch):
+        """When the same name is in both stack secrets and env, stack wins."""
+        compose = _compose(secrets={"db_pass": {"name": "db_pass_v1", "external": True}})
         monkeypatch.setattr("swarm.secrets.secret_list", lambda: [])
-        created_secrets = []
-        monkeypatch.setattr("swarm.secrets.secret_create", lambda name, val: created_secrets.append((name, val)))
-
-        result = create_versioned_secrets(stack, "v1", env={"DB_PASS": "from-env"})
-        assert result["created"] == 1
-        assert created_secrets[0] == ("db_pass_v1", "from-sops")
-
-    def test_skips_existing(self, tmp_stack, monkeypatch):
-        stack = tmp_stack(
-            secrets_yml="db_pass:\n    name: db_pass_${DEPLOY_VERSION}\n    external: true\n",
-            secrets_env="placeholder",
+        created = []
+        monkeypatch.setattr("swarm.secrets.secret_create", lambda n, v: created.append((n, v)))
+        create_versioned_secrets(
+            compose, "v1",
+            stack_secrets=[("DB_PASS", "from-stack")],
+            env={"DB_PASS": "from-env"},
         )
-        monkeypatch.setattr("swarm.secrets.sops_decrypt", lambda f: [("DB_PASS", "val")])
-        monkeypatch.setattr("swarm.secrets.secret_list", lambda: ["db_pass_abc_123"])
-        monkeypatch.setattr("swarm.secrets.secret_create", lambda name, val: None)
+        assert created == [("db_pass_v1", "from-stack")]
 
-        result = create_versioned_secrets(stack, "abc_123", env={})
+    def test_skips_existing(self, monkeypatch):
+        compose = _compose(secrets={"db_pass": {"name": "db_pass_v1", "external": True}})
+        monkeypatch.setattr("swarm.secrets.secret_list", lambda: ["db_pass_v1"])
+        monkeypatch.setattr("swarm.secrets.secret_create", lambda n, v: None)
+        result = create_versioned_secrets(
+            compose, "v1", stack_secrets=[("DB_PASS", "x")], env={},
+        )
         assert result["skipped"] == 1
         assert result["created"] == 0
 
-    def test_ignores_unneeded_in_secrets_env(self, tmp_stack, monkeypatch):
-        stack = tmp_stack(
-            secrets_yml="db_pass:\n    name: db_pass_${DEPLOY_VERSION}\n    external: true\n",
-            secrets_env="placeholder",
-        )
-        monkeypatch.setattr("swarm.secrets.sops_decrypt", lambda f: [("UNRELATED", "val")])
+    def test_ignores_unneeded_stack_keys(self, monkeypatch):
+        """secrets.env may have keys the compose doesn't reference; ignore them."""
+        compose = _compose(secrets={"db_pass": {"name": "db_pass_v1", "external": True}})
         monkeypatch.setattr("swarm.secrets.secret_list", lambda: [])
-        monkeypatch.setattr("swarm.secrets.secret_create", lambda name, val: None)
-
-        result = create_versioned_secrets(stack, "abc_123", env={})
-        assert result["created"] == 0
-
-    def test_no_secrets_yml(self, tmp_stack, monkeypatch):
-        stack = tmp_stack()
-        result = create_versioned_secrets(stack, "abc_123", env={})
-        assert result == {"created": 0, "skipped": 0}
-
-    def test_b64_handled(self, tmp_stack, monkeypatch):
-        """_B64 suffix should already be resolved by _sops.sops_decrypt."""
-        stack = tmp_stack(
-            secrets_yml="oidc_key:\n    name: oidc_key_${DEPLOY_VERSION}\n    external: true\n",
-            secrets_env="placeholder",
-        )
-        # sops_decrypt returns already-decoded values (key without _B64 suffix)
-        monkeypatch.setattr("swarm.secrets.sops_decrypt", lambda f: [("OIDC_KEY", "decoded-pem")])
         created = []
-        monkeypatch.setattr("swarm.secrets.secret_list", lambda: [])
-        monkeypatch.setattr("swarm.secrets.secret_create", lambda name, val: created.append((name, val)))
+        monkeypatch.setattr("swarm.secrets.secret_create", lambda n, v: created.append((n, v)))
+        create_versioned_secrets(
+            compose, "v1",
+            stack_secrets=[("DB_PASS", "v"), ("UNRELATED", "x")],
+            env={},
+        )
+        assert created == [("db_pass_v1", "v")]
 
-        create_versioned_secrets(stack, "v1", env={})
-        assert created[0] == ("oidc_key_v1", "decoded-pem")
+    def test_no_versioned_secrets_returns_zero(self, monkeypatch):
+        result = create_versioned_secrets(_compose(), "v1", stack_secrets=[], env={})
+        assert result == {"created": 0, "skipped": 0}
 
 
 class TestValidateConfigFiles:
-    def test_all_exist(self, tmp_stack):
-        stack = tmp_stack(
-            configs_yml="my_config:\n    file: config/app.yml\n",
-            config_files={"app.yml": "key: value"},
-        )
-        validate_config_files(stack)
+    def test_all_exist(self, tmp_path):
+        f = tmp_path / "app.yml"
+        f.write_text("key: value")
+        compose = _compose(configs={"my_config": {"file": str(f)}})
+        validate_config_files(compose)
 
-    def test_missing_raises(self, tmp_stack):
-        stack = tmp_stack(
-            configs_yml="my_config:\n    file: config/missing.yml\n",
-        )
+    def test_missing_raises(self, tmp_path):
+        compose = _compose(configs={"my_config": {"file": str(tmp_path / "missing.yml")}})
         with pytest.raises(ValidationError, match="missing.yml"):
-            validate_config_files(stack)
+            validate_config_files(compose)
 
-    def test_no_configs_yml(self, tmp_stack):
-        stack = tmp_stack()
-        validate_config_files(stack)
+    def test_no_configs_block(self):
+        validate_config_files({"services": {}})
 
-    def test_multiple_missing(self, tmp_stack):
-        stack = tmp_stack(
-            configs_yml="c1:\n    file: config/a.yml\nc2:\n    file: config/b.yml\n",
-        )
+    def test_multiple_missing(self, tmp_path):
+        compose = _compose(configs={
+            "c1": {"file": str(tmp_path / "a.yml")},
+            "c2": {"file": str(tmp_path / "b.yml")},
+        })
         with pytest.raises(ValidationError) as exc_info:
-            validate_config_files(stack)
+            validate_config_files(compose)
         assert "a.yml" in str(exc_info.value)
         assert "b.yml" in str(exc_info.value)

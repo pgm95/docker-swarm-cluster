@@ -1,29 +1,54 @@
 """Compose config preprocessing.
 
-Concatenates centralized anchors with a stack's compose file,
-then runs docker compose config.
+Concatenates centralized anchors with a stack's compose file, pipes the
+result through `docker compose config` on stdin, and applies fixups for
+`docker stack deploy` compatibility.
 
 Also callable as: python3 -m swarm._compose <stack-file> [extra-args...]
 """
 
 import argparse
+import json
 import os
 import re
-import subprocess
 import sys
-import tempfile
+from functools import cache
 from pathlib import Path
 
-from . import DockerError
-from ._docker import docker_env
-from ._output import log, setup
+from . import _docker
+from ._cli import cli_main
 from ._stack import stack_name
 
 # docker compose config stringifies certain integer fields that
 # docker stack deploy requires as raw integers.
 _QUOTED_INT_FIELDS = re.compile(r"((?:published|size): )\"(\d+)\"")
 
-SHARED_ANCHORS = Path("stacks/_shared/anchors.yml")
+
+def _anchors_path() -> Path:
+    """Path to the shared YAML anchors file.
+
+    Configurable via the ``SWARM_ANCHORS_FILE`` environment variable.
+    Defaults to ``stacks/_shared/anchors.yml`` for the canonical layout.
+    Missing files are tolerated by ``_anchors_content`` (returns empty).
+    """
+    return Path(os.environ.get("SWARM_ANCHORS_FILE", "stacks/_shared/anchors.yml"))
+
+
+@cache
+def _read_anchors_file(path: Path) -> str:
+    """Read an anchors file once per (process, path) pair.
+
+    Cache is keyed on the resolved path so a mid-process change to
+    ``SWARM_ANCHORS_FILE`` would correctly read the new file. A missing
+    file is not an error — projects without shared anchors get an empty
+    prefix and the stack's own ``compose.yml`` is rendered as-is.
+    """
+    return path.read_text() if path.is_file() else ""
+
+
+def _anchors_content() -> str:
+    """Current shared anchors content (or empty string if no file)."""
+    return _read_anchors_file(_anchors_path())
 
 
 def _fixup_config(config: str) -> str:
@@ -44,8 +69,8 @@ def _fixup_config(config: str) -> str:
 def compose_config(stack_file: str | Path, *extra_args: str) -> str:
     """Preprocess a compose file through docker compose config.
 
-    Concatenates anchors.yml + compose file into a temp file, then runs
-    docker compose config with proper project settings. Applies fixups
+    Concatenates anchors.yml + compose file in memory, pipes the combined
+    YAML to `docker compose -f - config` on stdin, then applies fixups
     for docker stack deploy compatibility.
 
     Args:
@@ -59,41 +84,45 @@ def compose_config(stack_file: str | Path, *extra_args: str) -> str:
     stack_dir = stack_file.parent
     name = stack_name(stack_dir)
 
-    anchors_content = SHARED_ANCHORS.read_text()
-    compose_content = stack_file.read_text()
+    combined = _anchors_content() + "\n" + stack_file.read_text()
 
-    fd, tmp_path = tempfile.mkstemp(suffix=".yml")
-    try:
-        with os.fdopen(fd, "w") as f:
-            f.write(anchors_content)
-            f.write("\n")
-            f.write(compose_content)
+    result = _docker.run(
+        "compose",
+        "--project-directory", str(stack_dir),
+        "--project-name", name,
+        "-f", "-",
+        "config",
+        *extra_args,
+        input=combined,
+    )
+    return _fixup_config(result.stdout)
 
-        cmd = [
-            "docker", "compose",
-            "--project-directory", str(stack_dir),
-            "--project-name", name,
-            "-f", tmp_path,
-            "config",
-            *extra_args,
-        ]
-        log.debug("$ %s", " ".join(cmd))
-        result = subprocess.run(cmd, capture_output=True, text=True, env=docker_env())
-        if result.returncode != 0:
-            raise DockerError(cmd, result.returncode, result.stderr.strip())
-        return _fixup_config(result.stdout)
-    finally:
-        os.unlink(tmp_path)
+
+def compose_json(stack_file: str | Path) -> dict:
+    """Render the stack's compose document and return it as a parsed dict.
+
+    Convenience wrapper around ``compose_config(stack_file, "--format", "json")``
+    plus ``json.loads()``. This is the canonical entry point for code that
+    needs to inspect the rendered compose structurally — discovery of
+    versioned secrets, configs to validate, external networks, bind mounts,
+    placement constraints, and so on.
+
+    Use ``compose_config(stack_file)`` directly only when you need the YAML
+    text (e.g., to feed ``docker stack deploy -c -``).
+    """
+    return json.loads(compose_config(stack_file, "--format", "json"))
+
+
+def main() -> int:
+    def run() -> int:
+        parser = argparse.ArgumentParser(prog="swarm._compose")
+        parser.add_argument("stack_file", help="Path to stack's compose.yml")
+        parser.add_argument("extra", nargs="*", help="Additional args for docker compose config")
+        args = parser.parse_args()
+        print(compose_config(args.stack_file, *args.extra), end="")
+        return 0
+    return cli_main(run)
 
 
 if __name__ == "__main__":
-    setup()
-    parser = argparse.ArgumentParser(prog="swarm._compose")
-    parser.add_argument("stack_file", help="Path to stack's compose.yml")
-    parser.add_argument("extra", nargs="*", help="Additional args for docker compose config")
-    args = parser.parse_args()
-    try:
-        print(compose_config(args.stack_file, *args.extra), end="")
-    except DockerError as e:
-        print(str(e), file=sys.stderr)
-        sys.exit(1)
+    sys.exit(main())

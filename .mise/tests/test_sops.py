@@ -51,11 +51,28 @@ class TestSopsDecrypt:
         result = sops_decrypt("stack/secrets.env")
         assert result == [("KEY", "val")]
 
-    def test_filters_sops_metadata(self, mock_subprocess):
-        mock_subprocess.return_value.stdout = "sops_version=3.7\nKEY=val\nsops_age=xxx\n"
+    def test_keeps_user_keys_starting_with_sops(self, mock_subprocess):
+        """User keys like 'sops_recipient' must not be filtered.
+
+        `sops decrypt --output-type dotenv` does not emit metadata lines
+        (the `sops:` YAML block is stripped during decryption), so any line
+        with `key=value` shape is user data. Earlier versions of this filter
+        used `line.startswith("sops")` which incorrectly dropped legitimate
+        user keys that happened to begin with that prefix.
+        """
+        mock_subprocess.return_value.stdout = (
+            "sops_recipient=alice\nKEY=val\nsops_token=abc\n"
+        )
         mock_subprocess.return_value.returncode = 0
         result = sops_decrypt("stack/secrets.env")
-        assert result == [("KEY", "val")]
+        assert result == [("sops_recipient", "alice"), ("KEY", "val"), ("sops_token", "abc")]
+
+    def test_skips_lines_without_equals(self, mock_subprocess):
+        """Defensive: any non-blank line that lacks `=` is dropped."""
+        mock_subprocess.return_value.stdout = "KEY=val\nstray text\nOTHER=v\n"
+        mock_subprocess.return_value.returncode = 0
+        result = sops_decrypt("stack/secrets.env")
+        assert result == [("KEY", "val"), ("OTHER", "v")]
 
     def test_decrypt_failure(self, mock_subprocess):
         mock_subprocess.return_value.returncode = 1

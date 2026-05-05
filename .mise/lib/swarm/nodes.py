@@ -1,13 +1,11 @@
 """Node discovery and constraint matching."""
 
 import argparse
-import json
 import sys
 
-from . import SwarmError
-from ._compose import compose_config
+from ._cli import cli_main
+from ._compose import compose_json
 from ._docker import inspect_nodes
-from ._output import setup
 
 
 def get_swarm_nodes(filters: list[str] | None = None) -> list[dict]:
@@ -39,9 +37,9 @@ def get_service_node(compose_file: str) -> list[tuple[str, str]]:
     Returns:
         List of (service_name, hostname|"UNRESOLVED") tuples.
     """
-    compose_json = json.loads(compose_config(compose_file, "--format", "json"))
+    rendered = compose_json(compose_file)
     raw_nodes = inspect_nodes()
-    return resolve_service_nodes(compose_json, raw_nodes)
+    return resolve_service_nodes(rendered, raw_nodes)
 
 
 def resolve_service_nodes(
@@ -126,23 +124,22 @@ def _find_matching_node(
 
 
 def main() -> int:
-    setup()
-    parser = argparse.ArgumentParser(prog="swarm.nodes")
-    sub = parser.add_subparsers(dest="command")
+    def run() -> int:
+        parser = argparse.ArgumentParser(prog="swarm.nodes")
+        sub = parser.add_subparsers(dest="command")
 
-    list_cmd = sub.add_parser("list", help="List swarm nodes")
-    list_cmd.add_argument("--filter", action="append", default=[], help="Label filter (key=value)")
-    list_cmd.add_argument("--names-only", action="store_true", help="Print hostnames only")
+        list_cmd = sub.add_parser("list", help="List swarm nodes")
+        list_cmd.add_argument("--filter", action="append", default=[], help="Label filter (key=value)")
+        list_cmd.add_argument("--names-only", action="store_true", help="Print hostnames only")
 
-    resolve_cmd = sub.add_parser("resolve-services", help="Map services to nodes")
-    resolve_cmd.add_argument("compose_file", help="Path to compose.yml")
+        resolve_cmd = sub.add_parser("resolve-services", help="Map services to nodes")
+        resolve_cmd.add_argument("compose_file", help="Path to compose.yml")
 
-    args = parser.parse_args()
-    if not args.command:
-        parser.print_help()
-        return 1
+        args = parser.parse_args()
+        if not args.command:
+            parser.print_help()
+            return 1
 
-    try:
         if args.command == "list":
             nodes = get_swarm_nodes(args.filter or None)
             if args.names_only:
@@ -152,18 +149,11 @@ def main() -> int:
                 for node in nodes:
                     labels = ",".join(f"{k}={v}" for k, v in sorted(node["labels"].items()))
                     print(f"{node['hostname']}\t{labels}")
-
         elif args.command == "resolve-services":
-            mappings = get_service_node(args.compose_file)
-            for svc, hostname in mappings:
+            for svc, hostname in get_service_node(args.compose_file):
                 print(f"{svc}\t{hostname}")
-
-    except SwarmError as e:
-        from ._output import error
-        error(str(e))
-        return 1
-
-    return 0
+        return 0
+    return cli_main(run)
 
 
 if __name__ == "__main__":

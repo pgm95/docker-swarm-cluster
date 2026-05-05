@@ -1,72 +1,60 @@
 """Compose validation and bind mount checks."""
 
 import argparse
-import json
-import subprocess
+import os
+import shlex
 import sys
 from pathlib import Path
 
-from . import SwarmError
-from ._compose import compose_config
-from ._docker import docker_env, inspect_nodes
-from ._output import error, setup
-from ._ssh import ssh_node
+from . import SwarmError, ValidationError, _docker
+from ._cli import cli_main
+from ._compose import compose_config, compose_json
+from ._docker import inspect_nodes
+from ._output import info, warn
+from ._ssh import parallel_run, ssh_node
+from ._stack import find_namespaces, find_stacks, oci_tag_var
 from .deploy import compute_content_hash
 from .nodes import resolve_service_nodes
+from .secrets import validate_config_files
 
 
-def validate_compose(stack_file: Path) -> tuple[bool, str]:
+def _set_oci_tags(stack_dir: Path) -> None:
+    """Export OCI_TAG_<SERVICE> for each build/<service>/ dir.
+
+    Validation needs to see the same env vars that deploy will produce so
+    compose interpolation resolves identically. The shared :func:`oci_tag_var`
+    formula keeps the two paths in lock-step.
+    """
+    build_root = stack_dir / "build"
+    if not build_root.is_dir():
+        return
+    for svc_dir in sorted(build_root.iterdir()):
+        if svc_dir.is_dir():
+            os.environ[oci_tag_var(svc_dir.name)] = compute_content_hash(svc_dir)
+
+
+def validate_compose(stack_file: Path, yaml_text: str | None = None) -> tuple[bool, str]:
     """Run full Swarm validation pipeline for a single compose file.
 
-    compose_config (includes fixups) -> docker stack config
+    `yaml_text` may be passed in to skip a redundant `compose_config` call
+    when the caller has already produced the preprocessed YAML.
 
     Returns:
         (success, error_output)
     """
     try:
-        config = compose_config(str(stack_file))
+        if yaml_text is None:
+            yaml_text = compose_config(str(stack_file))
     except Exception as e:
         return False, str(e)
 
-    result = subprocess.run(
-        ["docker", "stack", "config", "-c", "-"],
-        input=config,
-        capture_output=True,
-        text=True,
-        env=docker_env(),
-    )
+    try:
+        result = _docker.run("stack", "config", "-c", "-", input=yaml_text, check=False)
+    except SwarmError as e:
+        return False, str(e)
     if result.returncode != 0:
         return False, result.stderr.strip()
     return True, ""
-
-
-def validate_all_compose() -> list[dict]:
-    """Discover and validate all compose.yml files.
-
-    Sets up OCI_TAG_* env vars for stacks with build contexts.
-
-    Returns:
-        [{"file": str, "valid": bool, "error": str}]
-    """
-    import os
-
-    # Export OCI_TAG_* for stacks with build dirs
-    for compose_file in _find_all_compose():
-        stack_dir = compose_file.parent
-        build_root = stack_dir / "build"
-        if not build_root.is_dir():
-            continue
-        for svc_dir in sorted(build_root.iterdir()):
-            if svc_dir.is_dir():
-                tag = compute_content_hash(svc_dir)
-                var = f"OCI_TAG_{svc_dir.name.upper()}"
-                os.environ[var] = tag
-
-    results = []
-    for compose_file in _find_all_compose():
-        valid, err = validate_compose(compose_file)
-        results.append({"file": str(compose_file), "valid": valid, "error": err})
-    return results
 
 
 def extract_bind_mounts(compose_json: dict) -> dict[str, list[str]]:
@@ -89,31 +77,41 @@ def extract_bind_mounts(compose_json: dict) -> dict[str, list[str]]:
 
 
 def collect_bind_mounts(
-    stack_file: Path, raw_nodes: list[dict],
+    stack_file: Path,
+    raw_nodes: list[dict],
+    rendered: dict | None = None,
 ) -> dict[str, set[str]]:
     """Collect bind mount paths grouped by node for a stack.
+
+    `rendered` may be passed in to reuse a previously-parsed compose
+    document and skip a redundant `docker compose config --format json`
+    invocation.
 
     Returns:
         {node_hostname: {path, ...}} — empty dict if no bind mounts.
     """
-    try:
-        raw_json = compose_config(str(stack_file), "--format", "json")
-        compose_json = json.loads(raw_json)
-    except Exception:
+    if rendered is None:
+        try:
+            rendered = compose_json(stack_file)
+        except Exception:
+            return {}
+    if rendered is None:
         return {}
 
-    binds = extract_bind_mounts(compose_json)
+    binds = extract_bind_mounts(rendered)
     if not binds:
         return {}
 
     try:
-        svc_nodes = dict(resolve_service_nodes(compose_json, raw_nodes))
+        svc_nodes = dict(resolve_service_nodes(rendered, raw_nodes))
     except Exception:
         svc_nodes = {}
 
     node_paths: dict[str, set[str]] = {}
     for svc, paths in binds.items():
-        node = svc_nodes.get(svc, "UNKNOWN")
+        # Use the same sentinel as nodes.resolve_service_nodes — single
+        # canonical "we couldn't determine the target node" marker.
+        node = svc_nodes.get(svc, "UNRESOLVED")
         node_paths.setdefault(node, set()).update(paths)
     return node_paths
 
@@ -121,98 +119,133 @@ def collect_bind_mounts(
 def check_paths_on_node(node: str, paths: set[str]) -> list[dict]:
     """SSH to a node and stat all paths in a single call.
 
+    Each path produces exactly one line on stdout: either ``%A:%U:%G`` from
+    stat (path exists) or the literal string ``MISSING``. We rely on
+    positional alignment between the input path list and the output line
+    list — if a shell error truncates the chain mid-execution, the tail of
+    paths comes back unmatched. Those tail paths are reported as
+    ``unreachable`` rather than silently dropped (which would happen if we
+    just ``zip``ped the two lists).
+
     Returns:
-        [{"path", "status": "ok"|"missing", "permissions"}]
+        [{"path", "status": "ok"|"missing"|"unreachable", "permissions"}]
     """
-    stat_cmd = "; ".join(
-        f"if [ -e '{p}' ]; then stat -c '%A %U:%G {p}' '{p}'; else echo 'MISSING {p}'; fi"
-        for p in sorted(paths)
-    )
+    sorted_paths = sorted(paths)
+    parts = []
+    for p in sorted_paths:
+        qp = shlex.quote(p)
+        parts.append(f"if [ -e {qp} ]; then stat -c %A:%U:%G {qp}; else echo MISSING; fi")
+    stat_cmd = "; ".join(parts)
     try:
         result = ssh_node(node, stat_cmd, check=False)
     except Exception:
-        return [{"path": p, "status": "unreachable", "permissions": ""} for p in sorted(paths)]
+        return [{"path": p, "status": "unreachable", "permissions": ""} for p in sorted_paths]
 
+    out_lines = result.stdout.strip().splitlines()
     results = []
-    for line in result.stdout.strip().splitlines():
-        if line.startswith("MISSING"):
-            path = line.split(" ", 1)[1] if " " in line else line
+    for i, path in enumerate(sorted_paths):
+        if i >= len(out_lines):
+            results.append({"path": path, "status": "unreachable", "permissions": ""})
+            continue
+        line = out_lines[i]
+        if line == "MISSING":
             results.append({"path": path, "status": "missing", "permissions": ""})
         else:
-            parts = line.rsplit(" ", 1)
-            perms = parts[0] if len(parts) > 1 else ""
-            path = parts[-1]
-            results.append({"path": path, "status": "ok", "permissions": perms})
+            results.append({"path": path, "status": "ok", "permissions": line})
     return results
 
 
 def validate(stack_file: str | None = None) -> int:
     """Full validation run. Returns exit code."""
-    # --- Compose validation ---
-    if stack_file:
-        files = [Path(stack_file)]
-    else:
-        files = _find_all_compose()
+    files = [Path(stack_file)] if stack_file else _find_all_compose()
 
-    import os
-
-    # Set OCI_TAG_* for stacks with build dirs
+    # Set OCI_TAG_* once per stack with build dirs (deploy.py uses the same
+    # formula; consistent env between validate and deploy is mandatory).
     for f in files:
-        build_root = f.parent / "build"
-        if not build_root.is_dir():
-            continue
-        for svc_dir in sorted(build_root.iterdir()):
-            if svc_dir.is_dir():
-                tag = compute_content_hash(svc_dir)
-                os.environ[f"OCI_TAG_{svc_dir.name.upper()}"] = tag
+        _set_oci_tags(f.parent)
+
+    # Per-file caches: compose YAML (for stack config) and parsed JSON
+    # (for bind-mount extraction). Each file produces at most one YAML and
+    # one JSON compose_config call instead of three.
+    yaml_cache: dict[Path, str] = {}
+    json_cache: dict[Path, dict] = {}
 
     failed = False
     for f in files:
-        valid, err = validate_compose(f)
+        try:
+            yaml_cache[f] = compose_config(str(f))
+        except Exception as e:
+            info(f"✗ {f}")
+            info(f"  {e}")
+            failed = True
+            continue
+
+        valid, err = validate_compose(f, yaml_text=yaml_cache[f])
         if valid:
-            print(f"✓ {f}")
+            info(f"✓ {f}")
         else:
-            print(f"✗ {f}")
+            info(f"✗ {f}")
             if err:
                 for line in err.splitlines()[:5]:
-                    print(f"  {line}")
+                    info(f"  {line}")
+            failed = True
+            continue
+
+        try:
+            json_cache[f] = compose_json(f)
+        except Exception:
+            json_cache[f] = {}
+            continue
+
+        # Verify any `configs.<x>.file:` paths actually exist on disk.
+        try:
+            validate_config_files(json_cache[f])
+        except ValidationError as e:
+            info(f"✗ {f}")
+            for line in str(e).splitlines()[:5]:
+                info(f"  {line}")
             failed = True
 
     if failed:
         return 1
 
-    # --- Bind mount checks (1 inspect_nodes + 1 SSH per node) ---
-    print()
-    print("=== Bind mount paths ===")
+    # --- Bind mount checks ---
+    info("")
+    info("=== Bind mount paths ===")
 
     raw_nodes = inspect_nodes()
 
-    # Collect all bind mounts across all stacks, grouped by node
-    # Track which stack+node owns each path for display
     all_node_paths: dict[str, set[str]] = {}
-    path_owners: dict[tuple[str, str], str] = {}  # (node, path) -> stack
+    path_owners: dict[tuple[str, str], str] = {}
+    per_stack_paths: dict[Path, dict[str, set[str]]] = {}
     for f in files:
         stack_nm = str(f.parent)
-        node_paths = collect_bind_mounts(f, raw_nodes)
+        node_paths = collect_bind_mounts(f, raw_nodes, rendered=json_cache.get(f))
+        per_stack_paths[f] = node_paths
         for node, paths in node_paths.items():
             all_node_paths.setdefault(node, set()).update(paths)
             for p in paths:
                 path_owners[(node, p)] = stack_nm
 
-    # One SSH call per node for all paths
-    node_results: dict[str, list[dict]] = {}
-    for node, paths in sorted(all_node_paths.items()):
-        if node in ("UNKNOWN", "UNRESOLVED"):
-            node_results[node] = [{"path": p, "status": "unreachable", "permissions": ""} for p in sorted(paths)]
-        else:
-            node_results[node] = check_paths_on_node(node, paths)
+    # Parallel SSH across reachable nodes; unreachable/unknown nodes get a
+    # synthetic result without a network call.
+    reachable = {n: p for n, p in all_node_paths.items() if n != "UNRESOLVED"}
+    node_results: dict[str, list[dict]] = {
+        node: [{"path": p, "status": "unreachable", "permissions": ""} for p in sorted(paths)]
+        for node, paths in all_node_paths.items()
+        if node not in reachable
+    }
+    node_results.update(parallel_run(
+        list(reachable.keys()),
+        lambda node: check_paths_on_node(node, reachable[node]),
+    ))
 
     # Display grouped by stack and node
     warnings = 0
     displayed: set[str] = set()
     for f in files:
         stack_nm = str(f.parent)
-        node_paths = collect_bind_mounts(f, raw_nodes)
+        node_paths = per_stack_paths[f]
         for node in sorted(node_paths):
             header = f"{stack_nm} ({node}):"
             header_printed = False
@@ -224,40 +257,42 @@ def validate(stack_file: str | None = None) -> int:
                     continue
                 displayed.add(display_key)
                 if not header_printed:
-                    print(header)
+                    info(header)
                     header_printed = True
                 if r["status"] == "missing":
-                    print(f"  ⚠ MISSING {r['path']}")
+                    warn(f"MISSING {r['path']}")
                     warnings += 1
                 elif r["status"] == "unreachable":
-                    print(f"  ⚠ {node}: unreachable")
+                    warn(f"{node}: unreachable")
                     warnings += 1
                 else:
-                    print(f"  {r['permissions']} {r['path']}")
+                    info(f"  {r['permissions']} {r['path']}")
 
     if warnings > 0:
-        print()
-        print(f"{warnings} warning(s) — missing bind mount paths.")
+        info("")
+        warn(f"{warnings} warning(s) — missing bind mount paths.")
 
     return 0
 
 
 def _find_all_compose() -> list[Path]:
-    """Find all compose.yml files in stacks/."""
-    return sorted(Path("stacks").rglob("compose.yml"))
+    """Find every stack's compose.yml across all namespaces under the stacks root."""
+    composes: list[Path] = []
+    for ns in find_namespaces():
+        for stack_dir in find_stacks(ns):
+            compose = stack_dir / "compose.yml"
+            if compose.is_file():
+                composes.append(compose)
+    return composes
 
 
 def main() -> int:
-    setup()
-    parser = argparse.ArgumentParser(prog="swarm.validate")
-    parser.add_argument("--stack", help="Validate a single compose file")
-
-    args = parser.parse_args()
-    try:
+    def run() -> int:
+        parser = argparse.ArgumentParser(prog="swarm.validate")
+        parser.add_argument("--stack", help="Validate a single compose file")
+        args = parser.parse_args()
         return validate(args.stack)
-    except SwarmError as e:
-        error(str(e))
-        return 1
+    return cli_main(run)
 
 
 if __name__ == "__main__":

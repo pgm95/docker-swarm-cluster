@@ -72,17 +72,6 @@ SAMPLE_NODES = [
 SAMPLE_NODE_IDS = ["node1id", "node2id", "node3id"]
 
 
-@pytest.fixture
-def sample_nodes():
-    """Realistic 3-node cluster JSON."""
-    return SAMPLE_NODES
-
-
-@pytest.fixture
-def sample_node_ids():
-    return SAMPLE_NODE_IDS
-
-
 # ---------------------------------------------------------------------------
 # Mock helpers
 # ---------------------------------------------------------------------------
@@ -100,22 +89,52 @@ def mock_docker(monkeypatch):
     """Patch swarm._docker.run to return configurable responses.
 
     Returns a MockDocker instance. Set responses with mock.set_response().
+
+    Response keys can be:
+      - a string: matches when the first arg equals the key (e.g. "stack").
+      - a tuple of strings: matches when the args start with the tuple
+        (e.g. ("stack", "config") matches `run("stack", "config", "-c", "-", ...)`
+        but not `run("stack", "ls")`).
+
+    Tuple keys are checked first (longest first), then string keys, then default.
+    Lets one test fixture differentiate between sibling docker subcommands like
+    `stack ls`, `stack ps`, `stack services`, `stack config`, `stack deploy`.
     """
 
     class MockDocker:
         def __init__(self):
             self.calls: list[tuple] = []
-            self._responses: dict[str, subprocess.CompletedProcess] = {}
+            self.inputs: list[str | None] = []   # parallel to calls; piped stdin per call
+            self._tuple_responses: dict[tuple, subprocess.CompletedProcess] = {}
+            self._string_responses: dict[str, subprocess.CompletedProcess] = {}
             self._default = make_completed()
 
-        def set_response(self, subcommand: str, stdout: str = "", stderr: str = "", returncode: int = 0):
-            """Set response for a docker subcommand (first arg after 'docker')."""
-            self._responses[subcommand] = make_completed(stdout, stderr, returncode)
+        def set_response(
+            self,
+            subcommand: str | tuple[str, ...],
+            stdout: str = "",
+            stderr: str = "",
+            returncode: int = 0,
+        ):
+            """Set response for a docker subcommand (string match) or arg prefix (tuple match)."""
+            response = make_completed(stdout, stderr, returncode)
+            if isinstance(subcommand, tuple):
+                self._tuple_responses[subcommand] = response
+            else:
+                self._string_responses[subcommand] = response
+
+        def _resolve(self, args: tuple) -> subprocess.CompletedProcess:
+            for prefix in sorted(self._tuple_responses, key=len, reverse=True):
+                if args[: len(prefix)] == prefix:
+                    return self._tuple_responses[prefix]
+            if args and args[0] in self._string_responses:
+                return self._string_responses[args[0]]
+            return self._default
 
         def __call__(self, *args, check=True, capture=True, input=None):
             self.calls.append(args)
-            key = args[0] if args else ""
-            result = self._responses.get(key, self._default)
+            self.inputs.append(input)
+            result = self._resolve(args)
             if check and result.returncode != 0:
                 from swarm import DockerError
                 raise DockerError(["docker", *args], result.returncode, result.stderr)
@@ -123,35 +142,6 @@ def mock_docker(monkeypatch):
 
     mock = MockDocker()
     monkeypatch.setattr("swarm._docker.run", mock)
-    return mock
-
-
-@pytest.fixture
-def mock_ssh(monkeypatch):
-    """Patch swarm._ssh.ssh_node to return configurable responses.
-
-    Returns a MockSSH instance.
-    """
-
-    class MockSSH:
-        def __init__(self):
-            self.calls: list[tuple[str, str]] = []
-            self._responses: dict[str, subprocess.CompletedProcess] = {}
-            self._default = make_completed()
-
-        def set_response(self, hostname: str, stdout: str = "", stderr: str = "", returncode: int = 0):
-            self._responses[hostname] = make_completed(stdout, stderr, returncode)
-
-        def __call__(self, hostname, command, stdin_data=None, check=True):
-            self.calls.append((hostname, command))
-            result = self._responses.get(hostname, self._default)
-            if check and result.returncode != 0:
-                from swarm import SSHError
-                raise SSHError(hostname, result.returncode, result.stderr)
-            return result
-
-    mock = MockSSH()
-    monkeypatch.setattr("swarm._ssh.ssh_node", mock)
     return mock
 
 

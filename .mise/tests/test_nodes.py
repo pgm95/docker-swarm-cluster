@@ -1,6 +1,5 @@
 """Tests for swarm.nodes — node discovery and constraint matching."""
 
-import json
 
 from conftest import SAMPLE_NODES
 from swarm.nodes import (
@@ -146,7 +145,7 @@ class TestGetSwarmNodes:
 
 
 class TestGetServiceNode:
-    COMPOSE_JSON = json.dumps({
+    COMPOSE_DOC = {
         "services": {
             "web": {
                 "deploy": {
@@ -167,10 +166,10 @@ class TestGetServiceNode:
             },
             "worker": {},
         },
-    })
+    }
 
     def test_resolves_services(self, monkeypatch):
-        monkeypatch.setattr("swarm.nodes.compose_config", lambda *a, **kw: self.COMPOSE_JSON)
+        monkeypatch.setattr("swarm.nodes.compose_json", lambda *a, **kw: self.COMPOSE_DOC)
         monkeypatch.setattr("swarm.nodes.inspect_nodes", lambda: SAMPLE_NODES)
         result = get_service_node("fake/compose.yml")
         mapping = dict(result)
@@ -179,7 +178,7 @@ class TestGetServiceNode:
         assert mapping["worker"] == "swarm-vm"  # no constraints → first node
 
     def test_unresolved(self, monkeypatch):
-        compose = json.dumps({
+        compose = {
             "services": {
                 "svc": {
                     "deploy": {
@@ -189,8 +188,8 @@ class TestGetServiceNode:
                     },
                 },
             },
-        })
-        monkeypatch.setattr("swarm.nodes.compose_config", lambda *a, **kw: compose)
+        }
+        monkeypatch.setattr("swarm.nodes.compose_json", lambda *a, **kw: compose)
         monkeypatch.setattr("swarm.nodes.inspect_nodes", lambda: SAMPLE_NODES)
         result = get_service_node("fake/compose.yml")
         assert result[0] == ("svc", "UNRESOLVED")

@@ -1,12 +1,14 @@
 """Registry authentication across swarm nodes."""
 
+import argparse
 import os
-import subprocess
+import shlex
 import sys
 
-from . import SwarmError
-from ._output import error, info, setup
-from ._ssh import ssh_node
+from . import _docker
+from ._cli import cli_main
+from ._output import error, info
+from ._ssh import parallel_run, ssh_node
 from .nodes import get_swarm_nodes
 
 
@@ -15,7 +17,7 @@ def login_node(hostname: str, registry: str, user: str, password: str) -> bool:
     try:
         ssh_node(
             hostname,
-            f"docker login -u '{user}' --password-stdin '{registry}'",
+            f"docker login -u {shlex.quote(user)} --password-stdin {shlex.quote(registry)}",
             stdin_data=password,
         )
         return True
@@ -24,18 +26,20 @@ def login_node(hostname: str, registry: str, user: str, password: str) -> bool:
 
 
 def login_local(registry: str, user: str, password: str) -> bool:
-    """Docker login on the local machine."""
-    result = subprocess.run(
-        ["docker", "login", "-u", user, "--password-stdin", registry],
-        input=password,
-        capture_output=True,
-        text=True,
-    )
-    return result.returncode == 0
+    """Docker login on the local machine via the Docker CLI."""
+    try:
+        result = _docker.run(
+            "login", "-u", user, "--password-stdin", registry,
+            input=password,
+            check=False,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
 
 
 def registry_auth(local: bool = False) -> int:
-    """Login all swarm nodes (+ optionally local) to private registry."""
+    """Login all swarm nodes (+ optionally local) to private registry in parallel."""
     registry = os.environ.get("GLOBAL_SWARM_OCI_REGISTRY", "")
     user = os.environ.get("REGISTRY_USER", "")
     password = os.environ.get("REGISTRY_PASS", "")
@@ -50,20 +54,19 @@ def registry_auth(local: bool = False) -> int:
     info(f"Targets: {target_count}" + (f" ({len(nodes)} nodes + local machine)" if local else " nodes"))
     info("")
 
-    failed = 0
+    # Fan out node logins in parallel; the result dict's insertion order
+    # follows submission order (== get_swarm_nodes order), then local.
+    hostnames = [n["hostname"] for n in nodes]
+    results: dict[str, bool] = parallel_run(
+        hostnames, lambda h: login_node(h, registry, user, password),
+    )
     if local:
-        if login_local(registry, user, password):
-            info("  local machine: ok")
-        else:
-            info("  local machine: FAILED")
-            failed += 1
+        results["local machine"] = login_local(registry, user, password)
 
-    for node in nodes:
-        hostname = node["hostname"]
-        if login_node(hostname, registry, user, password):
-            info(f"  {hostname}: ok")
-        else:
-            info(f"  {hostname}: FAILED")
+    failed = 0
+    for target, ok in results.items():
+        info(f"  {target}: {'ok' if ok else 'FAILED'}")
+        if not ok:
             failed += 1
 
     info("")
@@ -75,14 +78,16 @@ def registry_auth(local: bool = False) -> int:
 
 
 def main() -> int:
-    setup()
-    local = os.environ.get("usage_local") == "true"
-
-    try:
-        return registry_auth(local)
-    except SwarmError as e:
-        error(str(e))
-        return 1
+    def run() -> int:
+        parser = argparse.ArgumentParser(prog="swarm.registry_auth")
+        parser.add_argument(
+            "--local",
+            action="store_true",
+            help="Also login the local dev machine in addition to swarm nodes",
+        )
+        args = parser.parse_args()
+        return registry_auth(args.local)
+    return cli_main(run)
 
 
 if __name__ == "__main__":

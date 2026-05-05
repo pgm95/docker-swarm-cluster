@@ -31,6 +31,9 @@ YAMLLINT_CONFIG_FILE = "{{ env.PROJECT_CONFIGS_DIR }}/yamllint.yaml"
 SOPS_AGE_KEY_FILE = "{{config_root}}/age.key"
 SOPS_CONFIG = "{{ env.PROJECT_CONFIGS_DIR }}/sops.yaml"
 
+SWARM_STACKS_DIR = "{{config_root}}/stacks"
+SWARM_ANCHORS_FILE = "{{ env.SWARM_STACKS_DIR }}/_shared/anchors.yml"
+
 GLOBAL_SECRETS = "{{ env.PROJECT_SECRETS_DIR }}/shared.yaml"
 _.file = { path = "{{ env.GLOBAL_SECRETS }}", redact = true }
 

@@ -2,9 +2,15 @@
 
 import os
 import subprocess
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from typing import TypeVar
 
 from . import SSHError
 from ._output import log
+
+_T = TypeVar("_T")
+_R = TypeVar("_R")
 
 SSH_OPTS = [
     "-o", "StrictHostKeyChecking=no",
@@ -49,3 +55,27 @@ def ssh_node(
     if check and result.returncode != 0:
         raise SSHError(hostname, result.returncode, result.stderr.strip())
     return result
+
+
+def parallel_run(
+    items: list[_T],
+    fn: Callable[[_T], _R],
+    *,
+    max_workers: int = 4,
+) -> dict[_T, _R]:
+    """Run ``fn(item)`` in parallel across ``items`` and return a per-item map.
+
+    Used for cluster-wide fan-out: SSH to every node, render every stack's
+    compose, etc. Worker count is capped at ``max_workers`` (default 4) or
+    ``len(items)``, whichever is smaller. The returned mapping preserves
+    item identity regardless of which future completes first.
+
+    ``fn`` should swallow per-item failures and return whatever the caller
+    treats as a "failed" sentinel (False, None, empty result), since the
+    fan-out itself doesn't try to interpret per-item results.
+    """
+    if not items:
+        return {}
+    with ThreadPoolExecutor(max_workers=min(len(items), max_workers)) as ex:
+        futures = {ex.submit(fn, item): item for item in items}
+        return {futures[fut]: fut.result() for fut in futures}

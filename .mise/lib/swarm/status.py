@@ -3,10 +3,16 @@
 import os
 import sys
 
-from . import SwarmError
-from ._docker import inspect_nodes, service_ls, service_ps_multi
-from ._output import error, setup, table
-from ._stack import find_stacks, stack_name
+from ._cli import cli_main
+from ._docker import (
+    inspect_nodes,
+    parse_replicas,
+    service_ls,
+    service_ps_multi,
+    task_name_to_service,
+)
+from ._output import table
+from ._stack import find_namespaces, find_stacks, stack_name
 
 
 def get_node_status() -> list[dict]:
@@ -42,24 +48,27 @@ def status() -> int:
     )
     print()
 
-    # --- Discover all known stacks ---
+    # --- Discover all known stacks across every namespace ---
     all_stack_names = []
-    for ns in ["stacks/infra", "stacks/apps"]:
+    for ns in find_namespaces():
         for d in find_stacks(ns):
             all_stack_names.append(stack_name(d))
 
     # --- Fetch all services in one call ---
     all_services = service_ls()
 
-    # Group services by stack (service name format: stackname_servicename)
+    # Group services by stack. Service name format is `<stack>_<service>`. Stack
+    # names contain no underscores after the NN_ prefix is stripped (project
+    # convention enforced by `stacks/<ns>/<NN>_<name>` directory layout), so
+    # the first underscore-delimited segment of any service name is the stack.
+    known_stacks = set(all_stack_names)
     deployed_stacks: set[str] = set()
     services_by_stack: dict[str, list[tuple[str, str]]] = {}
     for svc_name, replicas in all_services:
-        for candidate in all_stack_names:
-            if svc_name.startswith(f"{candidate}_"):
-                deployed_stacks.add(candidate)
-                services_by_stack.setdefault(candidate, []).append((svc_name, replicas))
-                break
+        candidate, _, _ = svc_name.partition("_")
+        if candidate in known_stacks:
+            deployed_stacks.add(candidate)
+            services_by_stack.setdefault(candidate, []).append((svc_name, replicas))
 
     # --- Identify services needing task queries ---
     # Services with current < desired need is_task_complete check
@@ -76,18 +85,17 @@ def status() -> int:
         )
         for row in task_rows:
             if len(row) >= 2 and row[1]:
-                # task name format: stackname_servicename.slot.id or stackname_servicename.nodeid.id
-                svc_key = row[0].rsplit(".", 2)[0] if "." in row[0] else row[0]
+                svc_key = task_name_to_service(row[0])
                 node_by_task.setdefault(svc_key, set()).add(row[1])
 
-    # Identify under-replicated services that might be init sidecars
+    # Identify under-replicated services that might be init sidecars.
+    # parse_replicas returns None for transient "N/A" values; treat unknown as
+    # not-under-replicated (we can't tell, so don't trigger a Complete check).
     under_replicated = []
     for svc_name, replicas in all_services:
-        parts = replicas.split("/")
-        if len(parts) == 2:
-            current, desired = int(parts[0]), int(parts[1])
-            if current < desired:
-                under_replicated.append(svc_name)
+        parsed = parse_replicas(replicas)
+        if parsed is not None and parsed[0] < parsed[1]:
+            under_replicated.append(svc_name)
 
     # Fetch shutdown tasks for under-replicated services (is_task_complete) — 1 call
     completed_services: set[str] = set()
@@ -101,7 +109,7 @@ def status() -> int:
         latest_state: dict[str, str] = {}
         for row in shutdown_rows:
             if len(row) >= 2:
-                svc_key = row[0].rsplit(".", 2)[0] if "." in row[0] else row[0]
+                svc_key = task_name_to_service(row[0])
                 if svc_key not in latest_state:
                     latest_state[svc_key] = row[1]
         for svc_name in under_replicated:
@@ -125,9 +133,10 @@ def status() -> int:
         svc_parts = []
 
         for svc_name, replicas in stack_svcs:
-            parts = replicas.split("/")
-            current, desired = int(parts[0]), int(parts[1])
-            if current < desired and svc_name not in completed_services:
+            parsed = parse_replicas(replicas)
+            # Unparseable replicas (e.g. transient "N/A") count as not-healthy
+            # so the stack surfaces as UNHEALTHY rather than silently passing.
+            if parsed is None or (parsed[0] < parsed[1] and svc_name not in completed_services):
                 healthy = False
             short = svc_name.removeprefix(f"{name}_")
             svc_parts.append(f"{short}({replicas})")
@@ -158,12 +167,7 @@ def status() -> int:
 
 
 def main() -> int:
-    setup()
-    try:
-        return status()
-    except SwarmError as e:
-        error(str(e))
-        return 1
+    return cli_main(status)
 
 
 if __name__ == "__main__":
