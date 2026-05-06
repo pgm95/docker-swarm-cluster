@@ -40,6 +40,14 @@ Enabling tonemapping causes ffmpeg to insert a `libplacebo` Vulkan compute filte
 
 Revisit when `gc_11_5_2_mes*.bin` blobs change in a future `pve-firmware` release.
 
+## Trickplay Hardware Decoding **DISABLED**
+
+Jellyfin's trickplay generation emits `scale_vaapi=...:mode=hq` whenever hardware decoding is enabled. Mesa 25.2.6's radeonsi VAAPI backend NULL-derefs in its high-quality scaler path on gfx1150 when `scale_vaapi` performs a resize with `mode=hq` or `mode=default` (`mode=fast` and the unset case work). This produced `vf#0:0[...]: segfault at 170 ... in radeonsi_drv_video.so` lines in the host dmesg, and affected videos silently missed their BIF thumbnails.
+
+Real-time playback transcoding emits `scale_vaapi=format=nv12` (no resize, no `mode=`), takes a different code path, and is unaffected.
+
+Revisit when Mesa updates radeonsi VAAPI for gfx1150.
+
 ## LDAP
 
 Jellyfin does not support OIDC. Authentication binds directly to the lldap service in the `accounts` stack, reachable cross-stack on the `infra_ldap` overlay. Install the LDAP Authentication plugin in Jellyfin admin, then configure via the plugin UI (settings live in Jellyfin's own DB, not in compose).
