@@ -1,6 +1,7 @@
 {
   "mcpServers": {
     "grafana": {
+      "alwaysLoad": false,
       "type": "stdio",
       "command": "uvx",
       "args": ["mcp-grafana", "--disable-write"],
