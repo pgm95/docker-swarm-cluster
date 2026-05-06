@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/borgmatic-collective/borgmatic/refs/heads/main/borgmatic/config/schema.yaml
+
+# Shared borgmatic config fragment included by per-target files via:
+#   <<: !include /etc/borgmatic.d/shared/common.yaml
+
+repositories:
+  - path: /mnt/borg-repository
+    label: local
+
+encryption_passphrase: "{credential container borg_passphrase}"
+
+archive_name_format: "swarm-cluster-{target}-{now:%Y-%m-%dT%H-%M-%S}"
+match_archives: "sh:swarm-cluster-{target}-*"
+
+retries: 3
+retry_wait: 30
+lock_wait: 60
+checkpoint_interval: 300
+
+compression: zstd,3
+compact_threshold: 20
+
+keep_daily: 7
+keep_weekly: 4
+keep_monthly: 6
+
+checks:
+  - name: repository
+    frequency: 1 week
+  - name: archives
+    frequency: 2 weeks
+  - name: extract
+    frequency: 1 month
+    only_run_on: [Sunday]
+
+statistics: true
+
+commands:
+  - after: action
+    when: [create]
+    states: [finish]
+    run:
+      - python3 /etc/borgmatic.d/exporter.py --status finish --target {target} --config "{configuration_filename}" "{repository_label}" "{repository}"
+  - after: action
+    when: [create]
+    states: [fail]
+    run:
+      - python3 /etc/borgmatic.d/exporter.py --status fail --target {target} --config "{configuration_filename}" "{repository_label}" "{repository}"

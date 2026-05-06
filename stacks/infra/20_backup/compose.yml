@@ -19,17 +19,26 @@ services:
       - immich_backup_db_password
       - dawarich_backup_db_password
     configs:
-      - source: borgmatic_config
-        target: /etc/borgmatic.d/config.yaml
+      - source: borgmatic_config_common
+        target: /etc/borgmatic.d/shared/common.yaml
+      - source: borgmatic_config_pg_central
+        target: /etc/borgmatic.d/pg-central.yaml
+      - source: borgmatic_config_pg_immich
+        target: /etc/borgmatic.d/pg-immich.yaml
+      - source: borgmatic_config_pg_dawarich
+        target: /etc/borgmatic.d/pg-dawarich.yaml
       - source: borgmatic_crontab
         target: /etc/borgmatic.d/crontab.txt
       - source: borgmatic_init
         target: /etc/borgmatic.d/init.sh
+      - source: borgmatic_exporter
+        target: /etc/borgmatic.d/exporter.py
     volumes:
       - borgmatic-repo:/mnt/borg-repository
       - borgmatic-state:/root/.local/state/borgmatic
       - borg-config:/root/.config/borg
       - borg-cache:/root/.cache/borg
+      - borgmatic-metrics:/shared
     networks:
       - infra_postgres
       - infra_backup
@@ -43,6 +52,27 @@ services:
       replicas: 1
       resources:
         <<: *resources-large
+
+  borgmatic-exporter:
+    image: busybox:latest
+    command: ["httpd", "-f", "-p", "9099", "-h", "/shared"]
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    volumes:
+      - borgmatic-metrics:/shared:ro
+    networks:
+      - infra_metrics
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      <<: [*place-vm, *deploy]
+      update_config:
+        order: start-first
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-tiny
 
   init-backup:
     image: postgres:17-alpine
@@ -74,9 +104,12 @@ volumes:
   borgmatic-state:
   borg-config:
   borg-cache:
+  borgmatic-metrics:
 
 networks:
   infra_postgres:
     external: true
   infra_backup:
+    external: true
+  infra_metrics:
     external: true

@@ -15,6 +15,7 @@ services:
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=15d"
       - "--web.enable-lifecycle"
+      - "--web.enable-admin-api"
     secrets:
       - syncthing_api_key
     configs:

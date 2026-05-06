@@ -1,13 +1,25 @@
 configs:
-  borgmatic_config:
-    name: borgmatic_config_${DEPLOY_VERSION}
-    file: ./config/borgmatic/config.yaml
+  borgmatic_config_common:
+    name: borgmatic_config_common_${DEPLOY_VERSION}
+    file: ./config/borgmatic/common.yaml
+  borgmatic_config_pg_central:
+    name: borgmatic_config_pg_central_${DEPLOY_VERSION}
+    file: ./config/borgmatic/pg-central.yaml
+  borgmatic_config_pg_immich:
+    name: borgmatic_config_pg_immich_${DEPLOY_VERSION}
+    file: ./config/borgmatic/pg-immich.yaml
+  borgmatic_config_pg_dawarich:
+    name: borgmatic_config_pg_dawarich_${DEPLOY_VERSION}
+    file: ./config/borgmatic/pg-dawarich.yaml
   borgmatic_crontab:
     name: borgmatic_crontab_${DEPLOY_VERSION}
     file: ./config/borgmatic/crontab.txt
   borgmatic_init:
     name: borgmatic_init_${DEPLOY_VERSION}
     file: ./config/borgmatic/init.sh
+  borgmatic_exporter:
+    name: borgmatic_exporter_${DEPLOY_VERSION}
+    file: ./config/borgmatic/exporter.py
   init_backup_entrypoint:
     name: backup_init_backup_${DEPLOY_VERSION}
     file: ./config/bootstrap/init-backup.sh

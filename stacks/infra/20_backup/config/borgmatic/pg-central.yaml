@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/borgmatic-collective/borgmatic/refs/heads/main/borgmatic/config/schema.yaml
+
+# yaml-language-server-disable
+constants:
+  target: central
+
+postgresql_databases:
+  - name: all
+    hostname: postgres
+    port: 5432
+    username: backup
+    password: "{credential container postgres_backup_db_password}"
+    format: custom
+    compression: none
+    no_owner: true
+
+<<: !include /etc/borgmatic.d/shared/common.yaml

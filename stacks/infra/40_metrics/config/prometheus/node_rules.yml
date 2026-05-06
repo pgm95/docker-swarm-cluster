@@ -1,4 +1,8 @@
 "groups":
+- "name": "borgmatic.rules"
+  "rules":
+  - "expr": "time() - max by (repository_label) (borgmatic_backup_last_success_timestamp_seconds)"
+    "record": "borgmatic:backup_last_success_age_seconds"
 - "name": "node-exporter.rules"
   "rules":
   - "expr": |

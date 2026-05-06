@@ -1,6 +1,6 @@
 # Metrics Stack
 
-Metrics collection, storage, visualization, and uptime monitoring.
+Metrics collection, storage, and visualization.
 
 ## Services
 
