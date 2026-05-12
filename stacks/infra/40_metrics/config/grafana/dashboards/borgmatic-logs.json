@@ -104,7 +104,7 @@
           "refId": "A"
         }
       ],
-      "title": "Backup Runs",
+      "title": "Backup Runs (24h)",
       "type": "stat"
     },
     {
@@ -176,7 +176,7 @@
           "refId": "A"
         }
       ],
-      "title": "Successful Backups",
+      "title": "Successful Backups (24h)",
       "type": "stat"
     },
     {
@@ -248,7 +248,7 @@
           "refId": "A"
         }
       ],
-      "title": "Failed Backups",
+      "title": "Failed Backups (24h)",
       "type": "stat"
     },
     {
