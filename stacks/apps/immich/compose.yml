@@ -13,7 +13,6 @@ services:
     stop_grace_period: 30s
     environment:
       - IMMICH_OWNER=${GLOBAL_NONROOT_DOCKER}
-      - AMD_VISIBLE_DEVICES=all
       - REDIS_HOSTNAME=valkey
       - DB_HOSTNAME=database
       - DB_USERNAME=postgres
@@ -32,6 +31,7 @@ services:
     # Originals on the bulk share at /data; cache subdirs overlay as subpath mounts of
     # server-data to keep generated content off the share. Subpaths need precreation.
     volumes:
+      - /dev/dri:/dev/dri # Hardware Transcoding
       - /etc/localtime:/etc/localtime:ro
       - /mnt/photos/immich:/data
       - /mnt/photos/archive:/external/archive
@@ -90,11 +90,15 @@ services:
           memory: 1024M
 
   immich-machine-learning:
-    image: ghcr.io/immich-app/immich-machine-learning:release
+    image: ghcr.io/immich-app/immich-machine-learning:release-openvino
     logging:
       <<: *logging
     stop_grace_period: 30s
+    environment:
+      - MACHINE_LEARNING_REQUEST_THREADS=8 # Set to LXC node CPU cores or less
+      # - MACHINE_LEARNING_OPENVINO_PRECISION=FP16  # half-precision, faster on Battlemage with negligible accuracy loss
     volumes:
+      - /dev/dri:/dev/dri # Machine Learning
       - ml-cache:/cache
     healthcheck:
       disable: false
