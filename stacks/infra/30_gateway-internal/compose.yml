@@ -17,10 +17,6 @@ services:
       # Logging
       - "--log.level=INFO"
       - "--log.format=common"
-      # - "--log.filePath=/var/log/traefik/container.log"
-      # - "--log.maxSize=1"
-      # - "--log.maxAge=1"
-      # - "--log.maxBackups=1"
       - "--accessLog.format=common"
       # API
       - "--api.insecure=false"
@@ -61,7 +57,7 @@ services:
       - "--entryPoints.websecure.transport.respondingTimeouts.readTimeout=12h"
       - "--entryPoints.websecure.transport.respondingTimeouts.writeTimeout=12h"
       - "--entryPoints.websecure.transport.respondingTimeouts.idleTimeout=90s"
-      # Encoded characters — reject path-encoded reserved chars to prevent split-view attacks
+      # Reject path-encoded reserved chars to prevent split-view attacks
       - "--entryPoints.websecure.http.encodedCharacters.allowEncodedSlash=false"
       - "--entryPoints.websecure.http.encodedCharacters.allowEncodedBackSlash=false"
       - "--entryPoints.websecure.http.encodedCharacters.allowEncodedNullCharacter=false"
@@ -69,6 +65,9 @@ services:
       - "--entryPoints.websecure.http.encodedCharacters.allowEncodedPercent=false"
       - "--entryPoints.websecure.http.encodedCharacters.allowEncodedQuestionMark=false"
       - "--entryPoints.websecure.http.encodedCharacters.allowEncodedHash=false"
+      # Syncthing sync protocol: raw TCP + QUIC, no TLS termination
+      - "--entryPoints.syncthing-tcp.address=:22000/tcp"
+      - "--entryPoints.syncthing-udp.address=:22000/udp"
     environment:
       - DOMAIN_PRIVATE=${DOMAIN_PRIVATE}
       - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/cf_acme_api_token
@@ -91,6 +90,14 @@ services:
       - target: 80
         published: 80
         protocol: tcp
+        mode: host
+      - target: 22000
+        published: 22000
+        protocol: tcp
+        mode: host
+      - target: 22000
+        published: 22000
+        protocol: udp
         mode: host
     volumes:
       - traefik-logs:/var/log/traefik

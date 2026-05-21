@@ -13,19 +13,10 @@ services:
     networks:
       - infra_gw-internal
       - infra_metrics
-    ports:
-      - target: 22000
-        published: 22000
-        protocol: tcp
-        mode: host
-      - target: 22000
-        published: 22000
-        protocol: udp #quic
-        mode: host
     volumes:
       - syncthing-data:/var/syncthing
-      - /mnt/personal:/mnt/personal
-      - /mnt/photos:/mnt/photos
+      - cifs-personal:/mnt/personal
+      - cifs-photos:/mnt/photos
     healthcheck:
       test: ["CMD", "curl", "-fkLsS", "-m", "2", "http://127.0.0.1:8384/rest/noauth/health"]
       interval: 60s
@@ -33,7 +24,7 @@ services:
       retries: 3
       start_period: 30s
     deploy:
-      <<: [*place-storage, *deploy]
+      <<: [*place-vm, *deploy]
       update_config:
         order: stop-first
       labels:
@@ -42,6 +33,13 @@ services:
         - "traefik.http.routers.syncthing.rule=Host(`syncthing.${DOMAIN_PRIVATE}`)"
         - "traefik.http.routers.syncthing.entrypoints=websecure"
         - "traefik.http.services.syncthing.loadbalancer.server.port=8384"
+        - "traefik.tcp.routers.syncthing-sync.rule=HostSNI(`*`)"
+        - "traefik.tcp.routers.syncthing-sync.entrypoints=syncthing-tcp"
+        - "traefik.tcp.routers.syncthing-sync.service=syncthing-sync"
+        - "traefik.tcp.services.syncthing-sync.loadbalancer.server.port=22000"
+        - "traefik.udp.routers.syncthing-sync.entrypoints=syncthing-udp"
+        - "traefik.udp.routers.syncthing-sync.service=syncthing-sync"
+        - "traefik.udp.services.syncthing-sync.loadbalancer.server.port=22000"
         - "homepage.group=Applications"
         - "homepage.name=Syncthing"
         - "homepage.icon=syncthing"
@@ -54,6 +52,18 @@ services:
 
 volumes:
   syncthing-data:
+  cifs-personal:
+    driver: local
+    driver_opts:
+      type: cifs
+      device: //${GLOBAL_CIFS_HOST}/personal
+      o: "username=${GLOBAL_CIFS_USERNAME},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
+  cifs-photos:
+    driver: local
+    driver_opts:
+      type: cifs
+      device: //${GLOBAL_CIFS_HOST}/photos
+      o: "username=${GLOBAL_CIFS_USERNAME},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
 
 networks:
   infra_gw-internal:
