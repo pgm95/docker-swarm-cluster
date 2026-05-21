@@ -44,7 +44,7 @@ services:
       retries: 3
       start_period: 5s
     deploy:
-      <<: [*place-vm, *deploy]
+      <<: [*place-main, *deploy]
       update_config:
         order: start-first
       labels:

@@ -64,11 +64,10 @@ Workload placement is driven by node labels, not hostnames.
 |-------|--------|---------|
 | `location` | `onprem`, `cloud` | Physical/network location |
 | `ip` | `public`, `private` | Internet-routable or behind NAT |
-| `type` | `vm`, `lxc` | Hypervisor type (affects kernel capabilities) |
-| `storage` | `true` | Bulk storage mounts available |
+| `type` | `vm`, `lxc`, `vps` | Hypervisor type (affects kernel capabilities) |
 | `gpu` | `true` | GPU passthrough available |
 
-Placement anchors (`*place-vm`, `*place-storage`, etc.) in `stacks/_shared/anchors.yml` map
+Placement anchors (`*place-main`, `*place-cloud`, `*place-gpu`, etc.) in `stacks/_shared/anchors.yml` map
 label constraints to reusable deploy blocks.
 
 ### Networking
@@ -97,7 +96,7 @@ Two separate Traefik instances serve different access patterns:
 
 - **External** (`*place-cloud`, `DOMAIN_PUBLIC`): CrowdSec + geoblock + security headers.
   Only entry point from the public internet.
-- **Internal** (`*place-vm`, `DOMAIN_PRIVATE`): Security headers only. Serves LAN and
+- **Internal** (`*place-main`, `DOMAIN_PRIVATE`): Security headers only. Serves LAN and
   Tailscale clients exclusively.
 
 Both use host-mode ports and a unified `websecure` entrypoint on `:443`.

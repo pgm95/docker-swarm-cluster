@@ -57,25 +57,18 @@ x-place-cloud: &place-cloud
     constraints:
       - node.labels.location == cloud
       - node.labels.ip == public
+      - node.labels.type == vps
 
-x-place-vm: &place-vm
+x-place-main: &place-main
   placement:
     constraints:
       - node.labels.location == onprem
       - node.labels.type == vm
-
-x-place-storage: &place-storage
-  placement:
-    constraints:
-      - node.labels.location == onprem
-      - node.labels.type == lxc
-      - node.labels.storage == true
+      - node.labels.gpu != true
 
 x-place-gpu: &place-gpu
   placement:
     constraints:
-      - node.labels.location == onprem
-      - node.labels.type == lxc
       - node.labels.gpu == true
 
 # --- Resources ---

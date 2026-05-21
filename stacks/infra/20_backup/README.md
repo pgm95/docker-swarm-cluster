@@ -6,9 +6,9 @@
 
 | Service | Image | Placement | Purpose |
 |---------|-------|-----------|---------|
-| `borgmatic` | `ghcr.io/borgmatic-collective/borgmatic:2` | `*place-vm` | Scheduled pg_dump / mariadb-dump + borg deduplication + encryption |
-| `init-backup` | `postgres:17-alpine` | `*place-vm` | Creates the `backup` role on the central Postgres (prepares the DB for borgmatic dumps; does not initialize databases) |
-| `borgmatic-exporter` | `busybox:latest` | `*place-vm` | Sidecar httpd serving Prometheus metrics emitted by the borgmatic post-action hook |
+| `borgmatic` | `ghcr.io/borgmatic-collective/borgmatic:2` | `*place-main` | Scheduled pg_dump / mariadb-dump + borg deduplication + encryption |
+| `init-backup` | `postgres:17-alpine` | `*place-main` | Creates the `backup` role on the central Postgres (prepares the DB for borgmatic dumps; does not initialize databases) |
+| `borgmatic-exporter` | `busybox:latest` | `*place-main` | Sidecar httpd serving Prometheus metrics emitted by the borgmatic post-action hook |
 
 ### Volumes
 

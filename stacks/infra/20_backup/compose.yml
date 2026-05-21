@@ -45,7 +45,7 @@ services:
     healthcheck:
       test: ["NONE"]
     deploy:
-      <<: [*place-vm, *deploy]
+      <<: [*place-main, *deploy]
       update_config:
         order: stop-first
       mode: replicated
@@ -66,7 +66,7 @@ services:
     healthcheck:
       test: ["NONE"]
     deploy:
-      <<: [*place-vm, *deploy]
+      <<: [*place-main, *deploy]
       update_config:
         order: start-first
       mode: replicated
@@ -93,7 +93,7 @@ services:
     healthcheck:
       test: ["NONE"]
     deploy:
-      <<: [*place-vm, *deploy-init]
+      <<: [*place-main, *deploy-init]
       mode: replicated
       replicas: 1
       resources:

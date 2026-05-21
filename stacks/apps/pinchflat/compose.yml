@@ -25,7 +25,7 @@ services:
       - pinchflat-data:/config
       - cifs-youtube:/downloads
     deploy:
-      <<: [*place-vm, *deploy]
+      <<: [*place-main, *deploy]
       update_config:
         order: stop-first
       labels:

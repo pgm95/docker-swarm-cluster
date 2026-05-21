@@ -26,7 +26,7 @@ services:
       - radarr-data:/config
       - cifs-media:/servarr
     deploy:
-      <<: [*place-vm, *deploy]
+      <<: [*place-main, *deploy]
       update_config:
         order: start-first
       labels:
@@ -72,7 +72,7 @@ services:
       - sonarr-data:/config
       - cifs-media:/servarr
     deploy:
-      <<: [*place-vm, *deploy]
+      <<: [*place-main, *deploy]
       update_config:
         order: start-first
       labels:
@@ -118,7 +118,7 @@ services:
     volumes:
       - prowlarr-data:/config
     deploy:
-      <<: [*place-vm, *deploy]
+      <<: [*place-main, *deploy]
       update_config:
         order: start-first
       labels:
@@ -152,7 +152,7 @@ services:
     networks:
       - default
     deploy:
-      <<: [*place-vm, *deploy]
+      <<: [*place-main, *deploy]
       update_config:
         order: start-first
       mode: replicated
@@ -180,7 +180,7 @@ services:
     healthcheck:
       test: ["NONE"]
     deploy:
-      <<: [*place-vm, *deploy-init]
+      <<: [*place-main, *deploy-init]
       mode: replicated
       replicas: 1
       resources:

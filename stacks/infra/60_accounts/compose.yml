@@ -51,7 +51,7 @@ services:
       retries: 3
       start_period: 60s
     deploy:
-      <<: [*place-vm, *deploy]
+      <<: [*place-main, *deploy]
       update_config:
         order: start-first
       mode: replicated
@@ -156,7 +156,7 @@ services:
       retries: 3
       start_period: 30s
     deploy:
-      <<: [*place-vm, *deploy]
+      <<: [*place-main, *deploy]
       update_config:
         order: start-first
       mode: replicated
@@ -199,7 +199,7 @@ services:
     healthcheck:
       disable: false
     deploy:
-      <<: [*place-vm, *deploy]
+      <<: [*place-main, *deploy]
       update_config:
         order: start-first
       endpoint_mode: dnsrr
@@ -238,7 +238,7 @@ services:
     healthcheck:
       test: ["NONE"]
     deploy:
-      <<: [*place-vm, *deploy-init]
+      <<: [*place-main, *deploy-init]
       mode: replicated
       replicas: 1
       resources:
@@ -277,7 +277,7 @@ services:
     healthcheck:
       test: ["NONE"]
     deploy:
-      <<: [*place-vm, *deploy-init]
+      <<: [*place-main, *deploy-init]
       mode: replicated
       replicas: 1
       resources:

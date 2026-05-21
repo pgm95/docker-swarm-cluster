@@ -17,7 +17,7 @@ services:
     healthcheck:
       test: ["NONE"]
     deploy:
-      <<: [*place-vm, *deploy]
+      <<: [*place-main, *deploy]
       update_config:
         order: start-first
       labels:
