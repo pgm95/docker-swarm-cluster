@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+services:
+  launcher:
+    image: docker:29.5.2-cli
+    entrypoint: ["/bin/sh", "/launch.sh"]
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    environment:
+      - DMM_IMAGE=${GLOBAL_SWARM_OCI_REGISTRY}/dmm/dmm:${OCI_TAG_DMM}
+    configs:
+      - source: dmm_launch
+        target: /launch.sh
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # registry creds so the launcher's docker CLI can pull the dmm image
+      - /root/.docker:/root/.docker:ro
+    deploy:
+      <<: [*place-gpu, *deploy]
+      update_config:
+        order: stop-first
+      mode: global
+      resources:
+        <<: *resources-small
+
+networks:
+  default:
+    name: dmm
+    internal: true
+
+configs:
+  dmm_launch:
+    name: dmm_launch_${DEPLOY_VERSION}
+    file: ./launch.sh

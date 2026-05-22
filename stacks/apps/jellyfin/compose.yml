@@ -5,7 +5,7 @@ include:
 
 services:
   jellyfin:
-    image: jellyfin/jellyfin:10
+    image: jellyfin/jellyfin:10.11.8
     entrypoint: ["/bin/sh", "/init.sh"]
     logging:
       <<: *logging
@@ -21,8 +21,9 @@ services:
       - infra_gw-internal
       - infra_ldap
     volumes:
-      - /dev/dri:/dev/dri
-      - /mnt/media:/media
+      - /dev/dri/renderD128:/dev/dri/renderD128
+      - /dev/dri/card0:/dev/dri/card0
+      - cifs-media:/media
       - jellyfin-config:/etc/jellyfin
       - jellyfin-data:/var/lib/jellyfin
       - jellyfin-logs:/var/log/jellyfin
@@ -98,6 +99,12 @@ volumes:
   jellyfin-data:
   jellyfin-logs:
   jellyfin-cache:
+  cifs-media:
+    driver: local
+    driver_opts:
+      type: cifs
+      device: //${GLOBAL_CIFS_HOST}/media
+      o: "username=${GLOBAL_CIFS_USERNAME},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
 
 networks:
   infra_gw-external:

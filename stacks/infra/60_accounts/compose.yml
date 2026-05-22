@@ -202,7 +202,6 @@ services:
       <<: [*place-main, *deploy]
       update_config:
         order: start-first
-      endpoint_mode: dnsrr
       mode: replicated
       replicas: 1
       resources:

@@ -6,11 +6,13 @@ Dual-domain routing via `deploy.labels`. Two routers share one backend service.
 
 ## GPU Passthrough
 
-Intel Arc Pro B50 dGPU passed through the PVE LXC host. The LXC config reassigns `/dev/dri` group ownership from `render` to `swarm` (GID 1000) so the container's non-root user (UID/GID 1000) can open `renderD128` without supplementary groups. The `/dev/dri:/dev/dri` bind mount in compose then wires the device into the container as-is, and the stock `jellyfin/jellyfin` image's bundled `jellyfin-ffmpeg` (with the Intel iHD VAAPI driver) handles QSV decode, VPP tone-mapping, and QSV encode without further customization.
+Intel Arc Pro B50 dGPU passed through (PCI passthrough) to the GPU node. The device nodes are bind-mounted in, and the stock `jellyfin/jellyfin` image's bundled `jellyfin-ffmpeg` (Intel iHD VAAPI driver) handles QSV decode, VPP tone-mapping, and QSV encode with no custom image.
+
+Device access has two parts: the init script grants the host `/dev/dri` GIDs to the non-root worker via `setpriv --groups`, and the [`dmm`](../../infra/70_dmm/README.md) stack grants the cgroup device rule (Swarm cannot pass devices itself).
 
 ## Volume Ownership
 
-Container starts as root via the `jellyfin_init` Docker Config (`entrypoint: /bin/sh /init.sh`). The init script chowns the persistent volumes to `${GLOBAL_NONROOT_DOCKER}` and drops privileges before exec'ing the stock entrypoint. See `.claude/rules/stack-compose.md` for the general pattern.
+Container starts as root via the `jellyfin_init` Docker Config (`entrypoint: /bin/sh /init.sh`). The init script chowns the persistent volumes to `${GLOBAL_NONROOT_DOCKER}` and drops privileges with `setpriv` before exec'ing the stock entrypoint.
 
 ## LDAP
 

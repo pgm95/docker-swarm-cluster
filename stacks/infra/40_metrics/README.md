@@ -63,8 +63,6 @@ simultaneously.
 ## Node Exporter
 
 Containerized global service with bind-mounted host paths (`/proc`, `/sys`, `/` all `:ro`).
-On LXC nodes, bind-mounted `/proc` correctly reflects the LXC's cgroup-scoped view (cgroup memory
-limits, allocated cores, visible block devices), not the Proxmox host.
 
 ### Swarm Limitations
 
@@ -85,5 +83,4 @@ exclusion flags filter Docker overlay mounts, `tmpfs`, `nsfs`, `tracefs`, and `c
 All rules filter on `{job="node"}` — the Prometheus scrape job name must match. Network
 rules exclude `lo|docker.*|veth.*|vx-.*|br-.*` to avoid summing Docker virtual interfaces
 with physical traffic. Remaining interfaces are physical NICs and Tailscale.
-Omitted: `vmstat` (partially virtualized `/proc/vmstat` on LXC), per-device disk IO (no
-aggregation over raw metrics), network drops (inflated by virtual interfaces).
+Omitted: per-device disk IO (no aggregation over raw metrics) and network drops (inflated by virtual interfaces).

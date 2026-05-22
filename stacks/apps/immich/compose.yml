@@ -33,9 +33,21 @@ services:
     volumes:
       - /dev/dri:/dev/dri # Hardware Transcoding
       - /etc/localtime:/etc/localtime:ro
-      - /mnt/photos/immich:/data
-      - /mnt/photos/archive:/external/archive
-      - /mnt/photos/wedding:/external/wedding
+      - type: volume
+        source: cifs-photos
+        target: /data
+        volume:
+          subpath: immich
+      - type: volume
+        source: cifs-photos
+        target: /external/archive
+        volume:
+          subpath: archive
+      - type: volume
+        source: cifs-photos
+        target: /external/wedding
+        volume:
+          subpath: wedding
       - type: volume
         source: server-data
         target: /data/thumbs
@@ -64,7 +76,6 @@ services:
       <<: [*place-gpu, *deploy]
       update_config:
         order: stop-first
-      endpoint_mode: dnsrr
       labels:
         - "traefik.enable=true"
         - "traefik.scope.internal=true"
@@ -95,7 +106,7 @@ services:
       <<: *logging
     stop_grace_period: 30s
     environment:
-      - MACHINE_LEARNING_REQUEST_THREADS=8 # Set to LXC node CPU cores or less
+      - MACHINE_LEARNING_REQUEST_THREADS=8 # Set to node CPU cores or less
       # - MACHINE_LEARNING_OPENVINO_PRECISION=FP16  # half-precision, faster on Battlemage with negligible accuracy loss
     volumes:
       - /dev/dri:/dev/dri # Machine Learning
@@ -106,7 +117,6 @@ services:
       <<: [*place-gpu, *deploy]
       update_config:
         order: start-first
-      endpoint_mode: dnsrr
       mode: replicated
       replicas: 1
       resources:
@@ -130,7 +140,6 @@ services:
       <<: [*place-gpu, *deploy]
       update_config:
         order: stop-first
-      endpoint_mode: dnsrr
       mode: replicated
       replicas: 1
       resources:
@@ -165,7 +174,6 @@ services:
       <<: [*place-gpu, *deploy]
       update_config:
         order: stop-first
-      endpoint_mode: dnsrr
       mode: replicated
       replicas: 1
       resources:
@@ -199,6 +207,12 @@ volumes:
   ml-cache:
   database-data:
   server-data:
+  cifs-photos:
+    driver: local
+    driver_opts:
+      type: cifs
+      device: //${GLOBAL_CIFS_HOST}/photos
+      o: "username=${GLOBAL_CIFS_USERNAME},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
 
 networks:
   infra_gw-internal:

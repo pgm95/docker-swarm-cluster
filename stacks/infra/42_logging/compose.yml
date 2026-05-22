@@ -37,7 +37,6 @@ services:
         order: stop-first
       mode: replicated
       replicas: 1
-      endpoint_mode: dnsrr
       resources:
         <<: *resources-large
 

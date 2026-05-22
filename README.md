@@ -24,10 +24,9 @@ Only the final `docker stack deploy` command executes over SSH.
 
 ### Setup
 
-1. **Clone and bootstrap:**
+1. **Bootstrap:**
 
    ```bash
-   git clone https://github.com/pgm95/docker-swarm-cluster && cd docker-swarm-cluster
    mise run env:setup
    mise run sops:init    # Generates age keypair for secrets decryption
    ```
@@ -57,38 +56,36 @@ Only the final `docker stack deploy` command executes over SSH.
 
 ### Cluster Topology
 
-Overlay traffic tunnels through the Tailnet: no port exposure beyond HTTPS for ingress.
-Workload placement is driven by node labels, not hostnames.
+Workload placement is driven by node labels.
+Placement anchors in `stacks/_shared/anchors.yml` map label constraints to reusable deploy blocks.
 
 | Label | Values | Purpose |
 |-------|--------|---------|
 | `location` | `onprem`, `cloud` | Physical/network location |
 | `ip` | `public`, `private` | Internet-routable or behind NAT |
-| `type` | `vm`, `lxc`, `vps` | Hypervisor type (affects kernel capabilities) |
-| `gpu` | `true` | GPU passthrough available |
-
-Placement anchors (`*place-main`, `*place-cloud`, `*place-gpu`, etc.) in `stacks/_shared/anchors.yml` map
-label constraints to reusable deploy blocks.
+| `type` | `vm`, `vps` | Node type |
+| `gpu` | `true` | GPU available |
 
 ### Networking
 
-Six overlay networks partition traffic by function:
+Overlay traffic tunnels through the Tailnet: no public port exposure beyond HTTPS for ingress.
+Overlay networks partition traffic by function:
 
-| Network | Purpose | Flags |
-|---------|---------|-------|
-| `infra_socket` | Docker API access (read-only socket-proxy) | `--internal` |
-| `infra_gw-internal` | Internal Traefik routing (LAN/Tailscale) | |
-| `infra_gw-external` | External Traefik routing (public internet) | |
-| `infra_metrics` | Prometheus scraping | |
-| `infra_postgres` | Central Postgres access | |
-| `infra_ldap` | LDAP directory access | |
+| Network | Purpose |
+|---------|---------|
+| `infra_socket` | Docker API access (read-only socket-proxy) |
+| `infra_gw-internal` | Internal Traefik routing (LAN/Tailscale) |
+| `infra_gw-external` | External Traefik routing (public internet) |
+| `infra_metrics` | Prometheus scraping |
+| `infra_postgres` | Central Postgres access |
+| `infra_ldap` | LDAP directory access |
 
 Networks are discovered dynamically from compose files and pre-created before deployment.
 This breaks circular dependencies between stacks that need each other's networks.
 Overlay MTU is set at creation time via [`SWARM_OVERLAY_MTU`](.mise/tasks/swarm.toml#L54).
 Docker subtracts 50 bytes for VXLAN overhead from the configured value, yielding 1230 on the
-VXLAN interface, which produces 1280-byte UDP packets on the wire (exact Tailscale MTU
-fit). Docker's `daemon.json` `"mtu"` only affects the default bridge, not overlays.
+VXLAN interface, which produces 1280-byte UDP packets on the wire (exact Tailscale MTU fit).
+Docker's `daemon.json` `"mtu"` does not affect overlays.
 
 ### Dual Ingress Gateways
 
@@ -129,8 +126,7 @@ versions persist until `swarm:cleanup`.
 |------|---------|----------|
 | Persistent data | `<service>-<purpose>` named volume | Docker volume |
 | Configuration | `./config/<service>/` | Docker Configs (versioned, immutable) |
-| Bulk storage (local) | `/mnt/*` | Bind mount (services needing direct filesystem access) |
-| Bulk storage (remote) | `cifs-<share>` named volume | Docker CIFS volume |
+| Bulk storage | `cifs-<share>` named volume | Docker CIFS volume |
 
 CIFS volumes use Docker's local driver with `type: cifs`, mounting SMB shares directly.
 Credentials come from `GLOBAL_CIFS_*` in shared secrets.
@@ -140,22 +136,21 @@ scripts) that chown and drop privileges (`setpriv` on Debian, `su` on Alpine).
 
 ### Infrastructure Components
 
-Infra stacks are auto-discovered and deploy in `NN_` prefix order.
-Each stack's README documents service-level details and operational procedures.
+Stacks are organized by namespace: A subdir of `SWARM_STACKS_DIR` is considered a namespace.
+`site:deploy-<namespace>` auto-discovers and deploys stacks in alphabetical order.
 
 - **Socket Proxy:** Central read-only Docker API gateway for consumers needing node-agnostic Swarm API info.
 - **Postgres:** Central database server.
   All stateful services share one instance via dedicated roles provisioned by init-db sidecars.
 - **Backup:** Borgmatic with scheduled backups, deduplication, and encryption.
-  Targets multiple database instances across Postgres and MariaDB.
-  Streams dumps directly to the repository.
+  Targets multiple database instances. Streams dumps directly to the repository.
 - **Dual Gateways:** Two Traefik instances: external (Coupled with CrowdSec WAF + geoblocking
   for public internet), and internal (Internal services accessible only on LAN/Tailscale).
   Both use host-mode ports and DNS-based routing.
 - **Observability:** Node Exporter and cAdvisor for host and per-container metrics.
   Prometheus scrapes these and all other compatible targets via dockerswarm_sd_configs and static_configs
-  Loki/Alloy for log collection and processing. Grafana is central metrics hub.
-  Gatus monitors service availability and alerts.
+  Loki/Alloy for log collection and processing. Grafana is central observability hub.
+  Gatus monitors service availability with synthetic workflows and alerts.
 - **Registry:** private OCI registry for custom images. Nodes authenticate via `site:registry`.
   Stacks with `build/` directories trigger automatic builds during `swarm:deploy`.
 - **Authentication:** Authentik provides OIDC and WebFinger; Syncs with lldap as LDAP source.
@@ -167,21 +162,11 @@ Each stack's README documents service-level details and operational procedures.
 
 - **`start-first` fails with exclusive-access files**
   For databases and services with exclusive-access volumes, use stop-first.
-
-- **`start-first` + rollback can silently revert.** If a new task fails (e.g., dependency not
-  ready), Swarm auto-rolls back. Deploy appears successful but runs the old version. Fix:
-  `docker service update --force <service>`.
-
+- **`start-first` + rollback can silently revert.** If a new task fails,
+  Swarm auto-rolls back. Deploy appears successful but runs the old version.
+  Fix: `docker service update --force <service>`.
 - Nodes that need to pull custom images must be able to resolve `DOMAIN_PRIVATE`
   to reach the private registry.
-
-### LXC Nodes
-
-Unprivileged LXC containers cannot use IPVS (Docker Swarm's default VIP load balancing).
-Any service that has consumers on LXC must set `endpoint_mode: dnsrr`, regardless of where
-the service itself runs. The IPVS limitation is on the client side: LXC nodes cannot
-translate VIP addresses to task IPs. Services only receiving traffic via Traefik are
-unaffected, as VIP resolution happens on the Traefik node.
 
 ### Docker Configs
 
@@ -190,7 +175,9 @@ unaffected, as VIP resolution happens on the Traefik node.
   EACCES. Provide all expected files as Docker Configs.
 - **No `mode` field.** Use `entrypoint: ["/bin/sh", "/script.sh"]` for executable scripts.
 
-### Bind Mounts
+### Device Passthrough
 
-Swarm rejects tasks when bind mount paths don't exist on the target node (unlike Compose, no
-auto-create). `swarm:validate` task warns but does not block.
+Swarm lacks support for passing devices to services.
+The `dmm` stack works around this by running a privileged manager that grants
+the needed cgroup rule for any bind-mounted `/dev` file.
+See its [README](stacks/infra/70_dmm/README.md) for details.

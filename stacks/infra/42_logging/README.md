@@ -91,7 +91,7 @@ connection.
 Alloy tags every log stream with a `node` label via `external_labels`. Inside a container,
 `HOSTNAME` resolves to the container ID (Swarm gives each task its own UTS namespace), so the
 compose file injects `NODE_HOSTNAME` using Swarm's `{{.Node.Hostname}}` template. This resolves
-at task scheduling time to the actual node hostname (`swarm-vm`, `swarm-lxc`, etc.), matching the
+at task scheduling time to the actual node hostname (`swarm-vm`, `swarm-gpu`, etc.), matching the
 `instance` label that Prometheus Swarm SD produces for cAdvisor and node-exporter.
 
 Direct Loki pushers (e.g., CrowdSec HTTP notifications) define their own label schemas and are
