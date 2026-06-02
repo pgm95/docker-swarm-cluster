@@ -1,5 +1,5 @@
 discovery.docker "containers" {
-  host             = "unix:///alloy-proxy/docker.sock"
+  host             = "unix:///var/run/docker.sock"
   refresh_interval = "10s"
 }
 
@@ -24,7 +24,7 @@ discovery.relabel "containers" {
 }
 
 loki.source.docker "containers" {
-  host       = "unix:///alloy-proxy/docker.sock"
+  host       = "unix:///var/run/docker.sock"
   targets    = discovery.relabel.containers.output
   forward_to = [loki.process.docker.receiver]
 }

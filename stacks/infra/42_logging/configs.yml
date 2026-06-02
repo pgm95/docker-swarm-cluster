@@ -5,6 +5,3 @@ configs:
   alloy_config:
     name: alloy_config_${DEPLOY_VERSION}
     file: ./config/alloy/config.alloy
-  alloy_entrypoint:
-    name: alloy_entrypoint_${DEPLOY_VERSION}
-    file: ./config/alloy/entrypoint.sh
