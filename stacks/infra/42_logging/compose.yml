@@ -19,6 +19,7 @@ services:
       - infra_gw-internal
     volumes:
       - loki-data:/loki
+    # distroless image with no shell or wget; use the binary's built-in health probe
     healthcheck:
       test: ["CMD", "/usr/bin/loki", "-health"]
       interval: 15s
@@ -48,6 +49,10 @@ services:
       - "--storage.path=/tmp/alloy"
       - "--server.http.listen-addr=0.0.0.0:12345"
       - "--disable-reporting"
+    # Swarm gives each task its own UTS namespace, so a container's HOSTNAME is its container ID.
+    # Tagging Alloy's `node` external_label with that would churn the label on every restart, so we
+    # inject the real node hostname via the Swarm template; it resolves at schedule time and matches
+    # the `instance` label Prometheus SD sets for cadvisor and node-exporter.
     environment:
       NODE_HOSTNAME: "{{.Node.Hostname}}"
     logging:
@@ -60,6 +65,7 @@ services:
       - infra_metrics
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    # alloy image has bash but no wget/curl; probe the HTTP port via bash's /dev/tcp
     healthcheck:
       test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/12345' || exit 1"]
       interval: 15s

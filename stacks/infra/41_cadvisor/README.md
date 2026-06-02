@@ -3,15 +3,14 @@
 | Service | Purpose | Mode |
 |---------|---------|------|
 | cadvisor | Container metrics exporter | Global |
-| cadvisor-socket-proxy | Read-only Docker API proxy | Global |
 
 ## Host Access
 
 | Mount | Purpose | Notes |
 |-------|---------|-------|
-| Docker socket (via proxy) | Container discovery, names, labels, image info | `--docker` flag points to proxy socket |
-| `/run/containerd/containerd.sock` | Layer resolution (snapshotter) | Direct bind mount, default path |
-| `/:/rootfs:ro` | Host filesystem for disk/fs metrics | |
+| `/var/run/docker.sock` | Container discovery, names, labels, image info | Read only, `--docker` flag points at it |
+| `/run/containerd/containerd.sock` | Required for the Docker factory to initialize | Read only, default path. Without it the Docker factory fails to register and cadvisor falls back to the raw factory, losing all container names and labels |
+| `/:/rootfs:ro` | Host machine info (filesystem inventory, machine id) | |
 | `/sys:/sys:ro` | Kernel sysfs for cgroup data | |
 
 Not mounted (accepted trade-offs):
@@ -19,19 +18,14 @@ Not mounted (accepted trade-offs):
 - `/dev/kmsg` (OOM event detection, requires `--privileged`)
 - `/dev/disk` (disk device metadata)
 
-The official docs recommend mounting all of `/var/run:/var/run:ro`,
-providing access to both the Docker and containerd sockets.
-This setup is more restrictive: the Docker socket goes through a socket-proxy
+The official docs recommend mounting all of `/var/run:/var/run:ro`. This setup is narrower: only
+the Docker and containerd sockets are bound, both read only. Requires v0.54.0+ for
+containerd-snapshotter support.
 
-The containerd socket is a direct bind mount as no gRPC-aware socket proxy exists.
-Requires v0.54.0+ for containerd-snapshotter support.
+## Disabled metrics
 
-## Socket-Proxy
-
-Same wollomatic pattern as the logging stack's alloy-socket-proxy. cAdvisor's proxy allows
-`containers/*/json`, `images/json`, `info`, `version`, and `/_ping`.
-No container list endpoint, no events API, no write operations.
-
-cAdvisor's entrypoint wrapper polls for the proxy socket before starting (`while [ ! -S ... ]`).
-The socket-proxy uses `DEPLOY_VERSION` env var to force restart on every deploy (wollomatic
-deletes the socket on graceful shutdown).
+`disk` (per container filesystem usage) is disabled via `--disable_metrics`. cadvisor reads
+container layers at the data root path the Docker daemon reports, but that root is not the default
+and is not uniform across the cluster, so those paths are absent inside the container and every
+housekeeping cycle logged a filesystem stat error. Block IO (`diskIO`) is unaffected and stays
+enabled; host level disk usage is covered by node-exporter.

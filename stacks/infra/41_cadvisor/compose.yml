@@ -9,14 +9,14 @@ services:
     command:
       - "--docker=unix:///var/run/docker.sock"
       - "--docker_only=true"
-      - "--disable_metrics=referenced_memory,tcp,udp,advtcp,sched,hugetlb,resctrl"
+      - "--disable_metrics=referenced_memory,tcp,udp,advtcp,sched,hugetlb,resctrl,disk"
       - "--housekeeping_interval=15s"
     networks:
       - infra_metrics
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - /:/rootfs:ro
       - /sys:/sys:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - /run/containerd/containerd.sock:/run/containerd/containerd.sock:ro
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/healthz"]
