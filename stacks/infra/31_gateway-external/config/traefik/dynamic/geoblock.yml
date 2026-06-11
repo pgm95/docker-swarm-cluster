@@ -12,7 +12,9 @@ http:
           databaseFilePath: "/data/geoblock"
           databaseAutoUpdate: true
           databaseAutoUpdateDir: "/data/geoblock"
-          databaseAutoUpdateToken: '{{ env "GEOBLOCK_IP2LOCATION_TOKEN" }}'
+          # Token deliberately empty: the plugin's tokened download URL is broken
+          # (upstream issue #55, malformed file= param, always 404).
+          databaseAutoUpdateToken: ""
           databaseAutoUpdateCode: "DB1"
           defaultAllow: false
           allowedCountries: [DK,LB,FR,MX,CA,AE,US,GB,ES,PT]
