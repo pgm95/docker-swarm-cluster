@@ -28,11 +28,8 @@ server:
         defaultEnabled: true
         createUserDir: false
         rules:
-          - neverWatchPath: "/"
           - folderPath: "/"
             viewable: true
-        # Will be deprecated, no viable alternative as of 03/11/26
-        disableIndexing: true
     - path: "/mnt/photos"
       name: "Photos"
       config:
@@ -43,11 +40,8 @@ server:
         defaultEnabled: true
         createUserDir: false
         rules:
-          - neverWatchPath: "/"
           - folderPath: "/"
             viewable: true
-        # Will be deprecated, no viable alternative as of 03/11/26
-        disableIndexing: true
     - path: "/mnt/media"
       name: "Media"
       config:
@@ -58,11 +52,8 @@ server:
         defaultEnabled: true
         createUserDir: false
         rules:
-          - neverWatchPath: "/"
           - folderPath: "/"
             viewable: true
-        # Will be deprecated, no viable alternative as of 03/11/26
-        disableIndexing: true
     # - path: "/mnt/apple"
     #   name: "Apple"
     #   config:
@@ -73,11 +64,8 @@ server:
     #     defaultEnabled: true
     #     createUserDir: false
     #     rules:
-    #       - neverWatchPath: "/"
     #       - folderPath: "/"
     #         viewable: true
-    #     # Will be deprecated, no viable alternative as of 03/11/26
-    #     disableIndexing: true
 
 auth:
   tokenExpirationHours: 120
