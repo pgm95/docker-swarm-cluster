@@ -12,9 +12,6 @@ server:
   filesystem:
     createFilePermission: "660"
     createDirectoryPermission: "770"
-  database:
-    path: "" # Set via FILEBROWSER_DATABASE_PATH
-    # migrateFrom: "/quantum/db/data.db" # Old boltdb file
 
   sources:
     - path: "/mnt/personal"
@@ -60,7 +57,7 @@ server:
     #     private: false
     #     disabled: false
     #     defaultUserScope: "/"
-    #     defaultEnabled: true
+    #     defaultEnabled: false
     #     createUserDir: false
     #     rules:
     #       - folderPath: "/"
@@ -68,9 +65,13 @@ server:
 
 http:
   port: 8080
+  listen: "0.0.0.0"
   baseURL: "/"
-  externalUrl: ""
   internalUrl: "http://127.0.0.1:8080"
+  externalUrl: "https://files.${DOMAIN_PRIVATE}"
+  trustedHeaders:
+    - X-Forwarded-Proto
+    - X-Forwarded-Host
 
 auth:
   tokenExpirationHours: 120
@@ -96,19 +97,10 @@ auth:
 
 frontend:
   name: "Quantum"
-  disableNavButtons: false
-  disableDefaultLinks: true
+  disableDefaultLinks: false
   disableUsedPercentage: false
-  description: "NAS - SATA ZFS Pool"
-
-userDefaults:
-  listing:
-    showHidden: true
-    quickDownload: true
-    showSelectMultiple: true
-    singleClick: true
-  ui:
-    darkMode: true
-    themeColor: "#363636"
-  account:
-    disableSettings: false
+  disableNavButtons: false
+  description: "NAS"
+  loginIcon: ""
+  loginButtonText: ""
+  oidcLoginButtonText: "Authentik"

@@ -12,6 +12,7 @@ services:
     stop_grace_period: 30s
     environment:
       - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
+      - DOMAIN_PRIVATE=${DOMAIN_PRIVATE}
       - FILEBROWSER_DATABASE_PATH=/quantum/db/data.sqlite
       - FILEBROWSER_CONFIG=/home/filebrowser/config.yaml
       - FILEBROWSER_ADMIN_USERNAME=${FILEBROWSER_ADMIN_USERNAME}
