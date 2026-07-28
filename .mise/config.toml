@@ -38,7 +38,7 @@ GLOBAL_SECRETS = "{{ env.PROJECT_SECRETS_DIR }}/shared.yaml"
 _.file = { path = "{{ env.GLOBAL_SECRETS }}", redact = true }
 
 GLOBAL_TZ="UTC"
-GLOBAL_TZ_LOCAL="America/New_York"
+GLOBAL_TZ_LOCAL="America/Chicago"
 GLOBAL_USER_GROUP="app_user"
 GLOBAL_ADMIN_GROUP="app_admin"
 GLOBAL_NONROOT_PUID="1000"
