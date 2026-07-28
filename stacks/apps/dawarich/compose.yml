@@ -31,7 +31,7 @@ services:
       - DATABASE_PORT=5432
       - DATABASE_USERNAME=postgres
       - DATABASE_PASSWORD=${DAWARICH_DB_PASSWORD}
-      - DATABASE_NAME=dawarich_development
+      - DATABASE_NAME=dawarich_db
       # Redis
       - REDIS_URL=redis://redis:6379
       # App settings
@@ -66,7 +66,7 @@ services:
     deploy:
       <<: [*place-main, *deploy]
       update_config:
-        order: start-first
+        order: stop-first
       labels:
         - "traefik.enable=true"
         - "traefik.scope.internal=true"
@@ -97,6 +97,7 @@ services:
       - SECRET_KEY_BASE=${SECRET_KEY_BASE_DAWARICH}
       - RAILS_LOG_TO_STDOUT=true
       - SELF_HOSTED=true
+      - TIME_ZONE=${GLOBAL_TZ_LOCAL}
       - APPLICATION_HOSTS=127.0.0.1,maps.${DOMAIN_PRIVATE}
       - APPLICATION_PROTOCOL=http
       # Database
@@ -104,7 +105,7 @@ services:
       - DATABASE_PORT=5432
       - DATABASE_USERNAME=postgres
       - DATABASE_PASSWORD=${DAWARICH_DB_PASSWORD}
-      - DATABASE_NAME=dawarich_development
+      - DATABASE_NAME=dawarich_db
       # Redis
       - REDIS_URL=redis://redis:6379
       # Background processing
@@ -117,6 +118,13 @@ services:
       - PHOTON_API_HOST=photon.dawarich.app
       - PHOTON_API_KEY=${PHOTON_API_KEY_DAWARICH}
       - PHOTON_API_USE_HTTPS=true
+      # OIDC
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID_DAWARICH}
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET_DAWARICH}
+      - OIDC_ISSUER=https://auth.${DOMAIN_PUBLIC}/application/o/dawarich/
+      - OIDC_REDIRECT_URI=https://maps.${DOMAIN_PRIVATE}/users/auth/openid_connect/callback
+      - OIDC_PROVIDER_NAME=Authentik
+      - OIDC_AUTO_REGISTER=true
       # 2FA
       - OTP_ENCRYPTION_PRIMARY_KEY=${OTP_ENCRYPTION_PRIMARY_KEY}
       - OTP_ENCRYPTION_DETERMINISTIC_KEY=${OTP_ENCRYPTION_DETERMINISTIC_KEY}
@@ -148,21 +156,20 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD_FILE=/run/secrets/dawarich_db_password
-      - POSTGRES_DB=dawarich_development
+      - POSTGRES_DB=dawarich_db
     secrets:
       - dawarich_db_password
     volumes:
       - database-data:/var/lib/postgresql/data
-      - shared:/var/shared
       - type: tmpfs
         target: /dev/shm
         tmpfs:
-          size: 1073741728
+          size: 1073741824
     networks:
       - default
       - infra_backup
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d dawarich_development"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d dawarich_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -208,7 +215,7 @@ services:
       --save 300 10
       --appendonly no
     volumes:
-      - shared:/data
+      - redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
       interval: 10s
@@ -226,7 +233,7 @@ services:
 
 volumes:
   database-data:
-  shared:
+  redis-data:
   app-public:
   app-watched:
   app-storage:
