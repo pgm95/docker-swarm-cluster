@@ -4,6 +4,56 @@ include:
   - configs.yml
 
 services:
+  seerr:
+    image: ghcr.io/seerr-team/seerr:latest
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    environment:
+      - PORT=5055
+      - LOG_LEVEL=info
+      - DB_TYPE=postgres
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=seerr
+      - DB_USER=seerr
+      - DB_PASS=${SEERR_POSTGRES_PASSWORD}
+    networks:
+      - infra_gw-internal
+      - infra_gw-external
+      - infra_postgres
+    volumes:
+      - seerr-data:/app/config
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://127.0.0.1:5055/api/v1/settings/public || exit 1
+      start_period: 20s
+      timeout: 3s
+      interval: 15s
+      retries: 3
+    deploy:
+      <<: [*place-main, *deploy]
+      update_config:
+        order: start-first
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.services.seerr.loadbalancer.server.port=5055"
+        - "traefik.scope.external=true"
+        - "traefik.http.routers.seerr-external.rule=Host(`seerr.${DOMAIN_PUBLIC}`)"
+        - "traefik.http.routers.seerr-external.entrypoints=websecure"
+        - "traefik.http.routers.seerr-external.service=seerr"
+        - "homepage.group=Media"
+        - "homepage.name=Seerr"
+        - "homepage.icon=seerr"
+        - "homepage.href=https://seerr.${DOMAIN_PUBLIC}"
+        - "homepage.description=Media Management"
+        - "homepage.widget.type=seerr"
+        - "homepage.widget.url=https://seerr.${DOMAIN_PUBLIC}"
+        - "homepage.widget.key={{HOMEPAGE_VAR_SEERR_KEY}}"
+        - 'homepage.widget.fields=["pending", "approved", "available", "completed"]'
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-huge
   radarr:
     image: linuxserver/radarr:latest
     logging:
@@ -43,7 +93,7 @@ services:
         - "homepage.widget.type=radarr"
         - "homepage.widget.url=https://radarr.${DOMAIN_PRIVATE}"
         - "homepage.widget.key={{HOMEPAGE_VAR_RADARR_KEY}}"
-        - "homepage.widget.enableQueue=true"
+        - "homepage.widget.enableQueue=false"
         - 'homepage.widget.fields=["wanted", "queued", "movies"]'
       mode: replicated
       replicas: 1
@@ -89,7 +139,7 @@ services:
         - "homepage.widget.type=sonarr"
         - "homepage.widget.url=https://sonarr.${DOMAIN_PRIVATE}"
         - "homepage.widget.key={{HOMEPAGE_VAR_SONARR_KEY}}"
-        - "homepage.widget.enableQueue=true"
+        - "homepage.widget.enableQueue=false"
         - 'homepage.widget.fields=["wanted", "queued", "series"]'
       mode: replicated
       replicas: 1
@@ -135,6 +185,7 @@ services:
         - "homepage.widget.type=prowlarr"
         - "homepage.widget.url=https://prowlarr.${DOMAIN_PRIVATE}"
         - "homepage.widget.key={{HOMEPAGE_VAR_PROWLARR_KEY}}"
+        - 'homepage.widget.fields=["numberOfGrabs", "numberOfQueries"]'
       mode: replicated
       replicas: 1
       resources:
@@ -169,6 +220,7 @@ services:
     environment:
       - PROVISIONER_USER=${GLOBAL_POSTGRES_PROVISIONER_USER}
       - PROVISIONER_PASSWORD=${GLOBAL_POSTGRES_PROVISIONER_PASSWORD}
+      - SEERR_DB_PASSWORD=${SEERR_POSTGRES_PASSWORD}
       - RADARR_DB_PASSWORD=${RADARR_POSTGRES_PASSWORD}
       - SONARR_DB_PASSWORD=${SONARR_POSTGRES_PASSWORD}
       - PROWLARR_DB_PASSWORD=${PROWLARR_POSTGRES_PASSWORD}
@@ -187,6 +239,7 @@ services:
         <<: *resources-tiny
 
 volumes:
+  seerr-data:
   radarr-data:
   sonarr-data:
   prowlarr-data:
@@ -199,6 +252,8 @@ volumes:
 
 networks:
   infra_gw-internal:
+    external: true
+  infra_gw-external:
     external: true
   infra_postgres:
     external: true

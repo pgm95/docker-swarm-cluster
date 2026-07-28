@@ -16,6 +16,17 @@ done
 psql -v ON_ERROR_STOP=1 <<-EOSQL
     DO \$\$
     BEGIN
+        IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'seerr') THEN
+            EXECUTE format('CREATE ROLE seerr LOGIN PASSWORD %L', '${SEERR_DB_PASSWORD}');
+        END IF;
+    END
+    \$\$;
+    GRANT seerr TO ${PROVISIONER_USER};
+    SELECT 'CREATE DATABASE "seerr" OWNER seerr'
+    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'seerr')\gexec
+
+    DO \$\$
+    BEGIN
         IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'radarr') THEN
             EXECUTE format('CREATE ROLE radarr LOGIN PASSWORD %L', '${RADARR_DB_PASSWORD}');
         END IF;
