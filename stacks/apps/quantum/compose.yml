@@ -5,14 +5,14 @@ include:
 
 services:
   quantum:
-    image: gtstef/filebrowser:stable
+    image: gtstef/filebrowser:2-preview-3
     entrypoint: ["/bin/sh", "/init.sh"]
     logging:
       <<: *logging
     stop_grace_period: 30s
     environment:
       - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
-      - FILEBROWSER_DATABASE=/quantum/db/data.db
+      - FILEBROWSER_DATABASE_PATH=/quantum/db/data.sqlite
       - FILEBROWSER_CONFIG=/home/filebrowser/config.yaml
       - FILEBROWSER_ADMIN_USERNAME=${FILEBROWSER_ADMIN_USERNAME}
       - FILEBROWSER_ADMIN_PASSWORD=${FILEBROWSER_ADMIN_PASSWORD}

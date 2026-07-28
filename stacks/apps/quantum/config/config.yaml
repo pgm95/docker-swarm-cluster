@@ -4,10 +4,6 @@ server:
   disablePreviews: false
   disablePreviewResize: false
   disableTypeDetectionByHeader: false
-  port: 8080
-  baseURL: "/"
-  externalUrl: ""
-  internalUrl: "http://127.0.0.1:8080"
   logging:
     - output: "stdout"
       noColors: false
@@ -16,6 +12,9 @@ server:
   filesystem:
     createFilePermission: "660"
     createDirectoryPermission: "770"
+  database:
+    path: "" # Set via FILEBROWSER_DATABASE_PATH
+    # migrateFrom: "/quantum/db/data.db" # Old boltdb file
 
   sources:
     - path: "/mnt/personal"
@@ -67,6 +66,12 @@ server:
     #       - folderPath: "/"
     #         viewable: true
 
+http:
+  port: 8080
+  baseURL: "/"
+  externalUrl: ""
+  internalUrl: "http://127.0.0.1:8080"
+
 auth:
   tokenExpirationHours: 120
   adminUsername: "root"
@@ -78,16 +83,16 @@ auth:
       signup: false
     oidc:
       enabled: true
-      clientId: '' # Set via FILEBROWSER_OIDC_CLIENT_ID
-      clientSecret: '' # Set via FILEBROWSER_OIDC_CLIENT_SECRET
-      issuerUrl: 'https://auth.${DOMAIN_PUBLIC}/application/o/quantum/'
-      scopes: 'email openid profile groups'
-      userIdentifier: 'preferred_username'
+      clientId: "" # Set via FILEBROWSER_OIDC_CLIENT_ID
+      clientSecret: "" # Set via FILEBROWSER_OIDC_CLIENT_SECRET
+      issuerUrl: "https://auth.${DOMAIN_PUBLIC}/application/o/quantum/"
+      scopes: "email openid profile groups"
+      userIdentifier: "preferred_username"
       disableVerifyTLS: false
-      logoutRedirectUrl: ''
+      logoutRedirectUrl: ""
       createUser: true
-      adminGroup: 'app_admin'
-      groupsClaim: 'groups'
+      adminGroup: "app_admin"
+      groupsClaim: "groups"
 
 frontend:
   name: "Quantum"
@@ -97,16 +102,13 @@ frontend:
   description: "NAS - SATA ZFS Pool"
 
 userDefaults:
-  darkMode: true
-  disableSettings: false
-  showSelectMultiple: true
-  singleClick: true
-  showHidden: true
-  themeColor: "#363636"
-  quickDownload: true
-  preview:
-    image: true
-    popup: true
-    video: false
-    office: false
-    highQuality: false
+  listing:
+    showHidden: true
+    quickDownload: true
+    showSelectMultiple: true
+    singleClick: true
+  ui:
+    darkMode: true
+    themeColor: "#363636"
+  account:
+    disableSettings: false
