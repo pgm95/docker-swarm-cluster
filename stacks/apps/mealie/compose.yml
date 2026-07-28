@@ -46,7 +46,7 @@ services:
       - SMTP_HOST=${GLOBAL_SMTP_HOST}
       - SMTP_USER=${GLOBAL_SMTP_USER}
       - SMTP_PASSWORD_FILE=/run/secrets/smtp_pass
-      - SMTP_FROM_EMAIL=${GLOBAL_SMTP_NOREPLY}
+      - SMTP_FROM_EMAIL=noreply@${DOMAIN_PUBLIC}
       # OpenAI Integration
       - OPENAI_API_KEY_FILE=/run/secrets/mealie_openai_api_key
     secrets:

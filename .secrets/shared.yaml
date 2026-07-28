@@ -5,14 +5,11 @@ GLOBAL_PASSWORD: ENC[AES256_GCM,data:rSr72/iUfubvMQaHYxTcWzncnQ==,iv:cFNHJ3AIAja
 GLOBAL_SMTP_HOST: ENC[AES256_GCM,data:YQOJK9rlaOSu2Hfjxt/w7w==,iv:C8ZQlakSwg/cpZlaoaQLI9zOikV4fKj+TBOC7ezfLQM=,tag:ZkYfW2+jn7sL+PKW5sPgOA==,type:str]
 GLOBAL_SMTP_USER: ENC[AES256_GCM,data:RxjU1YBvTaTu/ipwqbYegx7JGwuKVQ==,iv:Fcr2GZ1Waq9bd6jK0z9DAIH1BTXM46HX9cRxvEPcGwg=,tag:T4vODaA3cSnwkiVZ2QyMdQ==,type:str]
 GLOBAL_SMTP_PASS: ENC[AES256_GCM,data:pbrCIfqwBeygCVuaBs/gSKxHpQ==,iv:lYvVffhWQVa9aLrcFQ1oP2EnZSXNLg4kBpB2PagwSus=,tag:VvMEf0oG9YvJqyVa47kYeg==,type:str]
-GLOBAL_SMTP_NOREPLY: ENC[AES256_GCM,data:jFJ3dQbjUhNk0pUGPnsmPfnd,iv:puhyVkOLexGIsgK1w2QZkNmaMSyVOMpaC1Qks29lzuE=,tag:yntLG2bHjLGbw7eVbxzF6g==,type:str]
-GLOBAL_LDAP_ADDRESS: ENC[AES256_GCM,data:xgnt/FzR3Meb8YLpAs3hD8noVXqdT0KbD9uLa4/IXLwF,iv:pjGs6bEkd9ocDp7RCvoWEXIBim+Dna084QP9G7qeG/4=,tag:+ddFqBJiYH/CO1DITNuN3A==,type:str]
 GLOBAL_POSTGRES_PROVISIONER_USER: ENC[AES256_GCM,data:HSPefWgVzjFKVOM=,iv:hG71lFbmSp54YY2konpHcNHX+YnJg9OZCwfrsmA6kWA=,tag:NTcvHL9XPbe5lBbatt+EVQ==,type:str]
 GLOBAL_POSTGRES_PROVISIONER_PASSWORD: ENC[AES256_GCM,data:1Xm4DnLIhRUcLNt5SzVgzk3I/9m4Zx3jDImWC1bCrWpmd+aVViC4mkoXYYb8r6x5b2bzTHW4AkUQt0Zjg/HMgw==,iv:cFFWuB+dNlc8zrTMrDQ4Tpr40zKds3vApIc1yGuNzAs=,tag:/eXxWSZ2mNjvjdWtsZQfTA==,type:str]
 sops:
     age:
-        - recipient: age1xcnm9hkeyrrjxz33tvufpxwfwc8ydkwt3dax6kqsklpvggatj5usna7r2l
-          enc: |
+        - enc: |
             -----BEGIN AGE ENCRYPTED FILE-----
             YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBKeGFTVlIxNVk5QXZxdVZ5
             ZEg4QVJkRGw1cFJuRUpwMWwySjZtbVlpTHhRClVSdHhFeUlGNzJJR0d2a3FwU0Js
@@ -20,7 +17,8 @@ sops:
             aStwYUJOYU1GVGlpL3JnWW9kc0hFUW8K9zj2NWYwj2r9ebbLyA2+2sfOd3X5YxBT
             b/TrRLG9jpKdIE+MhPODdsjbEDALXTkcAoSNVufcnFiQp8Fu9B6KBw==
             -----END AGE ENCRYPTED FILE-----
-    lastmodified: "2026-03-24T18:51:09Z"
-    mac: ENC[AES256_GCM,data:fEJiYFprgv8HGzTHisM57TgBeFs+kNs0ImMPOJMynv1zQFbKQRCU3fp/zf4CmcCdPbsDdjeXD2J3SMPno5Z8gwxHE8zJE1AqMFMrZ22c4Kp3VMvI2UBdAd0DG0vQ5uRDZwACAp6r1jCefFNZi+qH3kt/sXL3TwXcvV+7C4bdg/c=,iv:ci//Vh0nfxq6I1AMSf4X6xGMzVJep63pD/iUVfcmMPE=,tag:e1vmjRg7rZ13hnZrqIFWUg==,type:str]
+          recipient: age1xcnm9hkeyrrjxz33tvufpxwfwc8ydkwt3dax6kqsklpvggatj5usna7r2l
+    lastmodified: "2026-07-28T03:31:37Z"
+    mac: ENC[AES256_GCM,data:Oz8Kd9IbpYzzKvekzkc0E5uWOYUucStOG0NKBtpQRDEgh0cCVc6MYGVEYoOfjBUP7lvy9aR/AGQ21yOzWJBb8qYbfwFo746T+BS6HDkbsFj/RSmUffIazdYHhZpIU6YcwbK+kV3AcCBeuJTpItq1XkhyjgmLPdLSFH7bqAvO3uY=,iv:UqRUkfTFMlsAGe22lh6YByZH4qB3j7yA6mnttVFV4Sg=,tag:17D63P/F57dToPBwib+nPg==,type:str]
     unencrypted_suffix: _unencrypted
-    version: 3.12.1
+    version: 3.13.0

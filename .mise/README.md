@@ -63,7 +63,7 @@ This is why `GLOBAL_SWARM_OCI_REGISTRY` (uses `DOMAIN_PRIVATE` from SOPS) lives 
 | `DOMAIN_PUBLIC`, `DOMAIN_PRIVATE`, `GLOBAL_OIDC_URL`, `GLOBAL_LDAP_BASE_DN` | SOPS | `PROJECT_SECRETS_DIR/{env}.yaml` |
 | `SWARM_HOST`, `SWARM_SSH_USER` | Plaintext | `.mise/config.{env}.toml` |
 | `GLOBAL_SWARM_OCI_REGISTRY` | Derived | `.mise/config.{env}.toml` |
-| `GLOBAL_SMTP_*`, `REGISTRY_*`, `GLOBAL_LDAP_ADDRESS` | SOPS | `PROJECT_SECRETS_DIR/shared.yaml` |
+| `GLOBAL_SMTP_*`, `REGISTRY_*` | SOPS | `PROJECT_SECRETS_DIR/shared.yaml` |
 | `GLOBAL_CIFS_HOST`, `GLOBAL_CIFS_USERNAME`, `GLOBAL_CIFS_PASSWORD` | SOPS | `PROJECT_SECRETS_DIR/shared.yaml` |
 | `GLOBAL_TZ`, `GLOBAL_NONROOT_*` | Plaintext | `.mise/config.toml` (base) |
 | `SWARM_STACKS_DIR`, `SWARM_ANCHORS_FILE` | Plaintext | `.mise/config.toml` (base) |
