@@ -6,7 +6,6 @@ http:
     authentik:
       forwardAuth:
         address: '{{ env "AUTHENTIK_URL" }}'
-        trustForwardHeader: true
         authResponseHeaders:
           - X-authentik-username
           - X-authentik-groups

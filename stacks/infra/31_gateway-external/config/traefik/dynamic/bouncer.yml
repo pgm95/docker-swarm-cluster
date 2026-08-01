@@ -11,9 +11,10 @@ http:
           enabled: true
           crowdsecMode: stream
           updateIntervalSeconds: 60
+          streamStartupBlock: false # Allow all traffic until first stream sync
+          updateMaxFailure: 3 # Tolerate failed LAPI pulls before failing closed
           logLevel: INFO
           clientTrustedIPs: '{{ env "TRUSTED_IPS" }}'
-          forwardedHeadersTrustedIPs: '{{ env "TRUSTED_IPS" }}'
           crowdsecAppsecEnabled: true
           crowdsecAppsecHost: crowdsec:7422
           crowdsecAppsecFailureBlock: false

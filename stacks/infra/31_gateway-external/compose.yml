@@ -6,7 +6,7 @@ include:
 
 services:
   traefik-external:
-    image: traefik:v3.6 # Consider hardened dhi.io/traefik:3
+    image: traefik:v3.7 # Consider hardened dhi.io/traefik:3
     logging:
       <<: *logging
     stop_grace_period: 30s
@@ -29,7 +29,7 @@ services:
       - "--ping=true"
       # Plugins
       - "--experimental.plugins.bouncer.moduleName=github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
-      - "--experimental.plugins.bouncer.version=v1.4.6"
+      - "--experimental.plugins.bouncer.version=v1.7.1"
       - "--experimental.plugins.geoblock.moduleName=github.com/david-garcia-garcia/traefik-geoblock"
       - "--experimental.plugins.geoblock.version=v1.1.4"
       - "--experimental.plugins.geoblock.settings.useunsafe=true"
@@ -54,8 +54,9 @@ services:
       - "--certificatesResolvers.letsencrypt.acme.dnsChallenge.provider=cloudflare"
       - "--certificatesResolvers.letsencrypt.acme.dnsChallenge.propagation.delayBeforeChecks=30s"
       - "--certificatesResolvers.letsencrypt.acme.dnsChallenge.resolvers=1.1.1.1:53,8.8.8.8:53,9.9.9.9:53"
-      # Entrypoints
+      # Prometheus
       - "--entryPoints.metrics.address=:9091"
+      # HTTPS (websecure)
       - "--entryPoints.websecure.address=:443"
       - "--entryPoints.websecure.asDefault=true"
       - "--entryPoints.websecure.http.middlewares=security-headers@file,geoblock@file,crowdsec@file"
@@ -65,9 +66,8 @@ services:
       - "--entryPoints.websecure.transport.respondingTimeouts.readTimeout=12h"
       - "--entryPoints.websecure.transport.respondingTimeouts.writeTimeout=12h"
       - "--entryPoints.websecure.transport.respondingTimeouts.idleTimeout=90s"
-      - "--entryPoints.websecure.proxyProtocol.trustedIPs=10.0.0.0/8,127.0.0.0/16,172.16.0.0/12,100.64.0.0/10"
       - "--entryPoints.websecure.forwardedHeaders.trustedIPs=10.0.0.0/8,127.0.0.0/16,172.16.0.0/12,100.64.0.0/10"
-      # Encoded characters — reject path-encoded reserved chars to prevent split-view attacks
+      # Reject path-encoded reserved characters to prevent split-view attacks
       - "--entryPoints.websecure.http.encodedCharacters.allowEncodedSlash=false"
       - "--entryPoints.websecure.http.encodedCharacters.allowEncodedBackSlash=false"
       - "--entryPoints.websecure.http.encodedCharacters.allowEncodedNullCharacter=false"
@@ -81,7 +81,6 @@ services:
       - AUTHENTIK_URL=${AUTHENTIK_URL}
       - TRUSTED_IPS=10.0.0.0/8,127.0.0.0/16,172.16.0.0/12,100.64.0.0/10
       - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/cf_acme_api_token
-      # Keep as env vars - geoblock plugin reads token from dynamic config Go template, CrowdSec has buggy _FILE support (GitHub issue 221)
       - GEOBLOCK_IP2LOCATION_TOKEN=${GEOBLOCK_IP2LOCATION_TOKEN}
       - CROWDSEC_LAPI_KEY=${BOUNCER_KEY_TRAEFIK}
     secrets:
@@ -135,7 +134,7 @@ services:
         <<: *resources-medium
 
   crowdsec:
-    image: crowdsecurity/crowdsec:v1.7.6
+    image: crowdsecurity/crowdsec:v1.7.8
     entrypoint: ["/bin/bash", "/crowdsec-entrypoint.sh"]
     logging:
       <<: *logging
@@ -145,17 +144,17 @@ services:
       - METRICS_PORT=6060
       - TZ=${GLOBAL_TZ_LOCAL}
       - LOCAL_API_URL=http://0.0.0.0:8085
-      - PARSERS=crowdsecurity/geoip-enrich crowdsecurity/whitelists
+      - PARSERS=crowdsecurity/geoip-enrich crowdsecurity/whitelists crowdsecurity/jellyfin-whitelist
       - COLLECTIONS=crowdsecurity/traefik crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules crowdsecurity/base-http-scenarios
       - BOUNCER_KEY_TRAEFIK=${BOUNCER_KEY_TRAEFIK}
       - CTI_KEY=${CROWDSEC_CTI_KEY}
       - CROWDSEC_POSTGRES_PASSWORD=${CROWDSEC_POSTGRES_PASSWORD}
       # Uncomment these when redeploying frequently to avoid CAPI rate-limits
-      - NO_HUB_UPGRADE=true
-      - DISABLE_ONLINE_API=true
+      # - NO_HUB_UPGRADE=true
+      # - DISABLE_ONLINE_API=true
       # Hub enrollment is only needed once, comment these after first run
       # - ENROLL_KEY=${CROWDSEC_ENROLL_KEY}
-      # - ENROLL_TAGS=Swarm Docker Traefik
+      # - ENROLL_TAGS=Swarm Prod Traefik
       # - ENROLL_INSTANCE_NAME=swarm-cluster
     configs:
       - source: crowdsec_entrypoint
@@ -170,8 +169,10 @@ services:
         target: /etc/crowdsec/notifications/http.yaml
       - source: crowdsec_console
         target: /etc/crowdsec/console.yaml
-      - source: crowdsec_whitelist
-        target: /etc/crowdsec/parsers/s02-enrich/01-custom-whitelist.yaml
+      - source: crowdsec_whitelist_local
+        target: /etc/crowdsec/parsers/s02-enrich/01-local-cidr.yaml
+      - source: crowdsec_whitelist_rejected
+        target: /etc/crowdsec/parsers/s02-enrich/02-gateway-rejections.yaml
     networks:
       - default
       - infra_socket

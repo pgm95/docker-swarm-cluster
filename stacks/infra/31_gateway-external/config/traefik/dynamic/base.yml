@@ -24,14 +24,9 @@ http:
         customFrameOptionsValue: SAMEORIGIN
         customResponseHeaders:
           Server: ""
-          X-Forwarded-Proto: https
           X-Powered-By: ""
         forceSTSHeader: true
-        hostsProxyHeaders:
-          - X-Forwarded-Host
         referrerPolicy: strict-origin-when-cross-origin
-        sslProxyHeaders:
-          X-Forwarded-Proto: https
         stsIncludeSubdomains: true
         stsPreload: true
         stsSeconds: 63072000

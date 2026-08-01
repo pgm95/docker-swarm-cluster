@@ -1,15 +1,5 @@
 # External Gateway
 
-Public ingress with WAF protection. See [main README](../../../README.md#dual-gateways) for dual gateway architecture.
-
-## Services
-
-| Service | Purpose | Port |
-|---------|---------|------|
-| traefik | Reverse proxy + TLS termination | 443 (host mode) |
-| crowdsec | WAF + intrusion detection (Postgres backend) | 8085 (LAPI), 6060 (metrics) |
-| init-db | Postgres bootstrap sidecar | — |
-
 ## Architecture
 
 ```text
@@ -31,25 +21,19 @@ Internet :443
  Backend Services      Socket-Proxy (VM)
 ```
 
-## Middleware Chain
-
-Requests pass through (in order):
-
-1. **security-headers** — HSTS, CSP, X-Frame-Options
-2. **geoblock** — Country-based blocking via IP2Location
-3. **crowdsec** — Real-time threat blocking
+Middleware Chain, in order: security-headers -> geoblock -> crowdsec
 
 ## CrowdSec
 
 - Bouncer plugin blocks malicious IPs in Traefik
 - AppSec provides virtual patching
-- Log acquisition reads Traefik logs via local socket-proxy (minimal permissions: CONTAINERS, INFO only)
+- Log acquisition reads Traefik swarm logs via central socket-proxy
 - Postgres-backed for persistent decisions across restarts
-- Wrapper entrypoint waits for Postgres overlay DNS before starting (survives `stop-first` redeploys)
+- Wrapper entrypoint waits for Postgres overlay DNS before starting
 
 ### Decision logging
 
-CrowdSec pushes ban decisions directly to Loki — this is separate from the general container log pipeline (Alloy).
+CrowdSec pushes ban decisions directly to Loki (separate from the general Alloy container log pipeline).
 
 ```text
 CrowdSec decision
@@ -65,22 +49,13 @@ The notification plugin (`http_loki`) fires on every ban from all three profiles
 - **Structured metadata**: `country`, `ip`, `scenario`, `type`, `duration`, `asname`, `asnumber`, `latitude`, `longitude`, `iprange`, `scope`
 - **Log line**: human-readable summary (`{type} {ip} {scenario} {country}`)
 
-The Grafana dashboard uses LogQL `count_over_time` with `| keep` stages for aggregation panels (summary table, country pie chart, geo map) and raw log queries for the realtime table.
-
-### Debugging
-
-Middleware chain failures are silent. If any middleware in the entrypoint's default chain
-fails to initialize (missing database, broken config), Traefik cannot create ANY routers on
-that entrypoint. Symptom: 404 for all routes, not an error page. Check `docker service logs`
-for the actual error.
-
 ## Catch-All Router
 
 Traefik v3 entrypoint-level default middlewares only run on requests that match a router.
 Unmatched requests (direct IP scans, wrong Host header) bypass the middleware chain entirely.
 A low-priority catch-all router in `base.yml` (`PathPrefix(/)`, `priority: 1`, empty backend)
 ensures geoblock and CrowdSec run on all traffic. Allowed unmatched requests get 503;
-blocked requests get 403. This is the [officially recommended pattern](https://doc.traefik.io/traefik/getting-started/faq/).
+blocked requests get 403. This is the [officially recommended pattern](https://doc.traefik.io/traefik/getting-started/faq/#xxx-instead-of-404).
 
 ## Geoblock Bootstrap
 

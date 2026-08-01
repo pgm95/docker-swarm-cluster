@@ -1,4 +1,3 @@
-# Traefik Dynamic Configuration - Geoblock Plugin
 # https://github.com/david-garcia-garcia/traefik-geoblock
 ---
 # yaml-language-server: $schema=https://json.schemastore.org/traefik-v3-file-provider.json
@@ -12,9 +11,7 @@ http:
           databaseFilePath: "/data/geoblock"
           databaseAutoUpdate: true
           databaseAutoUpdateDir: "/data/geoblock"
-          # Token deliberately empty: the plugin's tokened download URL is broken
-          # (upstream issue #55, malformed file= param, always 404).
-          databaseAutoUpdateToken: ""
+          databaseAutoUpdateToken: "" # Tokened download URL is broken (upstream issue #55)
           databaseAutoUpdateCode: "DB1"
           defaultAllow: false
           allowedCountries: [DK,LB,FR,MX,CA,AE,US,GB,ES,PT]

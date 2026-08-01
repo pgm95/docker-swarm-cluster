@@ -1,0 +1,17 @@
+# Discards events for requests Traefik's own middlewares rejected, so the gateway's 403s cannot feed ban scenarios (ex: http-probing)
+# Deploy-window 403 bursts have led to false-positive bans, and banned clients retrying would keep renewing their own ban
+#
+# The discriminator is a Traefik CLF invariant: ServiceURL is written by exactly one FieldHandler wrapping the selected backend proxy, below the middleware chain (pkg/server/service/service.go).
+# A middleware rejection short-circuits above it, the field stays unset, and the CLF formatter emits its "-" constant (pkg/middlewares/accesslog/logger_formatters.go).
+# The crowdsec hub traefik parser models it explicitly in TRAEFIK_SERVER_URL, so server_url "-" holds if and only if no backend was selected.
+# Backend-emitted 403s keep their URL and still count, as do 400/404/503.
+#
+# Coupled to accessLog.format=common. The JSON formatter omits the field
+
+name: 02-gateway-rejections
+description: "Requests rejected by gateway middlewares"
+filter: "evt.Meta.log_type == 'http_access-log'"
+whitelist:
+  reason: "Rejected before reaching a backend; not evidence of probing"
+  expression:
+    - evt.Meta.http_status == '403' && evt.Parsed.traefik_server_url == '-'
