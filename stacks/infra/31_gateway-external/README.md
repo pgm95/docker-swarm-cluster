@@ -35,6 +35,12 @@ Middleware Chain, in order: security-headers -> geoblock -> crowdsec
 - Postgres-backed for persistent decisions across restarts
 - Wrapper entrypoint waits for Postgres overlay DNS before starting
 
+### Self-Ban Guard
+
+The `01-gateway-rejections` whitelist identifies requests already blocked by the
+gateway's own middlewares and keeps them from feeding ban scenarios as false probing evidence.
+Without it, mass rejections (e.g. a deploy-window 403 burst) ban legitimate clients.
+
 ### Decision logging
 
 CrowdSec pushes ban decisions directly to Loki (separate from the general Alloy container log pipeline).
@@ -52,6 +58,22 @@ The notification plugin (`http_loki`) fires on every ban from all three profiles
 - **Stream labels**: `job=crowdsec`, `instance=<host>`
 - **Structured metadata**: `country`, `ip`, `scenario`, `type`, `duration`, `asname`, `asnumber`, `latitude`, `longitude`, `iprange`, `scope`
 - **Log line**: human-readable summary (`{type} {ip} {scenario} {country}`)
+
+## Geoblock
+
+The plugin owns its database lifecycle: a seed DB ships inside the plugin source
+(`/plugins-storage/sources/`), auto-updates land in the `traefik-geoblock` volume,
+and the newest volume DB wins on restart. Fresh volumes need no bootstrap.
+
+`logBannedRequests` is off because the access log replaces it: geoblock stamps
+country and decision headers on every request (blocked included), and the JSON
+access log keeps them. Query those fields in Loki instead of a separate log stream.
+
+## Forwarded-Header Trust
+
+Deliberately absent everywhere (no entrypoint `trustedIPs`, no proxy protocol, no
+middleware or bouncer trust lists). Nothing proxies into this gateway, so every
+client-IP decision uses the unspoofable TCP peer and inbound `X-Forwarded-*` is always stripped.
 
 ## Catch-All Router
 

@@ -32,9 +32,6 @@ configs:
   crowdsec_notifications:
     name: crowdsec_notifications_${DEPLOY_VERSION}
     file: ./config/crowdsec/notifications-http.yaml
-  crowdsec_whitelist_local:
-    name: crowdsec_whitelist_local_${DEPLOY_VERSION}
-    file: ./config/crowdsec/whitelist-local.yaml
   crowdsec_whitelist_rejected:
     name: crowdsec_whitelist_rejected_${DEPLOY_VERSION}
     file: ./config/crowdsec/whitelist-rejected.yaml

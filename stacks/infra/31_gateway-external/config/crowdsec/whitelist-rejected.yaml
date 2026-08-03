@@ -9,8 +9,8 @@
 #
 # Backend-emitted 403s carry a backend address and still count, as do 400/404/503.
 
-name: 02-gateway-rejections
-description: "Requests already rejected by other middlewares"
+name: 01-gateway-rejections
+description: "Requests already rejected by the gateway's own middlewares"
 filter: "evt.Meta.log_type == 'http_access-log'"
 whitelist:
   reason: "Rejected before reaching a backend; not evidence of probing"

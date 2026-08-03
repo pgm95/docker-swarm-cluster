@@ -66,7 +66,6 @@ services:
       - "--entryPoints.websecure.transport.respondingTimeouts.readTimeout=12h"
       - "--entryPoints.websecure.transport.respondingTimeouts.writeTimeout=12h"
       - "--entryPoints.websecure.transport.respondingTimeouts.idleTimeout=90s"
-      - "--entryPoints.websecure.forwardedHeaders.trustedIPs=10.0.0.0/8,127.0.0.0/16,172.16.0.0/12,100.64.0.0/10"
       # Reject path-encoded reserved characters to prevent split-view attacks
       - "--entryPoints.websecure.http.encodedCharacters.allowEncodedSlash=false"
       - "--entryPoints.websecure.http.encodedCharacters.allowEncodedBackSlash=false"
@@ -79,7 +78,6 @@ services:
       - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
       - DOMAIN_TAILNET=${DOMAIN_TAILNET}
       - AUTHENTIK_URL=${AUTHENTIK_URL}
-      - TRUSTED_IPS=10.0.0.0/8,127.0.0.0/16,172.16.0.0/12,100.64.0.0/10
       - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/cf_acme_api_token
       - GEOBLOCK_IP2LOCATION_TOKEN=${GEOBLOCK_IP2LOCATION_TOKEN}
       - CROWDSEC_LAPI_KEY=${BOUNCER_KEY_TRAEFIK}
@@ -166,10 +164,8 @@ services:
         target: /etc/crowdsec/notifications/http.yaml
       - source: crowdsec_console
         target: /etc/crowdsec/console.yaml
-      - source: crowdsec_whitelist_local
-        target: /etc/crowdsec/parsers/s02-enrich/01-local-cidr.yaml
       - source: crowdsec_whitelist_rejected
-        target: /etc/crowdsec/parsers/s02-enrich/02-gateway-rejections.yaml
+        target: /etc/crowdsec/parsers/s02-enrich/01-gateway-rejections.yaml
     networks:
       - default
       - infra_socket

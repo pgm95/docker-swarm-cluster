@@ -1,9 +1,0 @@
-name: 01-local-cidr
-description: "Private IP Ranges"
-whitelist:
-  reason: "RFC-1918, RFC-6598"
-  cidr:
-    - "172.16.0.0/12"
-    - "10.0.0.0/8"
-    - "192.168.0.0/16"
-    - "100.64.0.0/10"
