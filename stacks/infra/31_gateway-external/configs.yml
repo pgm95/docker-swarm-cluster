@@ -1,7 +1,4 @@
 configs:
-  traefik_entrypoint:
-    name: traefik_external_entrypoint_${DEPLOY_VERSION}
-    file: ./config/traefik/entrypoint.sh
   traefik_dynamic_base:
     name: traefik_external_dynamic_base_${DEPLOY_VERSION}
     file: ./config/traefik/dynamic/base.yml

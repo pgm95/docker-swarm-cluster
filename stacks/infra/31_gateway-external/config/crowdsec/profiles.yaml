@@ -1,10 +1,15 @@
 # CrowdSec Profiles Configuration
 name: appsec_ip_remediation
 filters:
-  - Alert.GetScenario() startsWith "crowdsecurity/vpatch-" && Alert.GetScope() == "Ip"
+  # Kind "waf" marks alerts raised by the AppSec component (1.7.7+)
+  - Alert.Kind == "waf" && Alert.GetScope() == "Ip"
 decisions:
   - type: ban
-    duration: 4h
+    duration: 4h # fallback if duration_expr errors
+duration_expr: >-
+  (GetDecisionsCount(Alert.GetValue()) + 1) * 4 > 168
+  ? '168h'
+  : Sprintf('%dh', (GetDecisionsCount(Alert.GetValue()) + 1) * 4)
 on_success: break
 notifications:
   - http_loki

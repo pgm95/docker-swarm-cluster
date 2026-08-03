@@ -1,17 +1,20 @@
-# Discards events for requests Traefik's own middlewares rejected, so the gateway's 403s cannot feed ban scenarios (ex: http-probing)
-# Deploy-window 403 bursts have led to false-positive bans, and banned clients retrying would keep renewing their own ban
+# Discards events for requests that Traefik's own middlewares rejected, so gateway 403s cannot feed ban scenarios (http-probing counts 403s on distinct paths; a deploy-window 403 burst once banned legit clients, and banned clients retrying would keep renewing their own ban).
 #
-# The discriminator is a Traefik CLF invariant: ServiceURL is written by exactly one FieldHandler wrapping the selected backend proxy, below the middleware chain (pkg/server/service/service.go).
-# A middleware rejection short-circuits above it, the field stays unset, and the CLF formatter emits its "-" constant (pkg/middlewares/accesslog/logger_formatters.go).
-# The crowdsec hub traefik parser models it explicitly in TRAEFIK_SERVER_URL, so server_url "-" holds if and only if no backend was selected.
-# Backend-emitted 403s keep their URL and still count, as do 400/404/503.
+# Discriminator: ServiceAddr/ServiceURL are written by a single FieldHandler wrapping the selected backend proxy, below the middleware chain (pkg/server/service/service.go).
+# Middleware rejections short-circuit above it, so the field is never set.
 #
-# Coupled to accessLog.format=common. The JSON formatter omits the field
+# JSON access logs omit unset fields, and the hub traefik parser maps ServiceAddr to Parsed.service_addr only when present, so an absent/empty service_addr holds iff no backend was selected.
+# CLF access logs render the same absence as a literal "-" in traefik_server_url
+# Both clauses are kept for portability.
+#
+# Backend-emitted 403s carry a backend address and still count, as do 400/404/503.
 
 name: 02-gateway-rejections
-description: "Requests rejected by gateway middlewares"
+description: "Requests already rejected by other middlewares"
 filter: "evt.Meta.log_type == 'http_access-log'"
 whitelist:
   reason: "Rejected before reaching a backend; not evidence of probing"
   expression:
-    - evt.Meta.http_status == '403' && evt.Parsed.traefik_server_url == '-'
+    - >-
+      evt.Meta.http_status == '403' &&
+      (evt.Parsed.service_addr in [nil, ''] || evt.Parsed.traefik_server_url == '-')

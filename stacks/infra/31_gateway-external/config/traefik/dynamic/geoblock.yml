@@ -1,4 +1,4 @@
-# https://github.com/david-garcia-garcia/traefik-geoblock
+# https://github.com/david-garcia-garcia/traefik-geoblock#dynamic-configuration
 ---
 # yaml-language-server: $schema=https://json.schemastore.org/traefik-v3-file-provider.json
 
@@ -8,21 +8,17 @@ http:
       plugin:
         geoblock:
           enabled: true
-          databaseFilePath: "/data/geoblock"
+          databaseFilePath: "/plugins-storage/sources/" # included seed db in the plugin source
           databaseAutoUpdate: true
-          databaseAutoUpdateDir: "/data/geoblock"
+          databaseAutoUpdateDir: "/data/geoblock" # persistent volume for database updates
           databaseAutoUpdateToken: "" # Tokened download URL is broken (upstream issue #55)
           databaseAutoUpdateCode: "DB1"
           defaultAllow: false
+          allowPrivate: true
+          allowedIPBlocks: []
           allowedCountries: [DK,LB,FR,MX,CA,AE,US,GB,ES,PT]
           blockedCountries: [RU,CN,IN]
           blockedIPBlocks: []
-          allowPrivate: true
-          allowedIPBlocks:
-            - 10.0.0.0/8
-            - 127.0.0.0/16
-            - 172.16.0.0/12
-            - 100.64.0.0/10
           ipHeaders: # Headers to use for client IPs (required)
             - "remoteAddress" # Real TCP source - cannot be spoofed
           banHtmlFilePath: ""
@@ -32,6 +28,7 @@ http:
           logLevel: "info" # Available: debug, info, warn, error
           logFormat: "json" # Available: json, text
           logPath: "" # Empty for Traefik's standard output
-          logBannedRequests: true # Log blocked requests. They will be logged at info level.
-          fileLogBufferSizeBytes: 1024 # Buffer size for file logging in bytes (default: 1024)
-          fileLogBufferTimeoutSeconds: 2 # Buffer timeout for file logging in seconds (default: 2)
+          logBannedRequests: false # Log blocked requests. They will be logged at info level.
+          countryHeader: "X-Ip-Country"
+          logStatusHeader: "X-Geoblock-Status"
+          logStatusDetailHeader: "X-Geoblock-Decision"

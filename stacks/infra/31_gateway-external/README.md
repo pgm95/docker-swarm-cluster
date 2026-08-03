@@ -1,5 +1,9 @@
 # External Gateway
 
+Uses `mode: host` for port 443 directly. No HTTP entrypoint; ACME uses DNS-01 via Cloudflare.
+
+Static config via CLI flags in compose `command:`. Dynamic config via Docker Configs (file provider).
+
 ## Architecture
 
 ```text
@@ -56,16 +60,6 @@ Unmatched requests (direct IP scans, wrong Host header) bypass the middleware ch
 A low-priority catch-all router in `base.yml` (`PathPrefix(/)`, `priority: 1`, empty backend)
 ensures geoblock and CrowdSec run on all traffic. Allowed unmatched requests get 503;
 blocked requests get 403. This is the [officially recommended pattern](https://doc.traefik.io/traefik/getting-started/faq/#xxx-instead-of-404).
-
-## Geoblock Bootstrap
-
-The IP2Location database is required for the geoblock middleware. If missing, the middleware fails and silently breaks all routes (404). The entrypoint wrapper (`config/traefik/entrypoint.sh`) auto-downloads and extracts the DB on first boot using `GEOBLOCK_IP2LOCATION_TOKEN` (env var, not Docker secret). The plugin's `databaseAutoUpdate` handles subsequent refreshes.
-
-## Port Binding
-
-Uses `mode: host` for port 443 — bypasses Swarm ingress mesh for predictable source IP handling. No HTTP entrypoint; ACME uses DNS-01 via Cloudflare.
-
-Static config via CLI flags in compose `command:`. Dynamic config via Docker Configs (file provider).
 
 ## Dual-Scope Services and Phantom Routers
 

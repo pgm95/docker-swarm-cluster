@@ -1,5 +1,5 @@
+console_management: true
 share_manual_decisions: true
+share_context: true
 share_tainted: true
 share_custom: true
-console_management: true
-share_context: true

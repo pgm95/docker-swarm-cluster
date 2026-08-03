@@ -10,7 +10,6 @@ services:
     logging:
       <<: *logging
     stop_grace_period: 30s
-    entrypoint: ["/bin/sh", "/geoblock-entrypoint.sh"]
     command:
       # Global
       - "--global.checkNewVersion=false"
@@ -18,11 +17,12 @@ services:
       # Logging
       - "--log.level=INFO"
       - "--log.format=common"
-      # - "--log.filePath=/var/log/traefik/container.log"
-      # - "--log.maxSize=1"
-      # - "--log.maxAge=1"
-      # - "--log.maxBackups=1"
-      - "--accessLog.format=common"
+      - "--accessLog.format=json"
+      - "--accessLog.fields.headers.names.Referer=keep"
+      - "--accessLog.fields.headers.names.User-Agent=keep"
+      - "--accessLog.fields.headers.names.X-Ip-Country=keep"
+      - "--accessLog.fields.headers.names.X-Geoblock-Status=keep"
+      - "--accessLog.fields.headers.names.X-Geoblock-Decision=keep"
       # API
       - "--api.insecure=false"
       - "--api.dashboard=false"
@@ -48,8 +48,8 @@ services:
       - "--providers.swarm.network=infra_gw-external"
       - "--providers.swarm.constraints=Label(`traefik.scope.external`, `true`)"
       # TLS / ACME
-      - "--certificatesResolvers.letsencrypt.acme.email=pgm95@github.com"
       - "--certificatesResolvers.letsencrypt.acme.storage=/certs/acme.json"
+      - "--certificatesResolvers.letsencrypt.acme.email=admin@${DOMAIN_PUBLIC}"
       - "--certificatesResolvers.letsencrypt.acme.caServer=${GLOBAL_ACME_CA_SERVER}"
       - "--certificatesResolvers.letsencrypt.acme.dnsChallenge.provider=cloudflare"
       - "--certificatesResolvers.letsencrypt.acme.dnsChallenge.propagation.delayBeforeChecks=30s"
@@ -86,8 +86,6 @@ services:
     secrets:
       - cf_acme_api_token
     configs:
-      - source: traefik_entrypoint
-        target: /geoblock-entrypoint.sh
       - source: traefik_dynamic_base
         target: /etc/traefik/dynamic/base.yml
       - source: traefik_dynamic_authentik
@@ -109,7 +107,6 @@ services:
         protocol: tcp
         mode: host
     volumes:
-      - traefik-logs:/var/log/traefik
       - traefik-certs:/certs
       - traefik-geoblock:/data/geoblock
     healthcheck:
@@ -233,7 +230,6 @@ services:
         <<: *resources-tiny
 
 volumes:
-  traefik-logs:
   traefik-certs:
   traefik-geoblock:
   crowdsec-app:
