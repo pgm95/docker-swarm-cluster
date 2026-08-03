@@ -75,6 +75,12 @@ services:
     volumes:
       - radarr-data:/config
       - cifs-media:/servarr
+    healthcheck:
+      test: curl -sf http://127.0.0.1:7878/ping || exit 1
+      start_period: 60s
+      timeout: 5s
+      interval: 15s
+      retries: 3
     deploy:
       <<: [*place-main, *deploy]
       update_config:
@@ -121,6 +127,12 @@ services:
     volumes:
       - sonarr-data:/config
       - cifs-media:/servarr
+    healthcheck:
+      test: curl -sf http://127.0.0.1:8989/ping || exit 1
+      start_period: 60s
+      timeout: 5s
+      interval: 15s
+      retries: 3
     deploy:
       <<: [*place-main, *deploy]
       update_config:
@@ -167,6 +179,12 @@ services:
       - infra_postgres
     volumes:
       - prowlarr-data:/config
+    healthcheck:
+      test: curl -sf http://127.0.0.1:9696/ping || exit 1
+      start_period: 60s
+      timeout: 5s
+      interval: 15s
+      retries: 3
     deploy:
       <<: [*place-main, *deploy]
       update_config:
