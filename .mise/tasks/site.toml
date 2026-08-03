@@ -32,8 +32,7 @@ done
 
 ["site:drain"]
 description = "Remove all stacks in reverse order"
-confirm = "This will remove ALL stacks, secrets, configs, and networks. Continue?"
-depends_post = ["swarm:cleanup"]
+confirm = "This will bring down ALL running stacks. Continue?"
 run = '''
 {% raw %}
 #!/usr/bin/env bash
