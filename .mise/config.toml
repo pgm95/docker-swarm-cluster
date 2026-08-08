@@ -1,13 +1,9 @@
 #:schema https://mise.jdx.dev/schema/mise.json
 
-############################ SETTINGS ############################
 [settings]
 experimental = true
 auto_install = false
-python.uv_venv_auto = true
 sops.age_key_file = "age.key"
-unix_default_file_shell_args = "bash -o errexit -o nounset -o pipefail"
-unix_default_inline_shell_args = "bash -c -o errexit -o nounset -o pipefail"
 
 [tools]
 "core:python" = "3.14"
@@ -20,8 +16,6 @@ unix_default_inline_shell_args = "bash -c -o errexit -o nounset -o pipefail"
 "aqua:pre-commit/pre-commit" = "latest"
 
 [env]
-MISE_ENV = "{{ mise_env | first }}"
-PROJECT_ROOT_DIR = "{{config_root}}"
 PROJECT_CONFIGS_DIR = "{{config_root}}/.config"
 PROJECT_SECRETS_DIR = "{{config_root}}/.secrets"
 
@@ -47,11 +41,7 @@ GLOBAL_NONROOT_DOCKER="{{ env.GLOBAL_NONROOT_PUID }}:{{ env.GLOBAL_NONROOT_PGID 
 
 ############################ TASKS ############################
 [task_config]
-includes = [
-    ".mise/tasks/sops.toml",
-    ".mise/tasks/swarm.toml",
-    ".mise/tasks/site.toml"
-]
+shell = "bash -c -o errexit -o nounset -o pipefail"
 
 [tasks."env:setup"]
 description = " " # Complete environment setup via mise
