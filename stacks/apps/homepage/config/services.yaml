@@ -8,12 +8,13 @@
           type: homeassistant
           url: http://hass.home.arpa:8123
           key: {{HOMEPAGE_VAR_HASS_KEY}}
+          # fields: ["people_home", "lights_on"]
           custom:
             - state: zone.home
               label: People Home
             - template: "{{ states.light|selectattr('state','equalto','on')|list|length }} / {{ states.light|list|length }}"
               label: Lights On
-            - state: vacuum.roomba
+            - state: vacuum.kitchen_roomba
               label: Roomba
     - Proxmox NUC:
         href: https://nuc.lan.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}:8006
