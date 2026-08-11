@@ -1,6 +1,7 @@
 """Tests for swarm.secrets — compose-JSON-driven secret/config validation."""
 
 import pytest
+
 from swarm import SecretError, ValidationError
 from swarm.secrets import (
     create_versioned_secrets,

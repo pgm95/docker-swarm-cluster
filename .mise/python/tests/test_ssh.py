@@ -1,6 +1,7 @@
 """Tests for swarm._ssh — SSH execution helpers."""
 
 import pytest
+
 from swarm import SSHError
 from swarm._ssh import ssh_node
 

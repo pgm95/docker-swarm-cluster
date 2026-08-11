@@ -3,6 +3,7 @@
 import base64
 
 import pytest
+
 from swarm import SopsError
 from swarm._sops import sops_decrypt
 

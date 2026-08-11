@@ -1,6 +1,7 @@
 """Tests for swarm.status — cluster status display."""
 
 from conftest import SAMPLE_NODES
+
 from swarm.status import get_node_status, status
 
 

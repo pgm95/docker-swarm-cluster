@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pytest
+
 from swarm import SwarmError
 from swarm._stack import (
     find_namespaces,

@@ -1,6 +1,7 @@
 """Tests for swarm.networks — overlay network discovery and initialization."""
 
 from conftest import make_completed
+
 from swarm.networks import get_external_networks, init_networks
 
 

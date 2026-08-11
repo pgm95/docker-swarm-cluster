@@ -1,6 +1,7 @@
 """Tests for swarm.cleanup — versioned secret/config/network cleanup and node-wide prune."""
 
 from conftest import make_completed
+
 from swarm.cleanup import (
     SYSTEM_NETWORKS,
     VERSIONED_PATTERN,

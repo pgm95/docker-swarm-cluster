@@ -2,6 +2,7 @@
 
 
 from conftest import SAMPLE_NODES
+
 from swarm.nodes import (
     _find_matching_node,
     _match_constraint,

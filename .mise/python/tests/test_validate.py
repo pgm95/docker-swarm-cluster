@@ -1,6 +1,7 @@
 """Tests for swarm.validate — compose validation and bind mount checks."""
 
 from conftest import SAMPLE_NODES, make_completed
+
 from swarm._compose import _fixup_config
 from swarm.validate import (
     _set_oci_tags,

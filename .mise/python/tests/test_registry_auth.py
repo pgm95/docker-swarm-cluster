@@ -1,6 +1,7 @@
 """Tests for swarm.registry_auth — registry login across nodes."""
 
 from conftest import make_completed
+
 from swarm.registry_auth import login_local, login_node, registry_auth
 
 
