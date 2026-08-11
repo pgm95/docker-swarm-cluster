@@ -2,6 +2,7 @@
 
 import json
 
+from conftest import SAMPLE_NODE_IDS, SAMPLE_NODES
 from swarm._docker import (
     config_rm,
     inspect_nodes,
@@ -15,7 +16,6 @@ from swarm._docker import (
     stack_services,
     task_name_to_service,
 )
-from conftest import SAMPLE_NODE_IDS, SAMPLE_NODES
 
 
 class TestStackServices:
@@ -202,8 +202,7 @@ class TestStreamLinePrefixed:
 
     def test_non_zero_exit_raises(self, monkeypatch):
         import pytest
-
-        from swarm import _docker, DockerError
+        from swarm import DockerError, _docker
         monkeypatch.setattr(
             "subprocess.Popen",
             lambda cmd, **kw: _FakeProc(lines=[], returncode=1),
@@ -215,8 +214,7 @@ class TestStreamLinePrefixed:
         """On non-zero exit, DockerError gets the tail of streamed output —
         not an empty string. Operators must see Docker's actual error."""
         import pytest
-
-        from swarm import _docker, DockerError
+        from swarm import DockerError, _docker
         proc = _FakeProc(
             lines=["pulling image...\n", "error: image not found\n"],
             returncode=1,

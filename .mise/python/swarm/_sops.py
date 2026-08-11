@@ -27,7 +27,7 @@ def sops_decrypt(file_path: str | Path) -> list[tuple[str, str]]:
     cmd.append(path_str)
 
     log.debug("$ %s", " ".join(cmd))
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if result.returncode != 0:
         raise SopsError(f"Failed to decrypt {path_str}: {result.stderr.strip()}")
 

@@ -1,0 +1,19 @@
+#:schema https://json.schemastore.org/pyproject.json
+
+[tool.pytest]
+cache_dir = ".cache/pytest"
+testpaths = ["tests"]
+
+[tool.ruff]
+cache-dir = ".cache/ruff"
+
+[tool.ruff.lint]
+ignore = [
+  "BLE001"  # Blind excepts are deliberate: fan-out isolation boundaries convert any per-item failure into a recorded result instead of crashing the sweep.
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+  "TRY002",  # Test mocks raise vanilla Exception on purpose to prove boundaries catch anything
+  "RUF012"  # Fixture class attributes are read-only reference data.
+]

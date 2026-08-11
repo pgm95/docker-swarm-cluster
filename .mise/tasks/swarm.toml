@@ -37,16 +37,11 @@ done
 ["swarm:cleanup"]
 alias = "cleanup"
 description = "Remove unused versioned secrets/configs and run docker system prune on every node"
-run = 'python3 -m swarm.cleanup'
+run = "python3 -m swarm.cleanup"
 
 ["swarm:init-networks"]
 description = "Internal: create overlay networks (idempotent)"
 hide = true
 env.SWARM_INTERNAL_NETWORKS = "infra_socket"
 env.SWARM_OVERLAY_MTU = "1280"
-run = 'python3 -m swarm.networks init'
-
-["swarm:validate"]
-description = "Internal: validate all compose files for Swarm compatibility"
-hide = true
-run = 'python3 -m swarm.validate'
+run = "python3 -m swarm.networks init"

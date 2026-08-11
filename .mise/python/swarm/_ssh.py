@@ -51,6 +51,7 @@ def ssh_node(
         capture_output=True,
         text=True,
         input=stdin_data,
+        check=False,
     )
     if check and result.returncode != 0:
         raise SSHError(hostname, result.returncode, result.stderr.strip())

@@ -75,7 +75,7 @@ class TestRegistryAuth:
         monkeypatch.setenv("GLOBAL_SWARM_OCI_REGISTRY", "reg.example.com")
         monkeypatch.setenv("REGISTRY_USER", "user")
         monkeypatch.setenv("REGISTRY_PASS", "pass")
-        monkeypatch.setattr("swarm.registry_auth.get_swarm_nodes", lambda: [])
+        monkeypatch.setattr("swarm.registry_auth.get_swarm_nodes", list)
         monkeypatch.setattr("swarm.registry_auth.login_local", lambda *a: True)
         assert registry_auth(local=True) == 0
 
@@ -107,7 +107,7 @@ class TestMainCli:
         monkeypatch.setenv("GLOBAL_SWARM_OCI_REGISTRY", "reg")
         monkeypatch.setenv("REGISTRY_USER", "u")
         monkeypatch.setenv("REGISTRY_PASS", "p")
-        monkeypatch.setattr("swarm.registry_auth.get_swarm_nodes", lambda: [])
+        monkeypatch.setattr("swarm.registry_auth.get_swarm_nodes", list)
         local_called = []
         monkeypatch.setattr(
             "swarm.registry_auth.login_local",
@@ -123,7 +123,7 @@ class TestMainCli:
         monkeypatch.setenv("GLOBAL_SWARM_OCI_REGISTRY", "reg")
         monkeypatch.setenv("REGISTRY_USER", "u")
         monkeypatch.setenv("REGISTRY_PASS", "p")
-        monkeypatch.setattr("swarm.registry_auth.get_swarm_nodes", lambda: [])
+        monkeypatch.setattr("swarm.registry_auth.get_swarm_nodes", list)
         local_called = []
         monkeypatch.setattr(
             "swarm.registry_auth.login_local",

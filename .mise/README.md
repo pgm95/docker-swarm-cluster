@@ -6,16 +6,19 @@ Task orchestration, deployment pipeline, and development tooling for swarm-clust
 
 ```text
 .mise/
-  config.toml             # Base env vars, tool versions, task includes
+  config.toml             # Base env vars, tool versions
   config.{dev,prod}.toml  # Per-environment secrets, nodes, domains
   tasks/                  # Task definitions (TOML) — what to run
-    swarm.toml            #   Stack operations: deploy, remove, cleanup, validate
+    swarm.toml            #   Stack operations: deploy, remove, cleanup
     site.toml             #   Cluster-wide: deploy-infra, deploy-apps, drain, registry
     sops.toml             #   Secrets: init, encrypt, edit, status
-  lib/swarm/              # Python package — how tasks work
-    _*.py                 #   Internal: cli helper, docker CLI, SSH, SOPS, compose, output, stack resolution
-    *.py                  #   User-facing: deploy, convergence, status, validate, cleanup, nodes, etc.
-  tests/                  # Pytest suite (mocked Docker/SSH, no live cluster needed)
+    validate.toml         #   Validation: all (pre-commit), pytest, ruff, compose
+  python/                 # Self-contained Python project
+    pyproject.toml        #   Pytest and ruff config
+    swarm/                #   Python package — how tasks work
+      _*.py               #     Internal: cli helper, docker CLI, SSH, SOPS, compose, output, stack resolution
+      *.py                #     User-facing: deploy, convergence, status, validate, cleanup, nodes, etc.
+    tests/                #   Pytest suite (mocked Docker/SSH, no live cluster needed)
 ```
 
 Three layers split the work cleanly:
@@ -28,9 +31,11 @@ Python only ever operates on **one stack at a time**. Multi-stack iteration live
 
 The Python package centralizes Docker CLI and SSH calls through `_docker.py` and `_ssh.py`, making the logic testable without a live cluster. Mise provides the environment (`PYTHONPATH`, SOPS keys, Docker host) and the task interface (`mise run swarm:deploy ...`).
 
+Inline tasks run under strict bash (`errexit`, `nounset`, `pipefail`) via `[task_config].shell` in the base config. Since mise 2026.7.14 the old `[settings]` shell args are global-only and ignored in project config, so `task_config.shell` is the committed replacement. Multi-line tasks with a `#!/usr/bin/env bash` shebang bypass this default entirely: they run plain bash without strict flags and handle failures explicitly.
+
 ## Environment Profiles
 
-Dev/prod separation uses mise's `MISE_ENV` profile system. Dev is default (set in `.config/miserc.toml`).
+Dev/prod separation uses mise's `MISE_ENV` profile system. Dev is default (set in the gitignored `.miserc.toml`).
 
 ```bash
 # Dev (default) — accepts bare name, dir name, or full path
@@ -243,7 +248,7 @@ Stacks needing external resources use `init-` prefixed sidecar services. These r
 
 ## Python Library
 
-Task logic lives in the `swarm` Python package at `.mise/lib/swarm/`, invoked by mise tasks as `python3 -m swarm.<module>`. `PYTHONPATH` is set in mise `[env]` to `.mise/lib`.
+Task logic lives in the `swarm` Python package at `.mise/python/swarm/`, invoked by mise tasks as `python3 -m swarm.<module>`. `PYTHONPATH` is set in mise `[env]` to `.mise/python`.
 
 ### Internal modules (prefixed `_`)
 
@@ -265,7 +270,7 @@ Task logic lives in the `swarm` Python package at `.mise/lib/swarm/`, invoked by
 | `convergence` | (library + CLI) | Convergence polling + replica-health verification in one call. Polling uses exponential backoff (2s initial → `max_interval`, 1.5x ramp). CLI: `python3 -m swarm.convergence <stack> [--timeout N] [--max-interval N]` |
 | `remove` | `swarm:remove` | Stack removal with drain wait |
 | `status` | `status` | Cluster node and stack health display. Walks `find_namespaces()` for stack discovery; O(N) service-stack matching via `partition("_")` (assumes no underscores in stack names) |
-| `validate` | `swarm:validate` | Compose validation, config-file existence check (from rendered JSON), and bind-mount path checks (parallel SSH; YAML+JSON cached per file) |
+| `validate` | `validate:compose` | Compose validation, config-file existence check (from rendered JSON), and bind-mount path checks (parallel SSH; YAML+JSON cached per file) |
 | `cleanup` | `swarm:cleanup` | Three phases: (1) prune unused versioned secrets/configs, (2) prune orphaned swarm-scoped overlay networks (excludes `ingress`), (3) `docker system prune --all --volumes --force` per node (parallel SSH). All phases use Docker's "in use" check as the safety net — items currently attached to running services are skipped. |
 | `networks` | `swarm:init-networks` | Walks every stack's rendered compose for `networks.*.external == true` entries and creates them on the cluster. `SWARM_INTERNAL_NETWORKS` (space-separated) controls which get `--internal`. `SWARM_OVERLAY_MTU` sets the VXLAN MTU at creation time |
 | `nodes` | (library) | Swarm node discovery and placement constraint matching |
@@ -276,11 +281,11 @@ Site-wide tasks (`site:deploy-infra`, `site:deploy-apps`, `site:drain`) are pure
 
 ### Testing
 
-Tests live at `.mise/tests/`, configured via `.config/pyproject.toml`. All Docker/SSH calls are mocked at the subprocess boundary — no live cluster required.
+Tests live at `.mise/python/tests/`. All Docker/SSH calls are mocked at the subprocess boundary — no live cluster required.
 
 ```bash
-pytest          # run via mise env
-mise run validate   # includes pytest via pre-commit hook
+mise run pytest     # alias for validate:pytest
+mise run validate   # alias for validate:all (all pre-commit hooks)
 ```
 
 ### Error handling
@@ -308,11 +313,11 @@ Pre-commit hooks run on every commit (`.config/pre-commit.yaml`):
 | `check-case-conflict` | All files | Case-insensitive filesystem collision detection |
 | `yamllint` | YAML (excl `.secrets/`) | Style linting |
 | `markdownlint-cli2` | Markdown | Documentation linting |
-| `taplo-lint` | TOML | TOML linting |
-| `ruff` | Python | Linting (unused imports, bugs, style) |
-| `pytest` | Always | Python test suite |
+| `tombi-lint`/`tombi-format` | TOML | TOML linting |
+| `ruff` | `.mise/` Python | Linting (unused imports, bugs, style) via `validate:ruff` |
+| `pytest` | Always | Python test suite via `validate:pytest` |
 | `check-secrets-encrypted` | `secrets.env`, `.secrets/*.yaml` | Verify SOPS markers present |
-| `compose-validate` | `compose.yml`, `anchors.yml` | Full Swarm compatibility via `swarm:validate` |
+| `compose-validate` | Stack yml files, `config/`, `anchors.yml` | Full Swarm compatibility via `validate:compose` |
 | `gitleaks` | All files | Secret detection |
 
 `compose-validate` runs the full pipeline (anchors + compose config + fixups + `docker stack config`) and checks bind mount paths on target nodes.

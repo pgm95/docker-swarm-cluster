@@ -1,7 +1,6 @@
 """Tests for swarm.secrets — compose-JSON-driven secret/config validation."""
 
 import pytest
-
 from swarm import SecretError, ValidationError
 from swarm.secrets import (
     create_versioned_secrets,
@@ -82,7 +81,7 @@ class TestValidateRequiredSecrets:
 class TestCreateVersionedSecrets:
     def test_creates_from_stack_secrets(self, monkeypatch):
         compose = _compose(secrets={"db_pass": {"name": "db_pass_v1", "external": True}})
-        monkeypatch.setattr("swarm.secrets.secret_list", lambda: [])
+        monkeypatch.setattr("swarm.secrets.secret_list", list)
         created = []
         monkeypatch.setattr("swarm.secrets.secret_create", lambda n, v: created.append((n, v)))
         result = create_versioned_secrets(
@@ -95,7 +94,7 @@ class TestCreateVersionedSecrets:
 
     def test_creates_from_env(self, monkeypatch):
         compose = _compose(secrets={"global_cf": {"name": "global_cf_v1", "external": True}})
-        monkeypatch.setattr("swarm.secrets.secret_list", lambda: [])
+        monkeypatch.setattr("swarm.secrets.secret_list", list)
         created = []
         monkeypatch.setattr("swarm.secrets.secret_create", lambda n, v: created.append((n, v)))
         result = create_versioned_secrets(
@@ -109,7 +108,7 @@ class TestCreateVersionedSecrets:
     def test_stack_secrets_take_precedence(self, monkeypatch):
         """When the same name is in both stack secrets and env, stack wins."""
         compose = _compose(secrets={"db_pass": {"name": "db_pass_v1", "external": True}})
-        monkeypatch.setattr("swarm.secrets.secret_list", lambda: [])
+        monkeypatch.setattr("swarm.secrets.secret_list", list)
         created = []
         monkeypatch.setattr("swarm.secrets.secret_create", lambda n, v: created.append((n, v)))
         create_versioned_secrets(
@@ -132,7 +131,7 @@ class TestCreateVersionedSecrets:
     def test_ignores_unneeded_stack_keys(self, monkeypatch):
         """secrets.env may have keys the compose doesn't reference; ignore them."""
         compose = _compose(secrets={"db_pass": {"name": "db_pass_v1", "external": True}})
-        monkeypatch.setattr("swarm.secrets.secret_list", lambda: [])
+        monkeypatch.setattr("swarm.secrets.secret_list", list)
         created = []
         monkeypatch.setattr("swarm.secrets.secret_create", lambda n, v: created.append((n, v)))
         create_versioned_secrets(

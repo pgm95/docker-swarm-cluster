@@ -206,7 +206,7 @@ class TestCollectBindMounts:
         result = collect_bind_mounts(Path("fake/ns/fake-stack/compose.yml"), SAMPLE_NODES)
         # No constraints = matches first node
         assert len(result) == 1
-        assert "/mnt/data" in list(result.values())[0]
+        assert "/mnt/data" in next(iter(result.values()))
 
 
 class TestCheckPathsOnNode:

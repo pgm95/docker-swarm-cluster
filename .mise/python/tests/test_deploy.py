@@ -4,7 +4,6 @@ import re
 from pathlib import Path
 
 import pytest
-
 from swarm import SwarmError
 from swarm.deploy import (
     _prepare_stack,

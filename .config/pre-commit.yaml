@@ -29,31 +29,36 @@ repos:
         exclude: ^\.secrets/
 
   - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.21.0
+    rev: v0.23.2
     hooks:
       - id: markdownlint-cli2
         args: [--config, .config/.markdownlint-cli2.jsonc, --fix]
 
+  - repo: https://github.com/tombi-toml/tombi-pre-commit
+    rev: v1.2.7
+    hooks:
+      - id: tombi-format
+        types: [toml]
+        exclude: ^stacks/
+      - id: tombi-lint
+        types: [toml]
+        exclude: ^stacks/
+
   - repo: local
     hooks:
 
-      - id: taplo-lint
-        name: taplo lint
-        entry: mise x -- taplo lint
-        language: system
-        types: [toml]
-
       - id: ruff
-        name: ruff lint
-        entry: mise x -- ruff check
+        name: ruff fix
+        entry: mise run validate:ruff -- --fix
         language: system
-        types: [python]
+        files: ^\.mise/python/
+        pass_filenames: false
 
       - id: pytest
         name: Run Python tests
-        entry: mise x -- pytest
-        language: system
+        entry: mise run validate:pytest
         always_run: true
+        language: system
         pass_filenames: false
 
       - id: check-secrets-encrypted
@@ -64,7 +69,7 @@ repos:
 
       - id: compose-validate
         name: Validate compose files
-        entry: mise run swarm:validate
+        entry: mise run validate:compose
         language: system
-        files: ^stacks/(.*/compose\.yml|_shared/anchors\.yml)$
+        files: ^stacks/(.*/(compose|configs|secrets)\.yml|.*/config/|_shared/anchors\.yml)
         pass_filenames: false

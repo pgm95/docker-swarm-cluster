@@ -43,7 +43,7 @@ def run(
     """
     cmd = ["docker", *args]
     log.debug("$ %s", " ".join(cmd))
-    result = subprocess.run(cmd, capture_output=capture, text=True, input=input, env=docker_env())
+    result = subprocess.run(cmd, capture_output=capture, text=True, input=input, env=docker_env(), check=False)
     if check and result.returncode != 0:
         raise DockerError(cmd, result.returncode, result.stderr.strip())
     return result

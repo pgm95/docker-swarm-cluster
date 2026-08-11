@@ -3,9 +3,14 @@
 from pathlib import Path
 
 import pytest
-
 from swarm import SwarmError
-from swarm._stack import find_namespaces, find_stacks, resolve_stack_path, stack_name, stacks_root
+from swarm._stack import (
+    find_namespaces,
+    find_stacks,
+    resolve_stack_path,
+    stack_name,
+    stacks_root,
+)
 
 
 class TestStacksRoot:

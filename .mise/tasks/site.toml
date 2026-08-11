@@ -50,4 +50,4 @@ done
 ["site:registry"]
 description = "Login all swarm nodes to the private registry"
 raw_args = true
-run = 'python3 -m swarm.registry_auth'
+run = "python3 -m swarm.registry_auth"
