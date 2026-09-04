@@ -71,11 +71,10 @@ services:
         - "traefik.http.routers.dawarich.rule=Host(`maps.${DOMAIN_PRIVATE}`)"
         - "traefik.http.routers.dawarich.entrypoints=websecure"
         - "traefik.http.services.dawarich.loadbalancer.server.port=3000"
-        - "homepage.group=Applications"
+        - "homepage.group=no-widget"
         - "homepage.name=Dawarich"
         - "homepage.icon=dawarich"
         - "homepage.href=https://maps.${DOMAIN_PRIVATE}"
-        - "homepage.description=Location History"
       mode: replicated
       replicas: 1
       resources:

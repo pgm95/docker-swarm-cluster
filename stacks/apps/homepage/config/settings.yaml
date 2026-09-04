@@ -28,19 +28,20 @@ layout:
     columns: 7
     target: _blank
     iconsOnly: false
+  no-widget:
+    header: false
+    style: row
+    columns: 5
+  Media:
+    header: false
+    style: row
+    columns: 4
   External:
     header: false
     style: columns
-    # columns: 4
   Infrastructure:
     header: false
     style: columns
-    # columns: 4
   Applications:
     header: false
     style: columns
-    # columns: 4
-  Media:
-    header: false
-    style: columns
-    # columns: 4

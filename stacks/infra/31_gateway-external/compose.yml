@@ -119,10 +119,9 @@ services:
         order: stop-first
       labels:
         - "crowdsec.enable=true"
-        - "homepage.group=Infrastructure"
+        - "homepage.group=no-widget"
         - "homepage.name=Traefik External"
         - "homepage.icon=traefik"
-        - "homepage.description=Public Reverse Proxy"
       mode: replicated
       replicas: 1
       resources:
@@ -191,7 +190,6 @@ services:
         - "homepage.name=Crowdsec"
         - "homepage.icon=crowdsec"
         - "homepage.group=Infrastructure"
-        - "homepage.description=Cyber threat intelligence"
         - "homepage.href=https://app.crowdsec.net/security-engines"
         - "homepage.widget.type=crowdsec"
         - "homepage.widget.username=${CROWDSEC_HOMEPAGE_USERNAME}"

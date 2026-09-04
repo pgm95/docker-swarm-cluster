@@ -79,7 +79,6 @@ services:
         - "homepage.name=Mealie"
         - "homepage.icon=mealie"
         - "homepage.href=https://recipes.${DOMAIN_PUBLIC}"
-        - "homepage.description=Recipe Manager"
         - "homepage.widget.type=mealie"
         - "homepage.widget.url=https://recipes.${DOMAIN_PUBLIC}"
         - "homepage.widget.key={{HOMEPAGE_VAR_MEALIE_KEY}}"

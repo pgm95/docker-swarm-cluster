@@ -49,11 +49,10 @@ services:
         - "traefik.http.routers.gatus.rule=Host(`status.${DOMAIN_PRIVATE}`)"
         - "traefik.http.routers.gatus.entrypoints=websecure"
         - "traefik.http.services.gatus.loadbalancer.server.port=8080"
-        - "homepage.group=Infrastructure"
+        - "homepage.group=no-widget"
         - "homepage.name=Gatus"
         - "homepage.icon=gatus"
         - "homepage.href=https://status.${DOMAIN_PRIVATE}"
-        - "homepage.description=Status & Monitoring"
 
   init-db:
     image: postgres:17-alpine

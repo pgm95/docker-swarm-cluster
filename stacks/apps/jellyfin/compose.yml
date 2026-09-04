@@ -56,7 +56,6 @@ services:
         - "homepage.name=Jellyfin"
         - "homepage.icon=jellyfin"
         - "homepage.href=https://jellyfin.${DOMAIN_PRIVATE}"
-        - "homepage.description=Movies & TV"
         - "homepage.widget.type=jellyfin"
         - "homepage.widget.version=2"
         - "homepage.widget.url=https://jellyfin.${DOMAIN_PRIVATE}"

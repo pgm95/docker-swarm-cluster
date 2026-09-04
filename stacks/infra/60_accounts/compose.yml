@@ -76,7 +76,6 @@ services:
         - "homepage.name=Authentik"
         - "homepage.icon=authentik"
         - "homepage.group=Infrastructure"
-        - "homepage.description=Identity Provider"
         - "homepage.href=https://auth.${DOMAIN_PUBLIC}"
         - "homepage.widget.type=authentik"
         - "homepage.widget.version=2"
@@ -212,11 +211,10 @@ services:
         - "traefik.http.routers.lldap.rule=Host(`lldap.${DOMAIN_PRIVATE}`)"
         - "traefik.http.routers.lldap.entrypoints=websecure"
         - "traefik.http.services.lldap.loadbalancer.server.port=17170"
-        - "homepage.group=Infrastructure"
+        - "homepage.group=no-widget"
         - "homepage.name=LLDAP"
         - "homepage.icon=lldap-dark"
         - "homepage.href=https://lldap.${DOMAIN_PRIVATE}"
-        - "homepage.description=LDAP Server"
 
   init-db:
     image: postgres:17-alpine

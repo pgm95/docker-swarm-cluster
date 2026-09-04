@@ -34,11 +34,10 @@ services:
         - "traefik.http.routers.pinchflat.rule=Host(`pinchflat.${DOMAIN_PRIVATE}`)"
         - "traefik.http.routers.pinchflat.entrypoints=websecure"
         - "traefik.http.services.pinchflat.loadbalancer.server.port=8945"
-        - "homepage.group=Applications"
+        - "homepage.group=no-widget"
         - "homepage.name=Pinchflat"
         - "homepage.icon=pinchflat"
         - "homepage.href=https://pinchflat.${DOMAIN_PRIVATE}"
-        - "homepage.description=YouTube Media Manager"
       mode: replicated
       replicas: 1
       resources:

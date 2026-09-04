@@ -1,9 +1,46 @@
 ---
 - External:
+    - Proxmox NUC:
+        href: https://nuc.lan.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}:8006
+        icon: proxmox-light.svg
+        widget:
+          type: proxmox
+          url: https://nuc.lan.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}:8006
+          username: {{HOMEPAGE_VAR_PVE_NUC_USER}}
+          password: {{HOMEPAGE_VAR_PVE_NUC_PASS}}
+          fields: ["vms", "lxc", "resources.cpu", "resources.mem"]
+    - Proxmox NAS:
+        href: https://nas.lan.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}:8006
+        icon: proxmox-light.svg
+        widget:
+          type: proxmox
+          url: https://nas.lan.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}:8006
+          username: {{HOMEPAGE_VAR_PVE_NAS_USER}}
+          password: {{HOMEPAGE_VAR_PVE_NAS_PASS}}
+          fields: ["vms", "lxc", "resources.cpu", "resources.mem"]
+    - OpenWRT:
+        href: https://luci.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}
+        icon: openwrt.svg
+        widget:
+          type: openwrt
+          url: https://luci.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}
+          username: root
+          password: {{HOMEPAGE_VAR_MAIN_PASS}}
+          # interfaceName: eth1
+    - AdGuard Home:
+        href: https://luci.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}/adguard/#logs
+        icon: adguard-home.svg
+        widget:
+          type: adguard
+          url: https://luci.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}/adguard
+          username: {{HOMEPAGE_VAR_MAIN_USER}}
+          password: {{HOMEPAGE_VAR_MAIN_PASS}}
+          fields: ["queries", "blocked", "latency"]
+
+- Applications:
     - Home Assistant:
         href: https://home.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}
         icon: home-assistant.svg
-        description: Smart Home Automation
         widget:
           type: homeassistant
           url: http://hass.home.arpa:8123
@@ -16,51 +53,8 @@
               label: Lights On
             - state: vacuum.kitchen_roomba
               label: Roomba
-    - Proxmox NUC:
-        href: https://nuc.lan.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}:8006
-        icon: proxmox-light.svg
-        description: Proxmox Virtual Environment
-        widget:
-          type: proxmox
-          url: https://nuc.lan.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}:8006
-          username: {{HOMEPAGE_VAR_PVE_NUC_USER}}
-          password: {{HOMEPAGE_VAR_PVE_NUC_PASS}}
-          fields: ["vms", "lxc", "resources.cpu", "resources.mem"]
-    - Proxmox NAS:
-        href: https://nas.lan.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}:8006
-        icon: proxmox-light.svg
-        description: Proxmox Virtual Environment
-        widget:
-          type: proxmox
-          url: https://nas.lan.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}:8006
-          username: {{HOMEPAGE_VAR_PVE_NAS_USER}}
-          password: {{HOMEPAGE_VAR_PVE_NAS_PASS}}
-          fields: ["vms", "lxc", "resources.cpu", "resources.mem"]
-    - OpenWRT:
-        href: https://luci.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}
-        icon: openwrt.svg
-        description: "GL-MT6000 Router"
-        widget:
-          type: openwrt
-          url: https://luci.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}
-          username: root
-          password: {{HOMEPAGE_VAR_MAIN_PASS}}
-          # interfaceName: eth1
-    - AdGuard Home:
-        href: https://luci.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}/adguard/#logs
-        icon: adguard-home.svg
-        description: Flint
-        widget:
-          type: adguard
-          url: https://luci.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}/adguard
-          username: {{HOMEPAGE_VAR_MAIN_USER}}
-          password: {{HOMEPAGE_VAR_MAIN_PASS}}
-          fields: ["queries", "blocked", "latency"]
-
-- Applications:
     - Gluetun:
         icon: gluetun.svg
-        description: Servarr Stack VPN
         widget:
           type: gluetun
           version: 2
@@ -72,7 +66,6 @@
     - qBittorrent:
         href: https://torrent.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}
         icon: qbittorrent.svg
-        description: BitTorrent Client
         widget:
           type: qbittorrent
           enableLeechSize: false

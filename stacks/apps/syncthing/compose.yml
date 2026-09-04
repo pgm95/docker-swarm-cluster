@@ -44,7 +44,6 @@ services:
         - "homepage.name=Syncthing"
         - "homepage.icon=syncthing"
         - "homepage.href=https://syncthing.${DOMAIN_PRIVATE}"
-        - "homepage.description=File Synchronization"
         - "homepage.widget.type=syncthing"
         - "homepage.widget.url=https://syncthing.${DOMAIN_PRIVATE}"
         - "homepage.widget.key=${SYNCTHING_API_KEY}"

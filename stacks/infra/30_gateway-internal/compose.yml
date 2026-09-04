@@ -117,7 +117,6 @@ services:
         - "homepage.name=Traefik Internal"
         - "homepage.icon=traefik"
         - "homepage.href=https://traefik.${DOMAIN_PRIVATE}"
-        - "homepage.description=LAN / Tailscale Reverse Proxy"
         - "homepage.widget.type=traefik"
         - "homepage.widget.url=https://traefik.${DOMAIN_PRIVATE}"
       mode: replicated

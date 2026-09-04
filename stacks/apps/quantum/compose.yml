@@ -48,11 +48,10 @@ services:
         - "traefik.http.routers.quantum.rule=Host(`files.${DOMAIN_PRIVATE}`)"
         - "traefik.http.routers.quantum.entrypoints=websecure"
         - "traefik.http.services.quantum.loadbalancer.server.port=8080"
-        - "homepage.group=Applications"
+        - "homepage.group=no-widget"
         - "homepage.name=Quantum"
         - "homepage.icon=filebrowser-quantum"
         - "homepage.href=https://files.${DOMAIN_PRIVATE}"
-        - "homepage.description=File Management"
       mode: replicated
       replicas: 1
       resources:

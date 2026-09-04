@@ -86,7 +86,6 @@ services:
         - "homepage.name=Immich"
         - "homepage.icon=immich"
         - "homepage.href=https://immich.${DOMAIN_PRIVATE}"
-        - "homepage.description=Photo Management"
         - "homepage.widget.type=immich"
         - "homepage.widget.version=2"
         - "homepage.widget.url=https://immich.${DOMAIN_PRIVATE}"

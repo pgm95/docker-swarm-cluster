@@ -53,7 +53,6 @@ services:
         - "homepage.name=Prometheus"
         - "homepage.icon=prometheus"
         - "homepage.href=https://prometheus.${DOMAIN_PRIVATE}"
-        - "homepage.description=Metrics Collection"
         - "homepage.widget.type=prometheus"
         - "homepage.widget.url=http://prometheus:9090"
 
@@ -156,16 +155,10 @@ services:
         - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN_PRIVATE}`)"
         - "traefik.http.routers.grafana.entrypoints=websecure"
         - "traefik.http.services.grafana.loadbalancer.server.port=3000"
-        - "homepage.group=Infrastructure"
+        - "homepage.group=no-widget"
         - "homepage.name=Grafana"
         - "homepage.icon=grafana"
         - "homepage.href=https://grafana.${DOMAIN_PRIVATE}"
-        - "homepage.description=Dashboards & Visualization"
-        # - "homepage.widget.type=grafana"
-        # - "homepage.widget.version=2"
-        # - "homepage.widget.url=https://grafana.${DOMAIN_PRIVATE}"
-        # - "homepage.widget.username={{HOMEPAGE_VAR_GRAFANA_USER}}"
-        # - "homepage.widget.password={{HOMEPAGE_VAR_GRAFANA_PASS}}"
 
   init-db:
     image: postgres:17-alpine
