@@ -1,0 +1,7 @@
+configs:
+  init_db_entrypoint:
+    name: dispatcharr_init_db_entrypoint_${DEPLOY_VERSION}
+    file: ./config/bootstrap/init-db.sh
+  epg_channels:
+    name: dispatcharr_epg_channels_${DEPLOY_VERSION}
+    file: ./config/epg/channels.xml

@@ -1,0 +1,210 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+include:
+  - configs.yml
+
+services:
+  web:
+    image: ghcr.io/dispatcharr/dispatcharr:0.30.0
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    environment:
+      - DISPATCHARR_ENV=modular
+      - TZ=${GLOBAL_TZ_LOCAL}
+      - PUID=${GLOBAL_NONROOT_PUID}
+      - PGID=${GLOBAL_NONROOT_PGID}
+      - DISPATCHARR_LOG_LEVEL=info
+      # PostgreSQL (central)
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=dispatcharr
+      - POSTGRES_USER=dispatcharr
+      - POSTGRES_PASSWORD=${DISPATCHARR_POSTGRES_PASSWORD}
+      # Redis (stack-local)
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - default
+      - infra_gw-internal
+      - infra_postgres
+    volumes:
+      - dispatcharr-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:9191/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    deploy:
+      <<: [*place-gpu, *deploy]
+      update_config:
+        order: stop-first
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.internal=true"
+        - "traefik.http.routers.dispatcharr.rule=Host(`tv.${DOMAIN_PRIVATE}`)"
+        - "traefik.http.routers.dispatcharr.entrypoints=websecure"
+        - "traefik.http.services.dispatcharr.loadbalancer.server.port=9191"
+        - "homepage.group=Media"
+        - "homepage.name=Dispatcharr"
+        - "homepage.icon=dispatcharr"
+        - "homepage.href=https://tv.${DOMAIN_PRIVATE}"
+        - "homepage.widget.type=dispatcharr"
+        - "homepage.widget.url=https://tv.${DOMAIN_PRIVATE}"
+        - "homepage.widget.username=${GLOBAL_USERNAME}"
+        - "homepage.widget.password=${GLOBAL_PASSWORD}"
+        - "homepage.widget.enableActiveStreams=false"
+        - 'homepage.widget.fields=["channels", "streams"]'
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M
+
+  celery:
+    image: ghcr.io/dispatcharr/dispatcharr:0.30.0
+    entrypoint: ["/app/docker/entrypoint.celery.sh"]
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    environment:
+      - DISPATCHARR_ENV=modular
+      - TZ=${GLOBAL_TZ_LOCAL}
+      - DISPATCHARR_LOG_LEVEL=info
+      - DISPATCHARR_PORT=9191
+      - DJANGO_SETTINGS_MODULE=dispatcharr.settings
+      - PYTHONUNBUFFERED=1
+      # PostgreSQL (central)
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=dispatcharr
+      - POSTGRES_USER=dispatcharr
+      - POSTGRES_PASSWORD=${DISPATCHARR_POSTGRES_PASSWORD}
+      # Redis (stack-local)
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - default
+      - infra_postgres
+    volumes:
+      - dispatcharr-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'celery.*worker'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+    deploy:
+      <<: [*place-gpu, *deploy]
+      update_config:
+        order: stop-first
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M
+
+  redis:
+    image: redis:7.4-alpine
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    # Broker, channel layer and cache only. Nothing worth persisting; the web
+    # entrypoint flushes stale state on every start anyway.
+    command: >
+      redis-server
+      --timeout 300
+      --save ""
+      --appendonly no
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      <<: [*place-gpu, *deploy]
+      update_config:
+        order: stop-first
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-medium
+
+  epg:
+    image: ghcr.io/iptv-org/epg:master
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    # Grabs the XMLTV guide for the channels in channels.xml and serves it on :3000.
+    # Runs once at startup, then on CRON_SCHEDULE. No volume: the guide is regenerated.
+    environment:
+      # The parser reads page times in the process timezone. elcinema.com is an
+      # Egyptian site and shows Cairo local time, so TZ must be Africa/Cairo.
+      - TZ=Africa/Cairo
+      - CRON_SCHEDULE=0 3,15 * * *
+      - DAYS=4
+      # elcinema.com rate-limits (429) at two concurrent requests. One at a time, 2s apart.
+      - MAX_CONNECTIONS=1
+      - DELAY=2000
+      - RUN_AT_STARTUP=true
+    configs:
+      - source: epg_channels
+        target: /epg/public/channels.xml
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/guide.xml | grep -q '<programme'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+    deploy:
+      <<: [*place-gpu, *deploy]
+      update_config:
+        order: start-first
+      mode: replicated
+      replicas: 1
+      # Loading the iptv-org API data peaks at ~660 MB regardless of channel count.
+      resources:
+        <<: *resources-huge
+
+  init-db:
+    image: postgres:17-alpine
+    entrypoint: ["/bin/sh", "/init-db-entrypoint.sh"]
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    environment:
+      - PROVISIONER_USER=${GLOBAL_POSTGRES_PROVISIONER_USER}
+      - PROVISIONER_PASSWORD=${GLOBAL_POSTGRES_PROVISIONER_PASSWORD}
+      - DISPATCHARR_DB_PASSWORD=${DISPATCHARR_POSTGRES_PASSWORD}
+    configs:
+      - source: init_db_entrypoint
+        target: /init-db-entrypoint.sh
+    networks:
+      - infra_postgres
+    healthcheck:
+      test: ["NONE"]
+    deploy:
+      <<: [*place-main, *deploy-init]
+      mode: replicated
+      replicas: 1
+      resources:
+        <<: *resources-tiny
+
+volumes:
+  dispatcharr-data:
+
+networks:
+  infra_gw-internal:
+    external: true
+  infra_postgres:
+    external: true
