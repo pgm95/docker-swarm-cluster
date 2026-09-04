@@ -34,6 +34,13 @@ Middleware Chain, in order: security-headers -> geoblock -> crowdsec
 - Log acquisition reads Traefik swarm logs via central socket-proxy
 - Postgres-backed for persistent decisions across restarts
 - Wrapper entrypoint waits for Postgres overlay DNS before starting
+- A dedicated LAPI machine for the homepage widget is registered on every container
+  start through the image's `AGENT_USERNAME` / `AGENT_PASSWORD` path (idempotent
+  `cscli machines add --force`, no credentials file written). The container's own
+  `localhost` agent is disposable: the entrypoint regenerates it with a random password
+  whenever its credentials file and the machine table disagree, so no external consumer
+  may borrow it. LAPI has no read-only machine type and bouncer keys cannot read alerts,
+  so the widget credential is write-capable by necessity
 
 ### Self-Ban Guard
 

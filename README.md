@@ -87,6 +87,10 @@ Docker subtracts 50 bytes for VXLAN overhead from the configured value, yielding
 VXLAN interface, which produces 1280-byte UDP packets on the wire (exact Tailscale MTU fit).
 Docker's `daemon.json` `"mtu"` does not affect overlays.
 
+Each on-prem node runs tailscaled on a unique UDP port (managed in the infrastructure repo).
+Behind one NAT, nodes sharing the default port collide on the external port, advertise wrong
+endpoints, and fall back to relayed paths. Unique ports keep every mapping stable and connections direct.
+
 ### Dual Ingress Gateways
 
 Two separate Traefik instances serve different access patterns:
@@ -116,7 +120,9 @@ Secrets are organized in three layers by scope:
 
 Secrets reach containers as either **versioned Swarm secrets** (mounted at `/run/secrets/`,
 triggered by `${DEPLOY_VERSION}` in `secrets.yml`) or **env var injection** (compose
-interpolation). Multi-line values use the `_B64` suffix convention for base64 encoding.
+interpolation). Credentials that another stack consumes through service labels (dashboard
+widgets) stay in the owning stack and are interpolated into its labels at deploy time; the
+consumer holds no copy. Multi-line values use the `_B64` suffix convention for base64 encoding.
 Versioned secrets are immutable: each deploy creates new ones with a unique suffix; old
 versions persist until `swarm:cleanup`.
 

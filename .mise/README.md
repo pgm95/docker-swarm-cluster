@@ -140,7 +140,7 @@ The `<stack>` argument accepts a bare stack name (`metrics`), a directory name (
 
 A single Python invocation runs the full per-stack pipeline in-process:
 
-1. **Prepare** — sets `STACK_NAME`/`STACK_PATH`/`DEPLOY_VERSION`, decrypts `secrets.env` once into env vars, discovers `build/<service>/` directories and builds+pushes images.
+1. **Prepare** — sets `STACK_NAME`/`STACK_PATH`/`DEPLOY_VERSION`, decrypts `secrets.env` once into env vars (these feed every `${VAR}` in the compose document, `deploy.labels` included), discovers `build/<service>/` directories and builds+pushes images.
 2. **Render** — concatenates the shared anchors file (if any) with the stack's `compose.yml` and runs `docker compose config` to produce both the YAML form (for `docker stack deploy -c -`) and the JSON form (for discovery).
 3. **Discover from rendered JSON** — walks the document for:
     - `secrets.<x>.name` ending in `_<DEPLOY_VERSION>` → versioned Docker secrets to create
@@ -320,7 +320,7 @@ Pre-commit hooks run on every commit (`.config/pre-commit.yaml`):
 | `compose-validate` | Stack yml files, `config/`, `anchors.yml` | Full Swarm compatibility via `validate:compose` |
 | `gitleaks` | All files | Secret detection |
 
-`compose-validate` runs the full pipeline (anchors + compose config + fixups + `docker stack config`) and checks bind mount paths on target nodes.
+`compose-validate` runs the full pipeline (anchors + compose config + fixups + `docker stack config`) and checks bind mount paths on target nodes. It does not decrypt `secrets.env`, so `${VAR}` references to stack-local secrets render empty during validation; compose warns and the check still passes.
 
 ## Adding a New Stack
 
