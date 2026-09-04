@@ -98,7 +98,7 @@ services:
         - "homepage.description=Movie Management"
         - "homepage.widget.type=radarr"
         - "homepage.widget.url=https://radarr.${DOMAIN_PRIVATE}"
-        - "homepage.widget.key={{HOMEPAGE_VAR_RADARR_KEY}}"
+        - "homepage.widget.key=${RADARR__AUTH__APIKEY}"
         - "homepage.widget.enableQueue=false"
         - 'homepage.widget.fields=["wanted", "queued", "movies"]'
       mode: replicated
@@ -150,7 +150,7 @@ services:
         - "homepage.description=TV Show Management"
         - "homepage.widget.type=sonarr"
         - "homepage.widget.url=https://sonarr.${DOMAIN_PRIVATE}"
-        - "homepage.widget.key={{HOMEPAGE_VAR_SONARR_KEY}}"
+        - "homepage.widget.key=${SONARR__AUTH__APIKEY}"
         - "homepage.widget.enableQueue=false"
         - 'homepage.widget.fields=["wanted", "queued", "series"]'
       mode: replicated
@@ -202,7 +202,7 @@ services:
         - "homepage.description=Indexer Management"
         - "homepage.widget.type=prowlarr"
         - "homepage.widget.url=https://prowlarr.${DOMAIN_PRIVATE}"
-        - "homepage.widget.key={{HOMEPAGE_VAR_PROWLARR_KEY}}"
+        - "homepage.widget.key=${PROWLARR__AUTH__APIKEY}"
         - 'homepage.widget.fields=["numberOfGrabs", "numberOfQueries"]'
       mode: replicated
       replicas: 1

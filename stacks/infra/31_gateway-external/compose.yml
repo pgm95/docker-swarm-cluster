@@ -144,6 +144,8 @@ services:
       - BOUNCER_KEY_TRAEFIK=${BOUNCER_KEY_TRAEFIK}
       - CTI_KEY=${CROWDSEC_CTI_KEY}
       - CROWDSEC_POSTGRES_PASSWORD=${CROWDSEC_POSTGRES_PASSWORD}
+      - AGENT_PASSWORD=${CROWDSEC_HOMEPAGE_PASSWORD}
+      - AGENT_USERNAME=${CROWDSEC_HOMEPAGE_USERNAME}
       # Uncomment these when redeploying frequently to avoid CAPI rate-limits
       # - NO_HUB_UPGRADE=true
       # - DISABLE_ONLINE_API=true
@@ -192,8 +194,8 @@ services:
         - "homepage.description=Cyber threat intelligence"
         - "homepage.href=https://app.crowdsec.net/security-engines"
         - "homepage.widget.type=crowdsec"
-        - "homepage.widget.username={{HOMEPAGE_VAR_CROWDSEC_USER}}"
-        - "homepage.widget.password={{HOMEPAGE_VAR_CROWDSEC_PASS}}"
+        - "homepage.widget.username=${CROWDSEC_HOMEPAGE_USERNAME}"
+        - "homepage.widget.password=${CROWDSEC_HOMEPAGE_PASSWORD}"
         - "homepage.widget.url=http://crowdsec:8085"
         - 'homepage.widget.fields=["alerts", "bans"]'
       mode: replicated
