@@ -6,7 +6,7 @@ include:
 
 services:
   app:
-    image: freikin/dawarich:latest
+    image: freikin/dawarich:1.14.2
     logging:
       <<: *logging
     stop_grace_period: 30s
@@ -14,7 +14,6 @@ services:
     command: ['bin/rails', 'server', '-p', '3000', '-b', '::']
     environment:
       # Core
-      - DISABLE_TELEMETRY=true
       - RAILS_ENV=production
       - SECRET_KEY_BASE=${SECRET_KEY_BASE_DAWARICH}
       - RAILS_LOG_TO_STDOUT=true
@@ -54,7 +53,6 @@ services:
       - default
       - infra_gw-internal
     volumes:
-      - app-public:/var/app/public
       - app-watched:/var/app/tmp/imports/watched
       - app-storage:/var/app/storage
     healthcheck:
@@ -84,7 +82,7 @@ services:
         <<: *resources-huge
 
   sidekiq:
-    image: freikin/dawarich:latest
+    image: freikin/dawarich:1.14.2
     logging:
       <<: *logging
     stop_grace_period: 30s
@@ -92,7 +90,6 @@ services:
     command: ['sidekiq']
     environment:
       # Core
-      - DISABLE_TELEMETRY=true
       - RAILS_ENV=production
       - SECRET_KEY_BASE=${SECRET_KEY_BASE_DAWARICH}
       - RAILS_LOG_TO_STDOUT=true
@@ -112,7 +109,6 @@ services:
       - BACKGROUND_PROCESSING_CONCURRENCY=12
       - STORE_GEODATA=true
       - PROMETHEUS_EXPORTER_ENABLED=false
-      - PROMETHEUS_EXPORTER_HOST=app
       - PROMETHEUS_EXPORTER_PORT=9394
       # Geocoding
       - PHOTON_API_HOST=photon.dawarich.app
@@ -130,7 +126,6 @@ services:
       - OTP_ENCRYPTION_DETERMINISTIC_KEY=${OTP_ENCRYPTION_DETERMINISTIC_KEY}
       - OTP_ENCRYPTION_KEY_DERIVATION_SALT=${OTP_ENCRYPTION_KEY_DERIVATION_SALT}
     volumes:
-      - app-public:/var/app/public
       - app-watched:/var/app/tmp/imports/watched
       - app-storage:/var/app/storage
     healthcheck:
@@ -234,7 +229,6 @@ services:
 volumes:
   database-data:
   redis-data:
-  app-public:
   app-watched:
   app-storage:
 

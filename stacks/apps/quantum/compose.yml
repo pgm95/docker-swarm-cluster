@@ -5,7 +5,7 @@ include:
 
 services:
   quantum:
-    image: gtstef/filebrowser:2-preview-3
+    image: gtstef/filebrowser:2-beta
     entrypoint: ["/bin/sh", "/init.sh"]
     logging:
       <<: *logging

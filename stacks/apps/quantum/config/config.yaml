@@ -69,9 +69,7 @@ http:
   baseURL: "/"
   internalUrl: "http://127.0.0.1:8080"
   externalUrl: "https://files.${DOMAIN_PRIVATE}"
-  trustedHeaders:
-    - X-Forwarded-Proto
-    - X-Forwarded-Host
+  trustProxyHeaders: true
 
 auth:
   tokenExpirationHours: 120

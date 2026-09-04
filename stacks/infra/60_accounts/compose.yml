@@ -165,7 +165,7 @@ services:
         <<: *resources-huge
 
   lldap:
-    image: lldap/lldap:2026-03-04-debian-rootless
+    image: lldap/lldap:v0.6.3-debian-rootless
     logging:
       <<: *logging
     stop_grace_period: 30s
