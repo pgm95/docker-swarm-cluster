@@ -1,0 +1,9 @@
+[extend]
+useDefault = true
+
+[allowlist]
+# Ignores SOPS-encrypted lines, whose high-entropy triggers false positive for keys
+description = "SOPS-encrypted files and ciphertext lines"
+paths = [
+  '''\.sops\.yaml$''',
+]

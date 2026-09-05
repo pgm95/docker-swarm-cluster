@@ -5,6 +5,7 @@ description = "Deploy one or more stacks"
 usage = '''
 arg "<stacks>..." help="Stack name(s) or path(s)"
 flag "--update" help="Re-resolve mutable image tags (e.g. latest, release) against the registry"
+complete "stacks" run="python3 -m swarm.stacks"
 '''
 depends = ["swarm:init-networks"]
 env.CONVERGE_TIMEOUT = "180"
@@ -22,7 +23,10 @@ done
 
 ["swarm:remove"]
 description = "Remove one or more stacks and wait for services to drain"
-usage = 'arg "<stacks>..." help="Stack name(s) or path(s)"'
+usage = '''
+arg "<stacks>..." help="Stack name(s) or path(s)"
+complete "stacks" run="python3 -m swarm.stacks"
+'''
 run = '''
 {% raw %}
 #!/usr/bin/env bash

@@ -1,9 +1,13 @@
 """Tests for swarm.validate — compose validation and bind mount checks."""
 
+import os
+from pathlib import Path
+
 from conftest import SAMPLE_NODES, make_completed
 
 from swarm._compose import _fixup_config
 from swarm.validate import (
+    _find_all_compose,
     _set_oci_tags,
     check_paths_on_node,
     collect_bind_mounts,
@@ -105,7 +109,6 @@ class TestValidateCompose:
             "swarm.validate.compose_config",
             lambda *a: "name: test\nservices:\n  web:\n    image: nginx\n",
         )
-        from pathlib import Path
         valid, err = validate_compose(Path("fake/ns/fake-stack/compose.yml"))
         assert valid is True
         assert err == ""
@@ -114,7 +117,6 @@ class TestValidateCompose:
         def fail(*a):
             raise Exception("bad yaml")
         monkeypatch.setattr("swarm.validate.compose_config", fail)
-        from pathlib import Path
         valid, err = validate_compose(Path("fake/ns/fake-stack/compose.yml"))
         assert valid is False
         assert "bad yaml" in err
@@ -125,7 +127,6 @@ class TestValidateCompose:
             lambda *a: "services:\n  web:\n    image: nginx\n",
         )
         mock_docker.set_response(("stack", "config"), returncode=1, stderr="invalid config")
-        from pathlib import Path
         valid, err = validate_compose(Path("fake/ns/fake-stack/compose.yml"))
         assert valid is False
         assert "invalid config" in err
@@ -137,7 +138,6 @@ class TestValidateCompose:
             "swarm.validate.compose_config",
             lambda *a: called.append(a) or "should-not-be-called",
         )
-        from pathlib import Path
         valid, _ = validate_compose(
             Path("fake/ns/fake-stack/compose.yml"),
             yaml_text="services:\n  web:\n    image: nginx\n",
@@ -156,7 +156,6 @@ class TestSetOciTags:
         monkeypatch.delenv("OCI_TAG_FOO_BAR_BAZ", raising=False)
         monkeypatch.delenv("OCI_TAG_FOO-BAR-BAZ", raising=False)
         _set_oci_tags(tmp_path)
-        import os
         assert "OCI_TAG_FOO_BAR_BAZ" in os.environ
         # The buggy old formula would have created OCI_TAG_FOO-BAR-BAZ
         assert "OCI_TAG_FOO-BAR-BAZ" not in os.environ
@@ -165,7 +164,6 @@ class TestSetOciTags:
         """Stacks without a build/ directory should leave OCI_TAG_* env untouched."""
         monkeypatch.setattr("os.environ", {})
         _set_oci_tags(tmp_path)
-        import os
         assert not any(k.startswith("OCI_TAG_") for k in os.environ)
 
 
@@ -180,7 +178,6 @@ class TestCollectBindMounts:
             },
         }
         monkeypatch.setattr("swarm.validate.compose_json", lambda *a: compose_doc)
-        from pathlib import Path
         result = collect_bind_mounts(Path("fake/ns/fake-stack/compose.yml"), SAMPLE_NODES)
         assert "swarm-vm" in result
         assert "/mnt/data" in result["swarm-vm"]
@@ -190,7 +187,6 @@ class TestCollectBindMounts:
             "swarm.validate.compose_json",
             lambda *a: {"services": {"web": {"image": "nginx"}}},
         )
-        from pathlib import Path
         result = collect_bind_mounts(Path("fake/ns/fake-stack/compose.yml"), SAMPLE_NODES)
         assert result == {}
 
@@ -203,7 +199,6 @@ class TestCollectBindMounts:
             },
         }
         monkeypatch.setattr("swarm.validate.compose_json", lambda *a: compose_doc)
-        from pathlib import Path
         result = collect_bind_mounts(Path("fake/ns/fake-stack/compose.yml"), SAMPLE_NODES)
         # No constraints = matches first node
         assert len(result) == 1
@@ -280,3 +275,13 @@ class TestCheckPathsOnNode:
         by_path = {r["path"]: r for r in results}
         assert by_path["/a"]["status"] == "ok"
         assert by_path["/b"]["status"] == "unreachable"
+
+
+class TestFindAllCompose:
+    def test_only_stacks_with_compose(self, stacks_tree):
+        (stacks_tree / "apps/mealie/compose.yml").write_text("services: {}\n")
+        (stacks_tree / "infra/40_metrics/compose.yml").write_text("services: {}\n")
+        assert _find_all_compose() == [
+            stacks_tree / "apps/mealie/compose.yml",
+            stacks_tree / "infra/40_metrics/compose.yml",
+        ]

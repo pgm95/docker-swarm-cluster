@@ -27,13 +27,12 @@ class TestStatus:
     def _patch_status(self, monkeypatch, services, running_tasks, shutdown_tasks=None):
         """Helper to set up mocks for the batch-query status function.
 
-        Crucially mocks `find_namespaces` so the test never reads the real
+        Crucially mocks `all_stacks` so the test never reads the real
         `SWARM_STACKS_DIR` tree — synthetic data only.
         """
         monkeypatch.setattr("swarm.status.inspect_nodes", lambda: SAMPLE_NODES)
         monkeypatch.setattr("swarm.status.service_ls", lambda: services)
-        monkeypatch.setattr("swarm.status.find_namespaces", lambda: ["fake-ns"])
-        monkeypatch.setattr("swarm.status.find_stacks", lambda ns: [f"{ns}/mystack"])
+        monkeypatch.setattr("swarm.status.all_stacks", lambda: ["fake-ns/mystack"])
         monkeypatch.setattr("swarm.status.stack_name", lambda d: d.rsplit("/", 1)[-1])
 
         def mock_ps_multi(names, format_str="", filters=None):

@@ -20,3 +20,28 @@ run = "ruff check"
 ["validate:compose"]
 description = "Validate all compose files for Swarm compatibility"
 run = "python3 -m swarm.validate"
+
+["validate:secrets"]
+description = "Internal: verify *.sops.yaml files are encrypted and decryptable (all files when none given)"
+hide = true
+run = '''
+{% raw %}
+#!/usr/bin/env bash
+files=("$@")
+if [[ ${#files[@]} -eq 0 ]]; then
+    while IFS= read -r f; do files+=("${f}"); done < <(python3 -m swarm.secrets path --all)
+fi
+failed=()
+for f in "${files[@]}"; do
+    if [[ "$(sops filestatus "${f}")" != *'"encrypted":true'* ]]; then
+        echo "PLAINTEXT: ${f}" >&2
+        failed+=("${f}")
+    elif ! sops decrypt "${f}" >/dev/null; then
+        echo "UNDECRYPTABLE: ${f}" >&2
+        failed+=("${f}")
+    fi
+done
+[[ ${#failed[@]} -eq 0 ]] || { echo "Failed: ${failed[*]}" >&2; exit 1; }
+echo "OK: ${#files[@]} file(s) encrypted and decryptable" >&2
+{% endraw %}
+'''

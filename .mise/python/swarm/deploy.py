@@ -24,7 +24,7 @@ from ._compose import compose_config, compose_json
 from ._docker import build, manifest_exists, push, stack_services
 from ._output import error, info, init_stack_prefix, table
 from ._sops import sops_decrypt
-from ._stack import oci_tag_var, resolve_stack_path, stack_name
+from ._stack import SECRETS_FILE, oci_tag_var, resolve_stack_path, stack_name
 from .secrets import (
     create_versioned_secrets,
     required_versioned_secrets,
@@ -115,9 +115,9 @@ def _prepare_stack(stack_path: Path) -> dict:
     """Prepare a stack for deployment: env, secrets, builds, render.
 
     Order of operations:
-      1. Validate inputs (compose.yml exists, SOPS key available)
+      1. Validate inputs (compose.yml exists, SOPS_AGE_KEY_FILE points at a file)
       2. Set STACK_NAME / STACK_PATH / DEPLOY_VERSION in env
-      3. Decrypt secrets.env, export each key into env (compose
+      3. Decrypt the stack secrets file, export each key into env (compose
          interpolation needs them)
       4. Discover build dirs, set OCI_TAG_*, build+push images
       5. Render the compose document — by this point every env var
@@ -138,6 +138,8 @@ def _prepare_stack(stack_path: Path) -> dict:
     if not compose_file.is_file():
         raise SwarmError(f"{compose_file} not found")
 
+    # The age key file is the single source of truth for decryption. Fail
+    # before any decrypt or docker call if it is unset or missing.
     sops_key = os.environ.get("SOPS_AGE_KEY_FILE", "")
     if not sops_key or not Path(sops_key).is_file():
         raise SwarmError(f"SOPS_AGE_KEY_FILE not found: {sops_key or 'unset'}")
@@ -159,10 +161,10 @@ def _prepare_stack(stack_path: Path) -> dict:
     # Decrypt stack-local secrets once. Values feed both compose
     # interpolation (via env vars) and create_versioned_secrets below.
     stack_secrets: list[tuple[str, str]] = []
-    secrets_env = stack_path / "secrets.env"
-    if secrets_env.is_file():
-        info(f"Loading secrets: {secrets_env}")
-        stack_secrets = sops_decrypt(secrets_env)
+    secrets_file = stack_path / SECRETS_FILE
+    if secrets_file.is_file():
+        info(f"Loading secrets: {secrets_file}")
+        stack_secrets = sops_decrypt(secrets_file)
         for key, value in stack_secrets:
             os.environ[key] = value
 

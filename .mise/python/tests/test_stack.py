@@ -6,12 +6,14 @@ import pytest
 
 from swarm import SwarmError
 from swarm._stack import (
+    all_stacks,
     find_namespaces,
     find_stacks,
     resolve_stack_path,
     stack_name,
     stacks_root,
 )
+from swarm.stacks import main as stacks_main
 
 
 class TestStacksRoot:
@@ -153,3 +155,29 @@ class TestFindStacks:
 
     def test_nonexistent_dir(self):
         assert find_stacks("/nonexistent/path") == []
+
+
+class TestAllStacks:
+    def test_deploy_order_across_namespaces(self, stacks_tree):
+        assert [d.name for d in all_stacks()] == ["mealie", "tools", "10_postgres", "40_metrics"]
+
+    def test_skips_files_and_underscore_dirs(self, stacks_tree):
+        found = all_stacks()
+        assert all(d.is_dir() for d in found)
+        assert not any(d.name.startswith("_") for d in found)
+
+    def test_missing_root(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("SWARM_STACKS_DIR", str(tmp_path / "nonexistent"))
+        assert all_stacks() == []
+
+
+class TestStacksCli:
+    def test_names(self, stacks_tree, monkeypatch, capsys):
+        monkeypatch.setattr("sys.argv", ["swarm.stacks"])
+        assert stacks_main() == 0
+        assert capsys.readouterr().out.split() == ["mealie", "tools", "postgres", "metrics"]
+
+    def test_paths(self, stacks_tree, monkeypatch, capsys):
+        monkeypatch.setattr("sys.argv", ["swarm.stacks", "--paths"])
+        assert stacks_main() == 0
+        assert capsys.readouterr().out.splitlines()[0] == str(stacks_tree / "apps/mealie")

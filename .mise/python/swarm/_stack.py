@@ -8,6 +8,10 @@ from . import SwarmError
 
 _NN_PREFIX = re.compile(r"^\d{2}_")
 
+# SOPS-encrypted per-stack secrets file. The compose fragment ``include.yml``
+# (Swarm secret and config declarations) is a different file.
+SECRETS_FILE = "secrets.sops.yaml"
+
 
 def stacks_root() -> Path:
     """Root of the stacks tree.
@@ -70,14 +74,9 @@ def resolve_stack_path(name_or_path: str) -> Path:
     if p.is_dir():
         return p
 
-    for ns_path in find_namespaces():
-        for d in ns_path.iterdir():
-            if not d.is_dir():
-                continue
-            if d.name == name_or_path:
-                return d
-            if stack_name(d) == name_or_path:
-                return d
+    for d in all_stacks():
+        if d.name == name_or_path or stack_name(d) == name_or_path:
+            return d
 
     raise SwarmError(f"Stack not found: {name_or_path}")
 
@@ -98,3 +97,13 @@ def find_stacks(namespace_dir: str | Path, reverse: bool = False) -> list[Path]:
     dirs = [d for d in ns.iterdir() if d.is_dir()]
     dirs.sort(key=lambda d: d.name, reverse=reverse)
     return dirs
+
+
+def all_stacks() -> list[Path]:
+    """Every stack directory across all namespaces, in deploy order.
+
+    Namespaces sort alphabetically, stacks within a namespace sort by folder
+    name (the ``NN_`` prefix convention). Single walk shared by discovery,
+    status, validation, and secrets tooling.
+    """
+    return [d for ns in find_namespaces() for d in find_stacks(ns)]

@@ -25,7 +25,7 @@ SOPS_CONFIG = "{{ env.PROJECT_CONFIGS_DIR }}/sops.yaml"
 SWARM_STACKS_DIR = "{{config_root}}/stacks"
 SWARM_ANCHORS_FILE = "{{ env.SWARM_STACKS_DIR }}/_shared/anchors.yml"
 
-GLOBAL_SECRETS = "{{ env.PROJECT_SECRETS_DIR }}/shared.yaml"
+GLOBAL_SECRETS = "{{ env.PROJECT_SECRETS_DIR }}/shared.sops.yaml"
 _.file = { path = "{{ env.GLOBAL_SECRETS }}", redact = true }
 
 GLOBAL_TZ = "UTC"
@@ -45,7 +45,9 @@ description = " "  # Complete environment setup via mise
 run = [
   "mise trust || true",
   "mise install",
-  "mise x -- pre-commit install --config {{ env.PROJECT_CONFIGS_DIR }}/pre-commit.yaml"
+  "mise x -- pre-commit install --config {{ env.PROJECT_CONFIGS_DIR }}/pre-commit.yaml",
+  "git config diff.sops.textconv 'sops decrypt --input-type yaml --output-type yaml'",
+  "git config diff.sops.cachetextconv true"
 ]
 
 [tasks."env:clean"]

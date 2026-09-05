@@ -2,11 +2,15 @@
 
 import pytest
 
-from swarm import SecretError, ValidationError
+from swarm import SecretError, SwarmError, ValidationError
 from swarm.secrets import (
+    all_secrets_files,
     create_versioned_secrets,
+    main,
     referenced_config_files,
     required_versioned_secrets,
+    secrets_file_for,
+    secrets_targets,
     validate_config_files,
     validate_required_secrets,
 )
@@ -130,7 +134,7 @@ class TestCreateVersionedSecrets:
         assert result["created"] == 0
 
     def test_ignores_unneeded_stack_keys(self, monkeypatch):
-        """secrets.env may have keys the compose doesn't reference; ignore them."""
+        """secrets.sops.yaml may have keys the compose doesn't reference; ignore them."""
         compose = _compose(secrets={"db_pass": {"name": "db_pass_v1", "external": True}})
         monkeypatch.setattr("swarm.secrets.secret_list", list)
         created = []
@@ -145,6 +149,22 @@ class TestCreateVersionedSecrets:
     def test_no_versioned_secrets_returns_zero(self, monkeypatch):
         result = create_versioned_secrets(_compose(), "v1", stack_secrets=[], env={})
         assert result == {"created": 0, "skipped": 0}
+
+    def test_creation_order_is_sorted_within_each_source(self, monkeypatch):
+        """Stack-local names first (sorted), then env-sourced names (sorted),
+        regardless of the order keys appear in the secrets file."""
+        compose = _compose(secrets={
+            n: {"name": f"{n}_v1", "external": True} for n in ("zeta", "alpha", "global_b", "global_a")
+        })
+        monkeypatch.setattr("swarm.secrets.secret_list", list)
+        created = []
+        monkeypatch.setattr("swarm.secrets.secret_create", lambda n, v: created.append(n))
+        create_versioned_secrets(
+            compose, "v1",
+            stack_secrets=[("ZETA", "1"), ("ALPHA", "2")],
+            env={"GLOBAL_B": "3", "GLOBAL_A": "4"},
+        )
+        assert created == ["alpha_v1", "zeta_v1", "global_a_v1", "global_b_v1"]
 
 
 class TestValidateConfigFiles:
@@ -171,3 +191,83 @@ class TestValidateConfigFiles:
             validate_config_files(compose)
         assert "a.yml" in str(exc_info.value)
         assert "b.yml" in str(exc_info.value)
+
+
+@pytest.fixture
+def secrets_tree(tmp_path, stacks_tree, monkeypatch):
+    """Global SOPS files next to the shared stacks tree; two stacks carry a secrets file."""
+    secrets_dir = tmp_path / ".secrets"
+    secrets_dir.mkdir()
+    for stem in ("shared", "dev", "prod"):
+        (secrets_dir / f"{stem}.sops.yaml").write_text("K: v\n")
+    (secrets_dir / "notes.txt").write_text("not a sops file\n")
+    (stacks_tree / "infra/10_postgres/secrets.sops.yaml").write_text("K: v\n")
+    (stacks_tree / "apps/mealie/secrets.sops.yaml").write_text("K: v\n")
+    monkeypatch.setenv("PROJECT_SECRETS_DIR", str(secrets_dir))
+    return tmp_path
+
+
+class TestSecretsTargets:
+    def test_global_target_resolves(self, secrets_tree):
+        assert secrets_file_for("shared") == secrets_tree / ".secrets/shared.sops.yaml"
+
+    def test_stack_target_by_bare_name(self, secrets_tree):
+        p = secrets_file_for("metrics")
+        assert p == secrets_tree / "stacks/infra/40_metrics/secrets.sops.yaml"
+        assert not p.exists()  # resolution does not require the file to exist
+
+    def test_stack_target_by_dir_name(self, secrets_tree):
+        assert secrets_file_for("10_postgres") == secrets_tree / "stacks/infra/10_postgres/secrets.sops.yaml"
+
+    def test_unknown_target_raises(self, secrets_tree):
+        with pytest.raises(SwarmError, match="Stack not found"):
+            secrets_file_for("nope")
+
+    def test_targets_globals_then_stacks(self, secrets_tree):
+        assert secrets_targets() == ["dev", "prod", "shared", "mealie", "tools", "postgres", "metrics"]
+
+    def test_all_files_only_existing(self, secrets_tree):
+        rel = [str(p.relative_to(secrets_tree)) for p in all_secrets_files()]
+        assert rel == [
+            ".secrets/dev.sops.yaml",
+            ".secrets/prod.sops.yaml",
+            ".secrets/shared.sops.yaml",
+            "stacks/apps/mealie/secrets.sops.yaml",
+            "stacks/infra/10_postgres/secrets.sops.yaml",
+        ]
+
+    def test_missing_secrets_dir(self, secrets_tree, monkeypatch):
+        monkeypatch.setenv("PROJECT_SECRETS_DIR", str(secrets_tree / "absent"))
+        assert secrets_targets() == ["mealie", "tools", "postgres", "metrics"]
+
+
+class TestPathCli:
+    def _run(self, monkeypatch, capsys, *argv):
+        monkeypatch.setattr("sys.argv", ["swarm.secrets", "path", *argv])
+        rc = main()
+        return rc, capsys.readouterr()
+
+    def test_single_target(self, secrets_tree, monkeypatch, capsys):
+        rc, out = self._run(monkeypatch, capsys, "mealie")
+        assert rc == 0
+        assert out.out.strip() == str(secrets_tree / "stacks/apps/mealie/secrets.sops.yaml")
+
+    def test_all(self, secrets_tree, monkeypatch, capsys):
+        rc, out = self._run(monkeypatch, capsys, "--all")
+        assert rc == 0
+        assert len(out.out.splitlines()) == 5
+
+    def test_targets(self, secrets_tree, monkeypatch, capsys):
+        rc, out = self._run(monkeypatch, capsys, "--targets")
+        assert rc == 0
+        assert out.out.split() == ["dev", "prod", "shared", "mealie", "tools", "postgres", "metrics"]
+
+    def test_no_args_is_usage_error(self, secrets_tree, monkeypatch, capsys):
+        rc, out = self._run(monkeypatch, capsys)
+        assert rc == 1
+        assert out.out == ""
+
+    def test_unknown_target_nonzero(self, secrets_tree, monkeypatch, capsys):
+        rc, out = self._run(monkeypatch, capsys, "nope")
+        assert rc != 0
+        assert out.out == ""

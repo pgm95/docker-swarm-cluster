@@ -12,7 +12,7 @@ from ._docker import (
     task_name_to_service,
 )
 from ._output import table
-from ._stack import find_namespaces, find_stacks, stack_name
+from ._stack import all_stacks, stack_name
 
 
 def get_node_status() -> list[dict]:
@@ -49,10 +49,7 @@ def status() -> int:
     print()
 
     # --- Discover all known stacks across every namespace ---
-    all_stack_names = []
-    for ns in find_namespaces():
-        for d in find_stacks(ns):
-            all_stack_names.append(stack_name(d))
+    all_stack_names = [stack_name(d) for d in all_stacks()]
 
     # --- Fetch all services in one call ---
     all_services = service_ls()

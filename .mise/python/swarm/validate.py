@@ -12,7 +12,7 @@ from ._compose import compose_config, compose_json
 from ._docker import inspect_nodes
 from ._output import info, warn
 from ._ssh import parallel_run, ssh_node
-from ._stack import find_namespaces, find_stacks, oci_tag_var
+from ._stack import all_stacks, oci_tag_var
 from .deploy import compute_content_hash
 from .nodes import resolve_service_nodes
 from .secrets import validate_config_files
@@ -277,13 +277,7 @@ def validate(stack_file: str | None = None) -> int:
 
 def _find_all_compose() -> list[Path]:
     """Find every stack's compose.yml across all namespaces under the stacks root."""
-    composes: list[Path] = []
-    for ns in find_namespaces():
-        for stack_dir in find_stacks(ns):
-            compose = stack_dir / "compose.yml"
-            if compose.is_file():
-                composes.append(compose)
-    return composes
+    return [c for d in all_stacks() if (c := d / "compose.yml").is_file()]
 
 
 def main() -> int:

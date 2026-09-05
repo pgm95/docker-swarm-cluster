@@ -138,7 +138,15 @@ class TestBuildAndPush:
 
 class TestPrepareStack:
     """_prepare_stack renders the compose, then drives discovery off the result.
-    Tests stub the rendering helpers to control the payload."""
+    Tests stub the rendering helpers to control the payload. SOPS_AGE_KEY_FILE
+    points at a throwaway file so the mise-exported value never leaks in; the
+    key-file tests override it."""
+
+    @pytest.fixture(autouse=True)
+    def _fake_key_file(self, tmp_path, monkeypatch):
+        key = tmp_path / "age.key"
+        key.write_text("# not a real key\n")
+        monkeypatch.setenv("SOPS_AGE_KEY_FILE", str(key))
 
     def _stub_compose(self, monkeypatch, *, secrets: dict | None = None, configs: dict | None = None):
         """Make compose_config return YAML and compose_json return the parsed dict.
@@ -154,7 +162,6 @@ class TestPrepareStack:
 
     def test_returns_context_no_versioning(self, tmp_stack, monkeypatch):
         stack = tmp_stack(compose="services: {}\n")
-        monkeypatch.setenv("SOPS_AGE_KEY_FILE", str(stack / "compose.yml"))
         self._stub_compose(monkeypatch)  # empty secrets/configs
         ctx = _prepare_stack(stack)
         assert ctx["stack_name"] == "test-stack"
@@ -168,8 +175,7 @@ class TestPrepareStack:
         assert ctx["compose_json"]["secrets"] == {}
 
     def test_versioned_stack_returns_deploy_version(self, tmp_stack, monkeypatch):
-        stack = tmp_stack(compose="services: {}\n", secrets_env="placeholder")
-        monkeypatch.setenv("SOPS_AGE_KEY_FILE", str(stack / "compose.yml"))
+        stack = tmp_stack(compose="services: {}\n", secrets_sops="placeholder")
         monkeypatch.setattr("swarm.deploy.sops_decrypt", lambda f: [("S", "val")])
         # Render contains a versioned secret keyed off the (yet unknown) deploy_version.
         # Patch generate_deploy_version to a known value, then render with that suffix.
@@ -184,10 +190,9 @@ class TestPrepareStack:
         assert ctx["stack_secrets"] == [("S", "val")]
 
     def test_decrypts_secrets_only_once(self, tmp_stack, monkeypatch):
-        """secrets.env is decrypted once and the pairs feed both env-export
+        """secrets.sops.yaml is decrypted once and the pairs feed both env-export
         and create_versioned_secrets."""
-        stack = tmp_stack(compose="services: {}\n", secrets_env="placeholder")
-        monkeypatch.setenv("SOPS_AGE_KEY_FILE", str(stack / "compose.yml"))
+        stack = tmp_stack(compose="services: {}\n", secrets_sops="placeholder")
         sops_calls = []
         monkeypatch.setattr(
             "swarm.deploy.sops_decrypt",
@@ -207,14 +212,20 @@ class TestPrepareStack:
         assert captured["pairs"] == [("DB_PASS", "secret")]
 
     def test_no_compose_raises(self, tmp_path, monkeypatch):
-        monkeypatch.setenv("SOPS_AGE_KEY_FILE", "/dev/null")
         with pytest.raises(SwarmError, match="compose.yml not found"):
             _prepare_stack(tmp_path)
 
-    def test_missing_sops_key_raises(self, tmp_stack, monkeypatch):
+    def test_configured_sops_key_file_must_exist(self, tmp_stack, monkeypatch):
         stack = tmp_stack(compose="services: {}\n")
-        monkeypatch.setenv("SOPS_AGE_KEY_FILE", "")
-        with pytest.raises(SwarmError, match="SOPS_AGE_KEY_FILE"):
+        monkeypatch.setenv("SOPS_AGE_KEY_FILE", str(stack / "absent.key"))
+        with pytest.raises(SwarmError, match="SOPS_AGE_KEY_FILE not found"):
+            _prepare_stack(stack)
+
+    def test_unset_sops_key_file_raises(self, tmp_stack, monkeypatch):
+        """The key file is the single source of truth; sops fallbacks are not used."""
+        stack = tmp_stack(compose="services: {}\n")
+        monkeypatch.delenv("SOPS_AGE_KEY_FILE", raising=False)
+        with pytest.raises(SwarmError, match="SOPS_AGE_KEY_FILE not found: unset"):
             _prepare_stack(stack)
 
 
@@ -222,7 +233,6 @@ class TestDeployStack:
     """Full deploy pipeline orchestration. Each phase mocked at its boundary."""
 
     def _setup_happy(self, monkeypatch, stack):
-        monkeypatch.setenv("SOPS_AGE_KEY_FILE", str(stack / "compose.yml"))
         monkeypatch.setattr(
             "swarm.deploy._prepare_stack",
             lambda p: {

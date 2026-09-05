@@ -1,7 +1,7 @@
 #:schema https://mise.jdx.dev/schema/mise.json
 
 [env]
-_.file = { path = "{{ env.PROJECT_SECRETS_DIR }}/dev.yaml", redact = true }
+_.file = { path = "{{ env.PROJECT_SECRETS_DIR }}/dev.sops.yaml", redact = true }
 
 SWARM_SSH_USER = "root"
 SWARM_HOST = "ssh://{{ env.SWARM_SSH_USER }}@swarm-vm-dev"

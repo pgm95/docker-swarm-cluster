@@ -1,17 +1,14 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/miiyakumo/sops/fb89aeaae6d1bc8cecab27d636f1650029702b39/schema/sops.json
 
+keys:
+  - &operator age1xcnm9hkeyrrjxz33tvufpxwfwc8ydkwt3dax6kqsklpvggatj5usna7r2l
+
+# Every SOPS-encrypted file in this repo is named *.sops.yaml:
 creation_rules:
-  # Shared and environment-specific secrets (.secrets/)
-  - path_regex: \.secrets/\w+\.yaml$
-    age: >-
-      age1xcnm9hkeyrrjxz33tvufpxwfwc8ydkwt3dax6kqsklpvggatj5usna7r2l
+  - path_regex: \.sops\.yaml$
+    age:
+      - *operator
 
-  # Stack-specific secrets
-  - path_regex: stacks/.*/secrets\.env$
-    age: >-
-      age1xcnm9hkeyrrjxz33tvufpxwfwc8ydkwt3dax6kqsklpvggatj5usna7r2l
-
-  # Fallback rule for .env files
-  - path_regex: \.env$
-    age: >-
-      age1xcnm9hkeyrrjxz33tvufpxwfwc8ydkwt3dax6kqsklpvggatj5usna7r2l
+stores:
+  yaml:
+    indent: 2

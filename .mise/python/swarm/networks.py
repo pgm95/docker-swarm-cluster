@@ -18,7 +18,7 @@ from ._cli import cli_main
 from ._compose import compose_json
 from ._docker import run as docker_run
 from ._output import debug, error, info
-from ._stack import find_namespaces, find_stacks
+from ._stack import all_stacks
 
 
 def get_external_networks() -> list[str]:
@@ -35,25 +35,24 @@ def get_external_networks() -> list[str]:
         Sorted list of platform network names.
     """
     found: set[str] = set()
-    for ns in find_namespaces():
-        for stack_dir in find_stacks(ns):
-            compose = stack_dir / "compose.yml"
-            if not compose.is_file():
-                continue
-            try:
-                rendered = compose_json(compose)
-            except Exception as e:
-                # Stack with a broken compose; skip and let
-                # `validate:compose` surface the error elsewhere.
-                debug(f"skipping {compose}: {e}")
-                continue
-            for key, spec in (rendered.get("networks") or {}).items():
-                spec = spec or {}
-                if spec.get("external") is True:
-                    # Prefer spec["name"] over the dict key — compose-spec
-                    # allows a stack-local alias that differs from the
-                    # platform-level network name.
-                    found.add(spec.get("name") or key)
+    for stack_dir in all_stacks():
+        compose = stack_dir / "compose.yml"
+        if not compose.is_file():
+            continue
+        try:
+            rendered = compose_json(compose)
+        except Exception as e:
+            # Stack with a broken compose; skip and let
+            # `validate:compose` surface the error elsewhere.
+            debug(f"skipping {compose}: {e}")
+            continue
+        for key, spec in (rendered.get("networks") or {}).items():
+            spec = spec or {}
+            if spec.get("external") is True:
+                # Prefer spec["name"] over the dict key — compose-spec
+                # allows a stack-local alias that differs from the
+                # platform-level network name.
+                found.add(spec.get("name") or key)
     return sorted(found)
 
 

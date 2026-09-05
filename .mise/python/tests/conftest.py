@@ -155,54 +155,37 @@ def mock_subprocess(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# Temp stack directory factory
+# Temp stack directory factories
 # ---------------------------------------------------------------------------
 
 
 @pytest.fixture
 def tmp_stack(tmp_path):
-    """Create a minimal stack directory structure.
+    """Create a minimal single stack directory (compose.yml plus optional secrets file)."""
 
-    Usage:
-        stack_dir = tmp_stack(
-            compose="services: ...",
-            secrets_yml="...",
-            secrets_env="KEY=val",
-        )
-    """
-
-    def _make(
-        name: str = "test-stack",
-        compose: str = "services: {}\n",
-        secrets_yml: str | None = None,
-        secrets_env: str | None = None,
-        configs_yml: str | None = None,
-        config_files: dict[str, str] | None = None,
-        build_dirs: dict[str, dict[str, str]] | None = None,
-    ) -> Path:
-        stack_dir = tmp_path / name
+    def _make(compose: str = "services: {}\n", secrets_sops: str | None = None) -> Path:
+        stack_dir = tmp_path / "test-stack"
         stack_dir.mkdir()
         (stack_dir / "compose.yml").write_text(compose)
-
-        if secrets_yml is not None:
-            (stack_dir / "secrets.yml").write_text(secrets_yml)
-        if secrets_env is not None:
-            (stack_dir / "secrets.env").write_text(secrets_env)
-        if configs_yml is not None:
-            (stack_dir / "configs.yml").write_text(configs_yml)
-        if config_files:
-            config_dir = stack_dir / "config"
-            config_dir.mkdir()
-            for fname, content in config_files.items():
-                (config_dir / fname).write_text(content)
-        if build_dirs:
-            build_root = stack_dir / "build"
-            build_root.mkdir()
-            for svc_name, files in build_dirs.items():
-                svc_dir = build_root / svc_name
-                svc_dir.mkdir()
-                for fname, content in files.items():
-                    (svc_dir / fname).write_text(content)
+        if secrets_sops is not None:
+            (stack_dir / "secrets.sops.yaml").write_text(secrets_sops)
         return stack_dir
 
     return _make
+
+
+@pytest.fixture
+def stacks_tree(tmp_path, monkeypatch):
+    """Two-namespace stacks tree wired into SWARM_STACKS_DIR.
+
+    Layout (deploy order: apps before infra, NN_ order within infra):
+      stacks/apps/mealie, stacks/apps/tools,
+      stacks/infra/10_postgres, stacks/infra/40_metrics,
+      plus an ignored ``_shared`` dir and a stray file.
+    """
+    root = tmp_path / "stacks"
+    for rel in ("apps/mealie", "apps/tools", "infra/10_postgres", "infra/40_metrics", "_shared"):
+        (root / rel).mkdir(parents=True)
+    (root / "apps" / "README.md").write_text("not a stack\n")
+    monkeypatch.setenv("SWARM_STACKS_DIR", str(root))
+    return root

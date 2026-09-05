@@ -12,7 +12,7 @@ repos:
       - id: detect-private-key
       - id: check-yaml
         args: [--unsafe]
-        exclude: ^\.secrets/
+        exclude: \.sops\.yaml$
       - id: check-json
       - id: check-case-conflict
 
@@ -20,13 +20,14 @@ repos:
     rev: v8.30.0
     hooks:
       - id: gitleaks
+        args: [--config, .config/gitleaks.toml]
 
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.38.0
     hooks:
       - id: yamllint
         args: [-c, .config/yamllint.yaml]
-        exclude: ^\.secrets/
+        exclude: \.sops\.yaml$
 
   - repo: https://github.com/DavidAnson/markdownlint-cli2
     rev: v0.23.2
@@ -62,14 +63,14 @@ repos:
         pass_filenames: false
 
       - id: check-secrets-encrypted
-        name: Check secrets are SOPS-encrypted
-        entry: "sh -c 'for f in \"$@\"; do grep -q \"^sops_\" \"$f\" || grep -q \"^sops:\" \"$f\" || { echo \"PLAINTEXT: $f\"; exit 1; }; done' --"
+        name: Check *.sops.yaml files are encrypted and decryptable
+        entry: mise run validate:secrets
         language: system
-        files: (^\.secrets/.*\.yaml$|secrets\.env$)
+        files: \.sops\.yaml$
 
       - id: compose-validate
         name: Validate compose files
         entry: mise run validate:compose
         language: system
-        files: ^stacks/(.*/(compose|configs|secrets)\.yml|.*/config/|_shared/anchors\.yml)
+        files: ^stacks/(.*/(compose|include)\.yml|.*/config/|_shared/anchors\.yml)
         pass_filenames: false
