@@ -11,8 +11,8 @@ Task orchestration, deployment pipeline, and development tooling for swarm-clust
   tasks/                  # Task definitions (TOML) — what to run
     swarm.toml            #   Stack operations: deploy, remove, cleanup
     site.toml             #   Cluster-wide: deploy-infra, deploy-apps, drain, registry
-    sops.toml             #   Secrets: init, encrypt, edit, status
-    validate.toml         #   Validation: all (pre-commit), pytest, ruff, compose
+    sops.toml             #   Secrets: init, edit, encrypt (targets: shared, dev, prod, or stack name)
+    validate.toml         #   Validation: all (pre-commit), pytest, ruff, compose, secrets
   python/                 # Self-contained Python project
     pyproject.toml        #   Pytest and ruff config
     swarm/                #   Python package — how tasks work
@@ -47,7 +47,7 @@ MISE_ENV=prod mise run swarm:deploy socket
 
 Each profile provides:
 
-- `_.file`: SOPS-encrypted secrets (`PROJECT_SECRETS_DIR/{env}.yaml`)
+- `_.file`: SOPS-encrypted secrets (`PROJECT_SECRETS_DIR/{env}.sops.yaml`)
 - `SWARM_HOST`: SSH URL of a manager node (e.g. `ssh://root@swarm-vm`)
 - `SWARM_SSH_USER`: SSH user for non-manager node access
 - `GLOBAL_SWARM_OCI_REGISTRY`: derived from `DOMAIN_PRIVATE`
@@ -65,11 +65,11 @@ This is why `GLOBAL_SWARM_OCI_REGISTRY` (uses `DOMAIN_PRIVATE` from SOPS) lives 
 
 | Variable | Source | Location |
 |----------|--------|----------|
-| `DOMAIN_PUBLIC`, `DOMAIN_PRIVATE`, `GLOBAL_OIDC_URL`, `GLOBAL_LDAP_BASE_DN` | SOPS | `PROJECT_SECRETS_DIR/{env}.yaml` |
+| `DOMAIN_PUBLIC`, `DOMAIN_PRIVATE`, `GLOBAL_OIDC_URL`, `GLOBAL_LDAP_BASE_DN` | SOPS | `PROJECT_SECRETS_DIR/{env}.sops.yaml` |
 | `SWARM_HOST`, `SWARM_SSH_USER` | Plaintext | `.mise/config.{env}.toml` |
 | `GLOBAL_SWARM_OCI_REGISTRY` | Derived | `.mise/config.{env}.toml` |
-| `GLOBAL_SMTP_*`, `REGISTRY_*` | SOPS | `PROJECT_SECRETS_DIR/shared.yaml` |
-| `GLOBAL_CIFS_HOST`, `GLOBAL_CIFS_USERNAME`, `GLOBAL_CIFS_PASSWORD` | SOPS | `PROJECT_SECRETS_DIR/shared.yaml` |
+| `GLOBAL_SMTP_*`, `REGISTRY_*` | SOPS | `PROJECT_SECRETS_DIR/shared.sops.yaml` |
+| `GLOBAL_CIFS_HOST`, `GLOBAL_CIFS_USERNAME`, `GLOBAL_CIFS_PASSWORD` | SOPS | `PROJECT_SECRETS_DIR/shared.sops.yaml` |
 | `GLOBAL_TZ`, `GLOBAL_NONROOT_*` | Plaintext | `.mise/config.toml` (base) |
 | `SWARM_STACKS_DIR`, `SWARM_ANCHORS_FILE` | Plaintext | `.mise/config.toml` (base) |
 
@@ -96,7 +96,8 @@ The lib operates on a stacks tree of shape:
   <namespace>/                # Any non-underscore-prefixed subdir
     <stack>/                  # Optional NN_ numeric prefix is stripped from the Swarm stack name
       compose.yml             # REQUIRED
-      secrets.env             # OPTIONAL — SOPS-encrypted env file for stack-local secrets
+      secrets.sops.yaml       # OPTIONAL — SOPS-encrypted YAML with stack-local secret values
+      include.yml             # CONVENTION — compose fragment declaring Swarm secrets and Docker configs
       build/<service>/        # OPTIONAL — Dockerfile context, content-hash tagged automatically
     ...
   _shared/                    # Underscore-prefixed dirs are skipped during enumeration
@@ -105,7 +106,7 @@ The lib operates on a stacks tree of shape:
 
 The lib has no awareness of which namespace is which (no special-casing for `infra` vs `apps`). Deploy ordering across stacks is the caller's responsibility — `site:deploy-infra` and `site:deploy-apps` simply iterate filesystem globs over their respective directories.
 
-**Per-stack file vocabulary the lib touches:** `compose.yml`, `secrets.env`, `build/`. Nothing else. How a stack organizes its compose document — inlined, split via compose's `include:`, anchors, multi-`-f` — is the user's choice. The lib only ever sees the rendered output of `docker compose config`.
+**Per-stack file vocabulary the lib touches:** `compose.yml`, `secrets.sops.yaml`, `build/`. Nothing else. `include.yml` is a project convention consumed by compose, not by the lib. How a stack organizes its compose document — inlined, split via compose's `include:`, anchors, multi-`-f` — is the user's choice. The lib only ever sees the rendered output of `docker compose config`.
 
 ## Compose Preprocessing
 
@@ -128,7 +129,7 @@ Docker Swarm doesn't natively support cross-file YAML anchors. `compose_config()
 - `published: "443"` → `published: 443` (port numbers)
 - `size: "10485760"` → `size: 10485760` (tmpfs size)
 
-**Compose `include:` is fully supported.** The `docker compose config` invocation resolves any `include:` directives the stack uses, so a compose document split across `compose.yml`, `secrets.yml`, `configs.yml`, etc. is merged before anything reaches the lib.
+**Compose `include:` is fully supported.** The `docker compose config` invocation resolves any `include:` directives the stack uses, so a compose document split across `compose.yml` and `include.yml` is merged before anything reaches the lib.
 
 **Docker Config note:** `docker compose config` resolves `file:` paths to absolute local paths but does NOT inline contents. `docker stack deploy` reads files from local disk at deploy time. Config file contents cannot be modified by sed/envsubst in the piped output — preprocessing must happen on source files before `docker compose config` runs.
 
@@ -136,11 +137,11 @@ Docker Swarm doesn't natively support cross-file YAML anchors. `compose_config()
 
 `mise run swarm:deploy <stack> [<stack> ...] [--update]` accepts one or more stacks. The bash wrapper iterates and calls `python3 -m swarm.deploy <stack>` per item, collecting which stacks failed.
 
-The `<stack>` argument accepts a bare stack name (`metrics`), a directory name (`40_metrics`), or a full path. `resolve_stack_path()` walks `find_namespaces()` (alphabetical order) looking for a match.
+The `<stack>` argument accepts a bare stack name (`metrics`), a directory name (`40_metrics`), or a full path. `resolve_stack_path()` walks `all_stacks()` (namespaces alphabetically, `NN_` order within each) looking for a match.
 
 A single Python invocation runs the full per-stack pipeline in-process:
 
-1. **Prepare** — sets `STACK_NAME`/`STACK_PATH`/`DEPLOY_VERSION`, decrypts `secrets.env` once into env vars (these feed every `${VAR}` in the compose document, `deploy.labels` included), discovers `build/<service>/` directories and builds+pushes images.
+1. **Prepare** — sets `STACK_NAME`/`STACK_PATH`/`DEPLOY_VERSION`, decrypts `secrets.sops.yaml` once into env vars (these feed every `${VAR}` in the compose document, `deploy.labels` included), discovers `build/<service>/` directories and builds+pushes images.
 2. **Render** — concatenates the shared anchors file (if any) with the stack's `compose.yml` and runs `docker compose config` to produce both the YAML form (for `docker stack deploy -c -`) and the JSON form (for discovery).
 3. **Discover from rendered JSON** — walks the document for:
     - `secrets.<x>.name` ending in `_<DEPLOY_VERSION>` → versioned Docker secrets to create
@@ -185,8 +186,8 @@ The deploy task creates immutable Docker secrets named `<key>_<deploy_version>`.
 
 Values are resolved from two sources in priority order:
 
-1. **`secrets.env`** (stack-local) — SOPS-decrypted at deploy time. Use for secrets scoped to a single stack.
-2. **Environment variables** (global) — already loaded by mise from `shared.yaml` + `{env}.yaml`. Use for secrets shared across stacks or that differ per environment.
+1. **`secrets.sops.yaml`** (stack-local) — SOPS-decrypted at deploy time. Use for secrets scoped to a single stack.
+2. **Environment variables** (global) — already loaded by mise from `shared.sops.yaml` + `{env}.sops.yaml`. Use for secrets shared across stacks or that differ per environment.
 
 Stack-local secrets always take precedence over global env vars when both have the same name.
 
@@ -195,7 +196,7 @@ Stack-local secrets always take precedence over global env vars when both have t
 Add the secret to a SOPS secrets file loaded by mise (shared or per-env):
 
 ```yaml
-# .secrets/prod.yaml
+# .secrets/prod.sops.yaml
 GLOBAL_CF_ACME_API_TOKEN_PRIVATE: <token>
 ```
 
@@ -220,7 +221,22 @@ The deploy pipeline renders the compose, finds `cf_token` named `global_cf_acme_
 
 #### Validation
 
-`validate_required_secrets()` walks the rendered compose for versioned secret names and confirms each base name resolves to a value in `secrets.env` or an env var (uppercased). Missing secrets fail the deploy before any Docker operations.
+`validate_required_secrets()` walks the rendered compose for versioned secret names and confirms each base name resolves to a value in `secrets.sops.yaml` or an env var (uppercased). Missing secrets fail the deploy before any Docker operations.
+
+#### Working with secrets files
+
+Every encrypted file is YAML named `*.sops.yaml`; one creation rule in the SOPS config (`SOPS_CONFIG`) covers all of them. Stack files are flat mappings of scalars: multi-line values are block scalars delivered verbatim, numbers and booleans are stringified, nested values are rejected.
+
+Tasks address files by **target** rather than path. A target is a global stem (`shared`, `dev`, `prod`) or anything `resolve_stack_path()` accepts; `python3 -m swarm.secrets path` is the resolver behind them and also lists all files (`--all`) and all target names (`--targets`, used for tab completion).
+
+| Task | Purpose |
+|------|---------|
+| `sops:init` | Create the age identity at `SOPS_AGE_KEY_FILE` if missing and print the recipient to add to the SOPS config |
+| `sops:edit <target>` | Open the file in `SOPS_EDITOR` (shell value wins, `code --wait` otherwise); creates it when missing; a no-change edit is not an error |
+| `sops:encrypt` | Encrypt in place any `*.sops.yaml` that is still plaintext |
+| `validate:secrets` | Hidden. Verify files are encrypted and decryptable (`sops filestatus` plus a decrypt); all files when called without arguments, the changed files when called by pre-commit |
+
+`env:setup` registers a git textconv driver for `*.sops.yaml` (declared in `.gitattributes`), so `git diff`, `git show`, and `git log -p` render plaintext locally while the repository keeps ciphertext.
 
 ### Custom Image Builds
 
@@ -259,8 +275,8 @@ Task logic lives in the `swarm` Python package at `.mise/python/swarm/`, invoked
 | `_docker` | Docker CLI subprocess wrappers — all docker calls go through here. Resource helpers (`secret_*`, `config_*`, `network_*`) follow a `list()` / `rm() -> bool` pattern. `stream(line_prefixed=True)` adds `[stackname]` to each line of subprocess output (used for `docker stack deploy`); on non-zero exit, the captured tail of output is surfaced through `DockerError.stderr`. Includes `task_name_to_service()` and `parse_replicas()` helpers |
 | `_ssh` | SSH execution helpers for remote node commands. `parallel_run(items, fn)` is the canonical fan-out helper — bounded ThreadPoolExecutor, returns a per-item result dict preserving identity regardless of completion order. Used by `cleanup`, `registry_auth`, and `validate` for cluster-wide SSH workloads |
 | `_output` | Logging and output formatting (strict I/O contract: data to stdout, diagnostics to stderr). Stack-name prefix held in a `ContextVar`; set via `init_stack_prefix(name)`, read via `get_stack_prefix()` |
-| `_sops` | SOPS decryption — calls sops binary, handles `_B64` suffix |
-| `_stack` | Stacks-tree discovery: `stacks_root()`, `find_namespaces()` (excludes `_*` dirs), `find_stacks()`, `resolve_stack_path()`, `stack_name()` (`NN_` prefix stripping). `oci_tag_var(service)` is the single source of truth for the `OCI_TAG_<SERVICE>` env-var formula used by both `deploy.discover_build_dirs` and `validate._set_oci_tags` |
+| `_sops` | SOPS decryption. Renders the file through `sops decrypt --output-type json`, accepts a flat mapping only, and stringifies scalars (`true`/`false`, numbers) so multi-line values survive and the store format never matters |
+| `_stack` | Stacks-tree discovery: `stacks_root()`, `find_namespaces()` (excludes `_*` dirs), `find_stacks()`, `all_stacks()` (the single deploy-order walk every other module uses), `resolve_stack_path()`, `stack_name()` (`NN_` prefix stripping), `SECRETS_FILE`. `oci_tag_var(service)` is the single source of truth for the `OCI_TAG_<SERVICE>` env-var formula used by both `deploy.discover_build_dirs` and `validate._set_oci_tags` |
 
 ### Public modules (CLI entry points)
 
@@ -269,12 +285,13 @@ Task logic lives in the `swarm` Python package at `.mise/python/swarm/`, invoked
 | `deploy` | `swarm:deploy` | Self-contained per-stack deploy: prepare → render → discover → deploy → converge. Discovery (versioned secrets, configs to validate) walks the rendered compose JSON. |
 | `convergence` | (library + CLI) | Convergence polling + replica-health verification in one call. Polling uses exponential backoff (2s initial → `max_interval`, 1.5x ramp). CLI: `python3 -m swarm.convergence <stack> [--timeout N] [--max-interval N]` |
 | `remove` | `swarm:remove` | Stack removal with drain wait |
-| `status` | `status` | Cluster node and stack health display. Walks `find_namespaces()` for stack discovery; O(N) service-stack matching via `partition("_")` (assumes no underscores in stack names) |
+| `status` | `status` | Cluster node and stack health display. Uses `all_stacks()` for stack discovery; O(N) service-stack matching via `partition("_")` (assumes no underscores in stack names) |
 | `validate` | `validate:compose` | Compose validation, config-file existence check (from rendered JSON), and bind-mount path checks (parallel SSH; YAML+JSON cached per file) |
 | `cleanup` | `swarm:cleanup` | Three phases: (1) prune unused versioned secrets/configs, (2) prune orphaned swarm-scoped overlay networks (excludes `ingress`), (3) `docker system prune --all --volumes --force` per node (parallel SSH). All phases use Docker's "in use" check as the safety net — items currently attached to running services are skipped. |
 | `networks` | `swarm:init-networks` | Walks every stack's rendered compose for `networks.*.external == true` entries and creates them on the cluster. `SWARM_INTERNAL_NETWORKS` (space-separated) controls which get `--internal`. `SWARM_OVERLAY_MTU` sets the VXLAN MTU at creation time |
 | `nodes` | (library) | Swarm node discovery and placement constraint matching |
-| `secrets` | (library) | Compose-JSON-driven secret/config discovery: `required_versioned_secrets()`, `validate_required_secrets()`, `create_versioned_secrets()`, `validate_config_files()`, `referenced_config_files()`. Accepts pre-decrypted `(key, value)` pairs to avoid double SOPS calls. |
+| `secrets` | (library + CLI) | Compose-JSON-driven secret/config discovery: `required_versioned_secrets()`, `validate_required_secrets()`, `create_versioned_secrets()`, `validate_config_files()`, `referenced_config_files()`. Accepts pre-decrypted `(key, value)` pairs to avoid double SOPS calls. CLI `path` subcommand resolves secrets targets to file paths for the sops tasks |
+| `stacks` | (completion) | Prints stack names (or paths with `--paths`) in deploy order; backs the `complete` blocks on `swarm:deploy` and `swarm:remove` |
 | `registry_auth` | `site:registry` | Registry login across swarm nodes (parallel SSH) |
 
 Site-wide tasks (`site:deploy-infra`, `site:deploy-apps`, `site:drain`) are pure mise+bash — they iterate the stacks directory and call `python3 -m swarm.deploy`/`python3 -m swarm.remove` per stack. There is no `site` Python module.
@@ -308,26 +325,26 @@ Pre-commit hooks run on every commit (`.config/pre-commit.yaml`):
 
 | Hook | Scope | Action |
 |------|-------|--------|
-| `check-yaml` | YAML (excl `.secrets/`) | Syntax validation |
+| `check-yaml` | YAML (excl `*.sops.yaml`) | Syntax validation |
 | `check-json` | JSON | Syntax validation (Grafana dashboards) |
 | `check-case-conflict` | All files | Case-insensitive filesystem collision detection |
-| `yamllint` | YAML (excl `.secrets/`) | Style linting |
+| `yamllint` | YAML (excl `*.sops.yaml`) | Style linting |
 | `markdownlint-cli2` | Markdown | Documentation linting |
 | `tombi-lint`/`tombi-format` | TOML | TOML linting |
 | `ruff` | `.mise/` Python | Linting (unused imports, bugs, style) via `validate:ruff` |
 | `pytest` | Always | Python test suite via `validate:pytest` |
-| `check-secrets-encrypted` | `secrets.env`, `.secrets/*.yaml` | Verify SOPS markers present |
-| `compose-validate` | Stack yml files, `config/`, `anchors.yml` | Full Swarm compatibility via `validate:compose` |
-| `gitleaks` | All files | Secret detection |
+| `check-secrets-encrypted` | `*.sops.yaml` | Encrypted and decryptable, via `validate:secrets` |
+| `compose-validate` | `compose.yml`, `include.yml`, `config/`, `anchors.yml` | Full Swarm compatibility via `validate:compose` |
+| `gitleaks` | All files | Secret detection; `.config/gitleaks.toml` allowlists `*.sops.yaml` paths, whose ciphertext otherwise trips the entropy rules |
 
-`compose-validate` runs the full pipeline (anchors + compose config + fixups + `docker stack config`) and checks bind mount paths on target nodes. It does not decrypt `secrets.env`, so `${VAR}` references to stack-local secrets render empty during validation; compose warns and the check still passes.
+`compose-validate` runs the full pipeline (anchors + compose config + fixups + `docker stack config`) and checks bind mount paths on target nodes. It does not decrypt `secrets.sops.yaml`, so `${VAR}` references to stack-local secrets render empty during validation; compose warns and the check still passes.
 
 ## Adding a New Stack
 
 1. Create `<SWARM_STACKS_DIR>/<namespace>/<stack-name>/compose.yml`
 2. Follow compose conventions (see existing stacks as reference)
-3. Add stack-specific secrets to `secrets.env` → `mise run sops:encrypt`
-4. Define secrets/configs/networks however your compose document is organized — inlined in `compose.yml`, split via compose's `include:` directive, or anchored from a shared file. The lib only sees the rendered output, so any compose-spec-native composition works.
+3. Add stack-specific secrets with `mise run sops:edit <stack-name>`; the file is created encrypted, no plaintext step
+4. Declare secrets, configs, and networks however your compose document is organized. The project convention is a single `include.yml` pulled in via compose `include:`; the lib only sees the rendered output, so any compose-spec-native composition works.
 5. For SOPS globals (shared or per-env), reference them directly in your secrets block using the lowercased env-var name suffixed with `_${DEPLOY_VERSION}`
 6. Apply ordering by prefixing folder with `NN_` if your iteration loop sorts alphabetically
 7. For Postgres consumers: add an `init-db` sidecar (project-internal pattern, see existing infra stacks)

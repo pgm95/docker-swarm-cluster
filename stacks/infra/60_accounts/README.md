@@ -144,7 +144,7 @@ value sometimes ships twice because the consumers cannot agree on a format.
    `10_directory.yaml`
 
 All three consumers mount the same versioned `global_password` secret
-(remapped from `GLOBAL_PASSWORD` via the `name:` indirection in `secrets.yml`).
+(remapped from `GLOBAL_PASSWORD` via the `name:` indirection in `include.yml`).
 
 `AUTHENTIK_BOOTSTRAP_PASSWORD` and friends are commented out in compose.
 They are only read on first startup; the directory blueprint owns the admin

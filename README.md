@@ -36,10 +36,10 @@ Only the final `docker stack deploy` command executes over SSH.
    You must set `SWARM_HOST` (SSH URL of a manager node, e.g. `ssh://root@swarm-vm`) and `SWARM_SSH_USER` (defaults to root).
    See [`.mise/README.md`](.mise/README.md) for all variable sources.
 
-3. **Configure secrets:** Populate SOPS-encrypted secrets files:
-   - `mise run sops:edit .secrets/dev|prod.yaml` — domains, OIDC URL, LDAP base DN
-   - `mise run sops:edit .secrets/shared.yaml` — registry creds, SMTP, Postgres provisioner
-   - Stack-level `secrets.env` files — per-stack API keys and passwords
+3. **Configure secrets:** Populate SOPS-encrypted secrets files by target:
+   - `mise run sops:edit dev|prod` for per-environment values (domains, OIDC URL, LDAP base DN)
+   - `mise run sops:edit shared` for shared credentials (registry, SMTP, Postgres provisioner)
+   - `mise run sops:edit <stack>` for stack-local API keys and passwords
 
 4. **Deploy:**
 
@@ -114,15 +114,19 @@ Secrets are organized in three layers by scope:
 
 | Layer | Location | Delivery |
 |-------|----------|----------|
-| **Shared** | `.secrets/shared.yaml` | Auto-injected by mise `_.file` to all stacks |
-| **Per-environment** | `.secrets/{env}.yaml` | Auto-injected by mise `_.file` per profile |
-| **Per-stack** | `<stack>/secrets.env` | Decrypted at deploy time by `swarm:deploy` |
+| **Shared** | `.secrets/shared.sops.yaml` | Auto-injected by mise `_.file` to all stacks |
+| **Per-environment** | `.secrets/{env}.sops.yaml` | Auto-injected by mise `_.file` per profile |
+| **Per-stack** | `<stack>/secrets.sops.yaml` | Decrypted at deploy time by `swarm:deploy` |
+
+Every encrypted file is YAML and carries the `.sops.yaml` suffix, so one SOPS creation rule,
+one git textconv rule, and one pre-commit check cover them all. Git shows them decrypted on
+this machine only; the committed blobs stay ciphertext.
 
 Secrets reach containers as either **versioned Swarm secrets** (mounted at `/run/secrets/`,
-triggered by `${DEPLOY_VERSION}` in `secrets.yml`) or **env var injection** (compose
+triggered by `${DEPLOY_VERSION}` in the stack's `include.yml`) or **env var injection** (compose
 interpolation). Credentials that another stack consumes through service labels (dashboard
 widgets) stay in the owning stack and are interpolated into its labels at deploy time; the
-consumer holds no copy. Multi-line values use the `_B64` suffix convention for base64 encoding.
+consumer holds no copy. Multi-line values are plain YAML block scalars.
 Versioned secrets are immutable: each deploy creates new ones with a unique suffix; old
 versions persist until `swarm:cleanup`.
 
