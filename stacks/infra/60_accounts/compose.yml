@@ -123,12 +123,10 @@ services:
       - smtp_pass
       - global_password
       - authentik_bind_pass
-      - oidc_client_secret_paperless
       - oidc_client_secret_mealie
       - oidc_client_secret_dawarich
       - oidc_client_secret_quantum
       - oidc_client_secret_immich
-      - oidc_client_secret_portainer
       - oidc_client_secret_grafana
       - oidc_client_secret_tailscale
     configs:

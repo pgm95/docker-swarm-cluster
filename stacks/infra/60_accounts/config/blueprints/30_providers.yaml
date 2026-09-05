@@ -7,37 +7,6 @@ metadata:
 
 entries:
 
-  # ===== Paperless =====
-  - model: authentik_providers_oauth2.oauth2provider
-    id: provider-paperless
-    state: present
-    identifiers:
-      name: Paperless
-    attrs:
-      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
-      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
-      client_type: confidential
-      client_id: paperless
-      client_secret: !File /run/secrets/oidc_client_secret_paperless
-      redirect_uris:
-        - url: !Format ["https://docs.%s/accounts/oidc/authentik/login/callback/", !Env DOMAIN_PRIVATE]
-          matching_mode: strict
-      property_mappings:
-        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
-        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
-        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
-      signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
-      access_token_validity: hours=1
-      refresh_token_validity: days=30
-  - model: authentik_core.application
-    state: present
-    identifiers:
-      slug: paperless
-    attrs:
-      name: Paperless
-      provider: !KeyOf provider-paperless
-      policy_engine_mode: any
-
   # ===== Mealie =====
   - model: authentik_providers_oauth2.oauth2provider
     id: provider-mealie
@@ -164,37 +133,6 @@ entries:
     attrs:
       name: Immich
       provider: !KeyOf provider-immich
-      policy_engine_mode: any
-
-  # ===== Portainer =====
-  - model: authentik_providers_oauth2.oauth2provider
-    id: provider-portainer
-    state: present
-    identifiers:
-      name: Portainer
-    attrs:
-      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
-      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
-      client_type: confidential
-      client_id: portainer
-      client_secret: !File /run/secrets/oidc_client_secret_portainer
-      redirect_uris:
-        - url: !Format ["https://portainer.%s", !Env DOMAIN_PRIVATE]
-          matching_mode: strict
-      property_mappings:
-        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
-        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
-        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
-      signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
-      access_token_validity: hours=1
-      refresh_token_validity: days=30
-  - model: authentik_core.application
-    state: present
-    identifiers:
-      slug: portainer
-    attrs:
-      name: Portainer
-      provider: !KeyOf provider-portainer
       policy_engine_mode: any
 
   # ===== Grafana =====
