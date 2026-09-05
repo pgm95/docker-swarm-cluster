@@ -1,3 +1,17 @@
+secrets:
+  borg_passphrase:
+    name: borg_passphrase_${DEPLOY_VERSION}
+    external: true
+  postgres_backup_db_password:
+    name: postgres_backup_db_password_${DEPLOY_VERSION}
+    external: true
+  immich_backup_db_password:
+    name: immich_backup_db_password_${DEPLOY_VERSION}
+    external: true
+  dawarich_backup_db_password:
+    name: dawarich_backup_db_password_${DEPLOY_VERSION}
+    external: true
+
 configs:
   borgmatic_config_common:
     name: borgmatic_config_common_${DEPLOY_VERSION}

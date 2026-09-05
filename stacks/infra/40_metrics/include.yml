@@ -1,3 +1,20 @@
+secrets:
+  grafana_oidc_client:
+    name: grafana_oidc_client_${DEPLOY_VERSION}
+    external: true
+  grafana_oidc_secret:
+    name: grafana_oidc_secret_${DEPLOY_VERSION}
+    external: true
+  grafana_postgres_password:
+    name: grafana_postgres_password_${DEPLOY_VERSION}
+    external: true
+  grafana_secret_key:
+    name: grafana_secret_key_${DEPLOY_VERSION}
+    external: true
+  syncthing_api_key:
+    name: syncthing_api_key_${DEPLOY_VERSION}
+    external: true
+
 configs:
   prometheus_config:
     name: prometheus_config_${DEPLOY_VERSION}

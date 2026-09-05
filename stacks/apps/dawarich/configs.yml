@@ -1,4 +1,0 @@
-configs:
-  init_backup_entrypoint:
-    name: dawarich_init_backup_entrypoint_${DEPLOY_VERSION}
-    file: ./config/bootstrap/init-backup.sh

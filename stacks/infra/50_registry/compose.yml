@@ -4,8 +4,7 @@
 # REGISTRY_HTTP_SECRET: env var injection (no _FILE support)
 
 include:
-  - secrets.yml
-  - configs.yml
+  - include.yml
 
 services:
   registry:

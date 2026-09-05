@@ -1,0 +1,9 @@
+secrets:
+  registry_htpasswd:
+    name: registry_htpasswd_${DEPLOY_VERSION}
+    external: true
+
+configs:
+  registry_init:
+    name: registry_init_${DEPLOY_VERSION}
+    file: ./config/init.sh

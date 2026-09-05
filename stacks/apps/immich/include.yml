@@ -1,3 +1,11 @@
+secrets:
+  db_password:
+    name: db_password_${DEPLOY_VERSION}
+    external: true
+  immich_backup_db_password:
+    name: immich_backup_db_password_${DEPLOY_VERSION}
+    external: true
+
 configs:
   immich_server_init:
     name: immich_server_init_${DEPLOY_VERSION}

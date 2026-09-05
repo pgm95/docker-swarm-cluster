@@ -1,3 +1,8 @@
+secrets:
+  cf_acme_api_token:
+    name: global_cf_acme_api_token_public_${DEPLOY_VERSION}
+    external: true
+
 configs:
   traefik_dynamic_base:
     name: traefik_external_dynamic_base_${DEPLOY_VERSION}

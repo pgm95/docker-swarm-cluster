@@ -1,3 +1,8 @@
+secrets:
+  postgres_password:
+    name: postgres_password_${DEPLOY_VERSION}
+    external: true
+
 configs:
   postgres_init:
     name: postgres_init_${DEPLOY_VERSION}

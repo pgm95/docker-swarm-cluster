@@ -20,3 +20,8 @@ secrets:
   fwd_recipient_3:
     name: fwd_recipient_3_${DEPLOY_VERSION}
     external: true
+
+configs:
+  forwarder_config:
+    name: forwarder_config_${DEPLOY_VERSION}
+    file: ./config/forwarder/config.json

@@ -1,4 +1,0 @@
-configs:
-  registry_init:
-    name: registry_init_${DEPLOY_VERSION}
-    file: ./config/init.sh
