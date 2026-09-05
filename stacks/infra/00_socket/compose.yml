@@ -2,7 +2,7 @@
 
 services:
   socket-proxy:
-    image: wollomatic/socket-proxy:1
+    image: wollomatic/socket-proxy:1.13.1
     read_only: true
     user: "65534:989" # GID should be that of the "docker" group on the host
     cap_drop: [ALL]
@@ -16,8 +16,20 @@ services:
       - '-stoponwatchdog'
       - '-watchdoginterval=600'
       - '-loglevel=info'
-      - '-allowGET=/(v1\..{1,2}/)?(_ping|version|containers/.*|events.*|services.*|tasks.*|networks.*|nodes.*|volumes.*|images.*|info|configs.*|secrets.*|swarm.*|system.*)'
-      - '-allowHEAD=/_ping'
+      - '-logjson'
+      # GET-only, curated per consumer. Regexes are anchored and matched against the path only.
+      # Version negotiation (Traefik, CrowdSec)
+      - '-allowHEAD=/(v1\..{1,2}/)?_ping'
+      - '-allowGET=/(v1\..{1,2}/)?(_ping|version|info)'
+      # Service discovery lists (Traefik, Prometheus, Homepage, CrowdSec)
+      - '-allowGET=/(v1\..{1,2}/)?(services|tasks|networks|nodes)'
+      # Single object inspect: Traefik nodes/<id>, Homepage and CrowdSec services/<name>
+      - '-allowGET=/(v1\..{1,2}/)?(services|nodes)/[A-Za-z0-9_.-]+'
+      # CrowdSec swarm log acquisition and event subscription
+      - '-allowGET=/(v1\..{1,2}/)?services/[A-Za-z0-9_.-]+/logs'
+      - '-allowGET=/(v1\..{1,2}/)?events'
+      # Homepage status probe (list only, no per-container inspect)
+      - '-allowGET=/(v1\..{1,2}/)?containers/json'
     networks:
       - infra_socket
     volumes:
