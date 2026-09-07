@@ -16,11 +16,11 @@ services:
       - "--web.enable-lifecycle"
       - "--web.enable-admin-api"
     secrets:
-      - syncthing_api_key
+      - widget_syncthing_api_key
     configs:
-      - source: prometheus_config
+      - source: metrics_prometheus_config
         target: /etc/prometheus/prometheus.yml
-      - source: prometheus_rules
+      - source: metrics_prometheus_rules
         target: /etc/prometheus/node_rules.yml
     networks:
       - infra_metrics
@@ -99,34 +99,34 @@ services:
       OIDC_URL: ${GLOBAL_OIDC_URL}
       GLOBAL_ADMIN_GROUP: ${GLOBAL_ADMIN_GROUP}
     secrets:
-      - grafana_oidc_client
-      - grafana_oidc_secret
-      - grafana_postgres_password
-      - grafana_secret_key
+      - oidc_grafana_client_id
+      - oidc_grafana_client_secret
+      - metrics_grafana_db_password
+      - metrics_grafana_secret_key
     configs:
-      - source: grafana_ini
+      - source: metrics_grafana_ini
         target: /etc/grafana/grafana.ini
-      - source: grafana_datasource
+      - source: metrics_grafana_datasource
         target: /etc/grafana/provisioning/datasources/datasource.yml
-      - source: grafana_dashboards_provisioner
+      - source: metrics_grafana_dashboards_provisioner
         target: /etc/grafana/provisioning/dashboards/dashboards.yml
-      - source: grafana_dashboard_crowdsec_prom
+      - source: metrics_grafana_dashboard_crowdsec_prom
         target: /etc/grafana/dashboards/crowdsec-prom.json
-      - source: grafana_dashboard_crowdsec_loki
+      - source: metrics_grafana_dashboard_crowdsec_loki
         target: /etc/grafana/dashboards/crowdsec-loki.json
-      - source: grafana_dashboard_traefik
+      - source: metrics_grafana_dashboard_traefik
         target: /etc/grafana/dashboards/traefik-standalone.json
-      - source: grafana_dashboard_syncthing
+      - source: metrics_grafana_dashboard_syncthing
         target: /etc/grafana/dashboards/syncthing-metrics.json
-      - source: grafana_dashboard_borgmatic
+      - source: metrics_grafana_dashboard_borgmatic
         target: /etc/grafana/dashboards/borgmatic-logs.json
-      - source: grafana_dashboard_gatus
+      - source: metrics_grafana_dashboard_gatus
         target: /etc/grafana/dashboards/gatus.json
-      - source: grafana_dashboard_registry
+      - source: metrics_grafana_dashboard_registry
         target: /etc/grafana/dashboards/docker-registry.json
-      - source: grafana_dashboard_node_exporter
+      - source: metrics_grafana_dashboard_node_exporter
         target: /etc/grafana/dashboards/node-exporter.json
-      - source: grafana_dashboard_cadvisor
+      - source: metrics_grafana_dashboard_cadvisor
         target: /etc/grafana/dashboards/cadvisor-overview.json
     networks:
       - infra_metrics
@@ -166,11 +166,12 @@ services:
       <<: *logging
     stop_grace_period: 30s
     environment:
-      PROVISIONER_USER: ${GLOBAL_POSTGRES_PROVISIONER_USER}
-      PROVISIONER_PASSWORD: ${GLOBAL_POSTGRES_PROVISIONER_PASSWORD}
-      GRAFANA_POSTGRES_PASSWORD: ${GRAFANA_POSTGRES_PASSWORD}
+      GLOBAL_DB_PROVISIONER_USER: ${GLOBAL_DB_PROVISIONER_USER}
+    secrets:
+      - global_db_provisioner_password
+      - metrics_grafana_db_password
     configs:
-      - source: init_db_entrypoint
+      - source: metrics_init_db
         target: /init-db-entrypoint.sh
     networks:
       - infra_postgres

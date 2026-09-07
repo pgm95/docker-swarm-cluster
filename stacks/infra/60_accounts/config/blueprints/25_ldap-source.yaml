@@ -77,7 +77,7 @@ entries:
       start_tls: false
       base_dn: !Env GLOBAL_LDAP_BASE_DN
       bind_cn: !Format ["uid=_bind_authentik,ou=people,%s", !Env GLOBAL_LDAP_BASE_DN]
-      bind_password: !File /run/secrets/authentik_bind_pass
+      bind_password: !File /run/secrets/ldap_authentik_bind_password
 
       additional_user_dn: ou=people
       additional_group_dn: ou=groups

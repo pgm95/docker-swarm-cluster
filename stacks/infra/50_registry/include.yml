@@ -1,4 +1,7 @@
 secrets:
+  registry_http_secret_key:
+    name: registry_http_secret_key_${DEPLOY_VERSION}
+    external: true
   registry_htpasswd:
     name: registry_htpasswd_${DEPLOY_VERSION}
     external: true

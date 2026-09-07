@@ -1,12 +1,33 @@
 secrets:
+  dawarich_secret_key_base:
+    name: dawarich_secret_key_base_${DEPLOY_VERSION}
+    external: true
+  dawarich_photon_api_key:
+    name: dawarich_photon_api_key_${DEPLOY_VERSION}
+    external: true
+  oidc_dawarich_client_secret:
+    name: oidc_dawarich_client_secret_${DEPLOY_VERSION}
+    external: true
+  dawarich_otp_primary_key:
+    name: dawarich_otp_primary_key_${DEPLOY_VERSION}
+    external: true
+  dawarich_otp_deterministic_key:
+    name: dawarich_otp_deterministic_key_${DEPLOY_VERSION}
+    external: true
+  dawarich_otp_key_derivation_salt:
+    name: dawarich_otp_key_derivation_salt_${DEPLOY_VERSION}
+    external: true
   dawarich_db_password:
     name: dawarich_db_password_${DEPLOY_VERSION}
     external: true
-  dawarich_backup_db_password:
-    name: dawarich_backup_db_password_${DEPLOY_VERSION}
+  backup_dawarich_db_password:
+    name: backup_dawarich_db_password_${DEPLOY_VERSION}
     external: true
 
 configs:
-  init_backup_entrypoint:
-    name: dawarich_init_backup_entrypoint_${DEPLOY_VERSION}
+  dawarich_init:
+    name: dawarich_init_${DEPLOY_VERSION}
+    file: ./config/init.sh
+  dawarich_init_backup:
+    name: dawarich_init_backup_${DEPLOY_VERSION}
     file: ./config/bootstrap/init-backup.sh

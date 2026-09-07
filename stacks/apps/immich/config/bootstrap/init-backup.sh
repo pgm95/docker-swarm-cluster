@@ -5,8 +5,8 @@ PGHOST="database"
 PGPORT="5432"
 PGUSER="postgres"
 PGDATABASE="postgres"
-PGPASSWORD="$(cat /run/secrets/db_password)"
-BACKUP_PASSWORD="$(cat /run/secrets/immich_backup_db_password)"
+PGPASSWORD="$(cat /run/secrets/immich_db_password)"
+BACKUP_PASSWORD="$(cat /run/secrets/backup_immich_db_password)"
 export PGHOST PGPORT PGUSER PGDATABASE PGPASSWORD
 
 echo "Waiting for PostgreSQL..."

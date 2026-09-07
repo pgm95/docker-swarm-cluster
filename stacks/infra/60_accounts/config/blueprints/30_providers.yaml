@@ -18,7 +18,7 @@ entries:
       invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
       client_type: confidential
       client_id: mealie
-      client_secret: !File /run/secrets/oidc_client_secret_mealie
+      client_secret: !File /run/secrets/oidc_mealie_client_secret
       redirect_uris:
         - url: !Format ["https://recipes.%s/login", !Env DOMAIN_PUBLIC]
           matching_mode: strict
@@ -49,7 +49,7 @@ entries:
       invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
       client_type: confidential
       client_id: dawarich
-      client_secret: !File /run/secrets/oidc_client_secret_dawarich
+      client_secret: !File /run/secrets/oidc_dawarich_client_secret
       redirect_uris:
         - url: !Format ["https://maps.%s/users/auth/openid_connect/callback", !Env DOMAIN_PRIVATE]
           matching_mode: strict
@@ -80,7 +80,7 @@ entries:
       invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
       client_type: confidential
       client_id: quantum
-      client_secret: !File /run/secrets/oidc_client_secret_quantum
+      client_secret: !File /run/secrets/oidc_quantum_client_secret
       redirect_uris:
         - url: !Format ["https://files.%s/api/auth/oidc/callback", !Env DOMAIN_PRIVATE]
           matching_mode: strict
@@ -111,7 +111,7 @@ entries:
       invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
       client_type: confidential
       client_id: immich
-      client_secret: !File /run/secrets/oidc_client_secret_immich
+      client_secret: !File /run/secrets/oidc_immich_client_secret
       redirect_uris:
         - url: !Format ["https://immich.%s/auth/login", !Env DOMAIN_PRIVATE]
           matching_mode: strict
@@ -146,7 +146,7 @@ entries:
       invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
       client_type: confidential
       client_id: grafana
-      client_secret: !File /run/secrets/oidc_client_secret_grafana
+      client_secret: !File /run/secrets/oidc_grafana_client_secret
       redirect_uris:
         - url: !Format ["https://grafana.%s/login/generic_oauth", !Env DOMAIN_PRIVATE]
           matching_mode: strict
@@ -177,7 +177,7 @@ entries:
       invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
       client_type: confidential
       client_id: tailscale
-      client_secret: !File /run/secrets/oidc_client_secret_tailscale
+      client_secret: !File /run/secrets/oidc_tailscale_client_secret
       redirect_uris:
         - url: "https://login.tailscale.com/a/oauth_response"
           matching_mode: strict

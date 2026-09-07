@@ -6,6 +6,7 @@ include:
 services:
   seerr:
     image: ghcr.io/seerr-team/seerr:latest
+    entrypoint: ["/bin/sh", "/init.sh"]
     logging:
       <<: *logging
     stop_grace_period: 30s
@@ -17,7 +18,11 @@ services:
       - DB_PORT=5432
       - DB_NAME=seerr
       - DB_USER=seerr
-      - DB_PASS=${SEERR_POSTGRES_PASSWORD}
+    secrets:
+      - servarr_seerr_db_password
+    configs:
+      - source: servarr_seerr_init
+        target: /init.sh
     networks:
       - infra_gw-internal
       - infra_gw-external
@@ -47,7 +52,7 @@ services:
         - "homepage.href=https://request.${DOMAIN_PUBLIC}"
         - "homepage.widget.type=seerr"
         - "homepage.widget.url=https://request.${DOMAIN_PUBLIC}"
-        - "homepage.widget.key={{HOMEPAGE_VAR_SEERR_KEY}}"
+        - "homepage.widget.key={{HOMEPAGE_FILE_SEERR_API_KEY}}"
         - 'homepage.widget.fields=["pending", "approved", "available", "completed"]'
       mode: replicated
       replicas: 1
@@ -61,13 +66,16 @@ services:
     environment:
       - PUID=${GLOBAL_NONROOT_PUID}
       - PGID=${GLOBAL_NONROOT_PGID}
-      - RADARR__AUTH__APIKEY=${RADARR__AUTH__APIKEY:-}
+      - FILE__RADARR__AUTH__APIKEY=/run/secrets/widget_radarr_api_key
       - RADARR__POSTGRES__HOST=postgres
       - RADARR__POSTGRES__PORT=5432
       - RADARR__POSTGRES__USER=radarr
-      - RADARR__POSTGRES__PASSWORD=${RADARR_POSTGRES_PASSWORD}
+      - FILE__RADARR__POSTGRES__PASSWORD=/run/secrets/servarr_radarr_db_password
       - RADARR__POSTGRES__MAINDB=radarr-main
       - RADARR__POSTGRES__LOGDB=radarr-log
+    secrets:
+      - widget_radarr_api_key
+      - servarr_radarr_db_password
     networks:
       - infra_gw-internal
       - infra_postgres
@@ -96,7 +104,7 @@ services:
         - "homepage.href=https://radarr.${DOMAIN_PRIVATE}"
         - "homepage.widget.type=radarr"
         - "homepage.widget.url=https://radarr.${DOMAIN_PRIVATE}"
-        - "homepage.widget.key=${RADARR__AUTH__APIKEY}"
+        - "homepage.widget.key={{HOMEPAGE_FILE_WIDGET_RADARR_API_KEY}}"
         - "homepage.widget.enableQueue=false"
         - 'homepage.widget.fields=["wanted", "queued", "movies"]'
       mode: replicated
@@ -112,13 +120,16 @@ services:
     environment:
       - PUID=${GLOBAL_NONROOT_PUID}
       - PGID=${GLOBAL_NONROOT_PGID}
-      - SONARR__AUTH__APIKEY=${SONARR__AUTH__APIKEY:-}
+      - FILE__SONARR__AUTH__APIKEY=/run/secrets/widget_sonarr_api_key
       - SONARR__POSTGRES__HOST=postgres
       - SONARR__POSTGRES__PORT=5432
       - SONARR__POSTGRES__USER=sonarr
-      - SONARR__POSTGRES__PASSWORD=${SONARR_POSTGRES_PASSWORD}
+      - FILE__SONARR__POSTGRES__PASSWORD=/run/secrets/servarr_sonarr_db_password
       - SONARR__POSTGRES__MAINDB=sonarr-main
       - SONARR__POSTGRES__LOGDB=sonarr-log
+    secrets:
+      - widget_sonarr_api_key
+      - servarr_sonarr_db_password
     networks:
       - infra_gw-internal
       - infra_postgres
@@ -147,7 +158,7 @@ services:
         - "homepage.href=https://sonarr.${DOMAIN_PRIVATE}"
         - "homepage.widget.type=sonarr"
         - "homepage.widget.url=https://sonarr.${DOMAIN_PRIVATE}"
-        - "homepage.widget.key=${SONARR__AUTH__APIKEY}"
+        - "homepage.widget.key={{HOMEPAGE_FILE_WIDGET_SONARR_API_KEY}}"
         - "homepage.widget.enableQueue=false"
         - 'homepage.widget.fields=["wanted", "queued", "series"]'
       mode: replicated
@@ -163,13 +174,16 @@ services:
     environment:
       - PUID=${GLOBAL_NONROOT_PUID}
       - PGID=${GLOBAL_NONROOT_PGID}
-      - PROWLARR__AUTH__APIKEY=${PROWLARR__AUTH__APIKEY:-}
+      - FILE__PROWLARR__AUTH__APIKEY=/run/secrets/widget_prowlarr_api_key
       - PROWLARR__POSTGRES__HOST=postgres
       - PROWLARR__POSTGRES__PORT=5432
       - PROWLARR__POSTGRES__USER=prowlarr
-      - PROWLARR__POSTGRES__PASSWORD=${PROWLARR_POSTGRES_PASSWORD}
+      - FILE__PROWLARR__POSTGRES__PASSWORD=/run/secrets/servarr_prowlarr_db_password
       - PROWLARR__POSTGRES__MAINDB=prowlarr-main
       - PROWLARR__POSTGRES__LOGDB=prowlarr-log
+    secrets:
+      - widget_prowlarr_api_key
+      - servarr_prowlarr_db_password
     networks:
       - default
       - infra_gw-internal
@@ -198,7 +212,7 @@ services:
         - "homepage.href=https://prowlarr.${DOMAIN_PRIVATE}"
         - "homepage.widget.type=prowlarr"
         - "homepage.widget.url=https://prowlarr.${DOMAIN_PRIVATE}"
-        - "homepage.widget.key=${PROWLARR__AUTH__APIKEY}"
+        - "homepage.widget.key={{HOMEPAGE_FILE_WIDGET_PROWLARR_API_KEY}}"
         - 'homepage.widget.fields=["numberOfGrabs", "numberOfQueries"]'
       mode: replicated
       replicas: 1
@@ -232,14 +246,15 @@ services:
       <<: *logging
     stop_grace_period: 30s
     environment:
-      - PROVISIONER_USER=${GLOBAL_POSTGRES_PROVISIONER_USER}
-      - PROVISIONER_PASSWORD=${GLOBAL_POSTGRES_PROVISIONER_PASSWORD}
-      - SEERR_DB_PASSWORD=${SEERR_POSTGRES_PASSWORD}
-      - RADARR_DB_PASSWORD=${RADARR_POSTGRES_PASSWORD}
-      - SONARR_DB_PASSWORD=${SONARR_POSTGRES_PASSWORD}
-      - PROWLARR_DB_PASSWORD=${PROWLARR_POSTGRES_PASSWORD}
+      - GLOBAL_DB_PROVISIONER_USER=${GLOBAL_DB_PROVISIONER_USER}
+    secrets:
+      - global_db_provisioner_password
+      - servarr_seerr_db_password
+      - servarr_radarr_db_password
+      - servarr_sonarr_db_password
+      - servarr_prowlarr_db_password
     configs:
-      - source: init_db_entrypoint
+      - source: servarr_init_db
         target: /init-db-entrypoint.sh
     networks:
       - infra_postgres
@@ -262,7 +277,7 @@ volumes:
     driver_opts:
       type: cifs
       device: //${GLOBAL_CIFS_HOST}/media
-      o: "username=${GLOBAL_CIFS_USERNAME},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
+      o: "username=${GLOBAL_CIFS_USER},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
 
 networks:
   infra_gw-internal:

@@ -1,3 +1,14 @@
+secrets:
+  quantum_admin_password:
+    name: quantum_admin_password_${DEPLOY_VERSION}
+    external: true
+  quantum_jwt_secret_key:
+    name: quantum_jwt_secret_key_${DEPLOY_VERSION}
+    external: true
+  oidc_quantum_client_secret:
+    name: oidc_quantum_client_secret_${DEPLOY_VERSION}
+    external: true
+
 configs:
   quantum_config:
     name: quantum_config_${DEPLOY_VERSION}

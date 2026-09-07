@@ -1,7 +1,18 @@
+secrets:
+  global_db_provisioner_password:
+    name: global_db_provisioner_password_${DEPLOY_VERSION}
+    external: true
+  dispatcharr_db_password:
+    name: dispatcharr_db_password_${DEPLOY_VERSION}
+    external: true
+
 configs:
-  init_db_entrypoint:
-    name: dispatcharr_init_db_entrypoint_${DEPLOY_VERSION}
+  dispatcharr_init:
+    name: dispatcharr_init_${DEPLOY_VERSION}
+    file: ./config/init.sh
+  dispatcharr_init_db:
+    name: dispatcharr_init_db_${DEPLOY_VERSION}
     file: ./config/bootstrap/init-db.sh
-  epg_channels:
+  dispatcharr_epg_channels:
     name: dispatcharr_epg_channels_${DEPLOY_VERSION}
     file: ./config/epg/channels.xml

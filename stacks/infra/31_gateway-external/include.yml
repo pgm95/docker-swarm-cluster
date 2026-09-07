@@ -1,45 +1,60 @@
 secrets:
-  cf_acme_api_token:
-    name: global_cf_acme_api_token_public_${DEPLOY_VERSION}
+  gateway_external_bouncer_key:
+    name: gateway_external_bouncer_key_${DEPLOY_VERSION}
+    external: true
+  gateway_external_crowdsec_cti_key:
+    name: gateway_external_crowdsec_cti_key_${DEPLOY_VERSION}
+    external: true
+  widget_crowdsec_password:
+    name: widget_crowdsec_password_${DEPLOY_VERSION}
+    external: true
+  global_db_provisioner_password:
+    name: global_db_provisioner_password_${DEPLOY_VERSION}
+    external: true
+  gateway_external_crowdsec_db_password:
+    name: gateway_external_crowdsec_db_password_${DEPLOY_VERSION}
+    external: true
+  global_cloudflare_acme_public_token:
+    name: global_cloudflare_acme_public_token_${DEPLOY_VERSION}
     external: true
 
 configs:
-  traefik_dynamic_base:
-    name: traefik_external_dynamic_base_${DEPLOY_VERSION}
+  gateway_external_traefik_dynamic_base:
+    name: gateway_external_traefik_dynamic_base_${DEPLOY_VERSION}
     file: ./config/traefik/dynamic/base.yml
-  traefik_dynamic_authentik:
-    name: traefik_external_dynamic_authentik_${DEPLOY_VERSION}
+  gateway_external_traefik_dynamic_authentik:
+    name: gateway_external_traefik_dynamic_authentik_${DEPLOY_VERSION}
     file: ./config/traefik/dynamic/authentik.yml
-  traefik_dynamic_bouncer:
-    name: traefik_external_dynamic_bouncer_${DEPLOY_VERSION}
+  gateway_external_traefik_dynamic_bouncer:
+    name: gateway_external_traefik_dynamic_bouncer_${DEPLOY_VERSION}
     file: ./config/traefik/dynamic/bouncer.yml
-  traefik_dynamic_geoblock:
-    name: traefik_external_dynamic_geoblock_${DEPLOY_VERSION}
+  gateway_external_traefik_dynamic_geoblock:
+    name: gateway_external_traefik_dynamic_geoblock_${DEPLOY_VERSION}
     file: ./config/traefik/dynamic/geoblock.yml
-  traefik_dynamic_hass-public:
-    name: traefik_external_dynamic_hass-public_${DEPLOY_VERSION}
+  gateway_external_traefik_dynamic_hass_public:
+    name: gateway_external_traefik_dynamic_hass_public_${DEPLOY_VERSION}
     file: ./config/traefik/dynamic/hass-public.yml
-  crowdsec_entrypoint:
-    name: crowdsec_entrypoint_${DEPLOY_VERSION}
+  gateway_external_crowdsec_entrypoint:
+    name: gateway_external_crowdsec_entrypoint_${DEPLOY_VERSION}
     file: ./config/crowdsec/entrypoint.sh
-  crowdsec_acquis:
-    name: crowdsec_acquis_${DEPLOY_VERSION}
+  gateway_external_crowdsec_acquis:
+    name: gateway_external_crowdsec_acquis_${DEPLOY_VERSION}
     file: ./config/crowdsec/acquis.yaml
-  crowdsec_profiles:
-    name: crowdsec_profiles_${DEPLOY_VERSION}
+  gateway_external_crowdsec_profiles:
+    name: gateway_external_crowdsec_profiles_${DEPLOY_VERSION}
     file: ./config/crowdsec/profiles.yaml
-  crowdsec_config:
-    name: crowdsec_config_${DEPLOY_VERSION}
+  gateway_external_crowdsec_config:
+    name: gateway_external_crowdsec_config_${DEPLOY_VERSION}
     file: ./config/crowdsec/config.yaml
-  crowdsec_console:
-    name: crowdsec_console_${DEPLOY_VERSION}
+  gateway_external_crowdsec_console:
+    name: gateway_external_crowdsec_console_${DEPLOY_VERSION}
     file: ./config/crowdsec/console.yaml
-  crowdsec_notifications:
-    name: crowdsec_notifications_${DEPLOY_VERSION}
+  gateway_external_crowdsec_notifications:
+    name: gateway_external_crowdsec_notifications_${DEPLOY_VERSION}
     file: ./config/crowdsec/notifications-http.yaml
-  crowdsec_whitelist_rejected:
-    name: crowdsec_whitelist_rejected_${DEPLOY_VERSION}
+  gateway_external_crowdsec_whitelist_rejected:
+    name: gateway_external_crowdsec_whitelist_rejected_${DEPLOY_VERSION}
     file: ./config/crowdsec/whitelist-rejected.yaml
-  init_db_entrypoint:
-    name: crowdsec_init_db_entrypoint_${DEPLOY_VERSION}
+  gateway_external_init_db:
+    name: gateway_external_init_db_${DEPLOY_VERSION}
     file: ./config/bootstrap/init-db.sh

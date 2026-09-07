@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 
 # Run 'mise run registry:auth' after deploy to login all nodes
-# REGISTRY_HTTP_SECRET: env var injection (no _FILE support)
+# REGISTRY_HTTP_SECRET has no _FILE form; init.sh reads it from /run/secrets and exports it
 
 include:
   - include.yml
@@ -21,13 +21,13 @@ services:
       REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
       REGISTRY_AUTH_HTPASSWD_PATH: /run/secrets/registry_htpasswd
       REGISTRY_STORAGE_DELETE_ENABLED: "true"
-      REGISTRY_HTTP_SECRET: ${REGISTRY_HTTP_SECRET}
       REGISTRY_HTTP_DEBUG_ADDR: 0.0.0.0:5001
       REGISTRY_HTTP_DEBUG_PROMETHEUS_ENABLED: "true"
       REGISTRY_LOG_LEVEL: info
       OTEL_TRACES_EXPORTER: none
     secrets:
       - registry_htpasswd
+      - registry_http_secret_key
     configs:
       - source: registry_init
         target: /init.sh

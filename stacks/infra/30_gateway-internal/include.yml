@@ -1,12 +1,12 @@
 secrets:
-  cf_acme_api_token:
-    name: global_cf_acme_api_token_private_${DEPLOY_VERSION}
+  global_cloudflare_acme_private_token:
+    name: global_cloudflare_acme_private_token_${DEPLOY_VERSION}
     external: true
 
 configs:
-  traefik_dynamic_base:
-    name: traefik_internal_dynamic_base_${DEPLOY_VERSION}
+  gateway_internal_traefik_dynamic_base:
+    name: gateway_internal_traefik_dynamic_base_${DEPLOY_VERSION}
     file: ./config/traefik/dynamic/base.yml
-  traefik_dynamic_hass-private:
-    name: traefik_internal_dynamic_hass-private_${DEPLOY_VERSION}
+  gateway_internal_traefik_dynamic_hass_private:
+    name: gateway_internal_traefik_dynamic_hass_private_${DEPLOY_VERSION}
     file: ./config/traefik/dynamic/hass-private.yml

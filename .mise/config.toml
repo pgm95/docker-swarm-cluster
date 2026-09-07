@@ -25,8 +25,14 @@ SOPS_CONFIG = "{{ env.PROJECT_CONFIGS_DIR }}/sops.yaml"
 SWARM_STACKS_DIR = "{{config_root}}/stacks"
 SWARM_ANCHORS_FILE = "{{ env.SWARM_STACKS_DIR }}/_shared/anchors.yml"
 
-GLOBAL_SECRETS = "{{ env.PROJECT_SECRETS_DIR }}/shared.sops.yaml"
-_.file = { path = "{{ env.GLOBAL_SECRETS }}", redact = true }
+GLOBAL_SECRETS = "{{ env.PROJECT_SECRETS_DIR }}/global.sops.yaml"
+_.file = [
+  { path = "{{ env.GLOBAL_SECRETS }}", redact = true },
+  { path = "{{ env.PROJECT_SECRETS_DIR }}/oidc.sops.yaml", redact = true },
+  { path = "{{ env.PROJECT_SECRETS_DIR }}/backup.sops.yaml", redact = true },
+  { path = "{{ env.PROJECT_SECRETS_DIR }}/ldap.sops.yaml", redact = true },
+  { path = "{{ env.PROJECT_SECRETS_DIR }}/widget.sops.yaml", redact = true },
+]
 
 GLOBAL_TZ = "UTC"
 GLOBAL_TZ_LOCAL = "America/Chicago"

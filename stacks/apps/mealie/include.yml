@@ -1,18 +1,21 @@
 secrets:
-  oidc_client_secret_mealie:
-    name: oidc_client_secret_mealie_${DEPLOY_VERSION}
+  global_db_provisioner_password:
+    name: global_db_provisioner_password_${DEPLOY_VERSION}
+    external: true
+  oidc_mealie_client_secret:
+    name: oidc_mealie_client_secret_${DEPLOY_VERSION}
     external: true
   mealie_openai_api_key:
     name: mealie_openai_api_key_${DEPLOY_VERSION}
     external: true
-  mealie_postgres_password:
-    name: mealie_postgres_password_${DEPLOY_VERSION}
+  mealie_db_password:
+    name: mealie_db_password_${DEPLOY_VERSION}
     external: true
-  smtp_pass:
-    name: global_smtp_pass_${DEPLOY_VERSION}
+  global_smtp_password:
+    name: global_smtp_password_${DEPLOY_VERSION}
     external: true
 
 configs:
-  init_db_entrypoint:
-    name: mealie_init_db_entrypoint_${DEPLOY_VERSION}
+  mealie_init_db:
+    name: mealie_init_db_${DEPLOY_VERSION}
     file: ./config/bootstrap/init-db.sh

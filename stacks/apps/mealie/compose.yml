@@ -20,7 +20,7 @@ services:
       - ALLOW_SIGNUP=false
       - DB_ENGINE=postgres
       - POSTGRES_USER=mealie
-      - POSTGRES_PASSWORD_FILE=/run/secrets/mealie_postgres_password
+      - POSTGRES_PASSWORD_FILE=/run/secrets/mealie_db_password
       - POSTGRES_SERVER=postgres
       - POSTGRES_PORT=5432
       - POSTGRES_DB=mealie
@@ -35,8 +35,8 @@ services:
       - OIDC_ADMIN_GROUP=${GLOBAL_ADMIN_GROUP}
       - OIDC_USER_GROUP=users
       - OIDC_CONFIGURATION_URL=https://auth.${DOMAIN_PUBLIC}/application/o/mealie/.well-known/openid-configuration
-      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID_MEALIE}
-      - OIDC_CLIENT_SECRET_FILE=/run/secrets/oidc_client_secret_mealie
+      - OIDC_CLIENT_ID=${OIDC_MEALIE_CLIENT_ID}
+      - OIDC_CLIENT_SECRET_FILE=/run/secrets/oidc_mealie_client_secret
       # - ALLOW_PASSWORD_LOGIN=false
       # SMTP Configuration
       - SMTP_PORT=587
@@ -44,15 +44,15 @@ services:
       - SMTP_FROM_NAME=Mealie
       - SMTP_HOST=${GLOBAL_SMTP_HOST}
       - SMTP_USER=${GLOBAL_SMTP_USER}
-      - SMTP_PASSWORD_FILE=/run/secrets/smtp_pass
+      - SMTP_PASSWORD_FILE=/run/secrets/global_smtp_password
       - SMTP_FROM_EMAIL=noreply@${DOMAIN_PUBLIC}
       # OpenAI Integration
       - OPENAI_API_KEY_FILE=/run/secrets/mealie_openai_api_key
     secrets:
-      - oidc_client_secret_mealie
+      - oidc_mealie_client_secret
       - mealie_openai_api_key
-      - mealie_postgres_password
-      - smtp_pass
+      - mealie_db_password
+      - global_smtp_password
     networks:
       - infra_gw-external
       - infra_postgres
@@ -80,7 +80,7 @@ services:
         - "homepage.href=https://recipes.${DOMAIN_PUBLIC}"
         - "homepage.widget.type=mealie"
         - "homepage.widget.url=https://recipes.${DOMAIN_PUBLIC}"
-        - "homepage.widget.key={{HOMEPAGE_VAR_MEALIE_KEY}}"
+        - "homepage.widget.key={{HOMEPAGE_FILE_MEALIE_API_KEY}}"
         - "homepage.widget.version=2"
       mode: replicated
       replicas: 1
@@ -94,11 +94,12 @@ services:
       <<: *logging
     stop_grace_period: 30s
     environment:
-      - PROVISIONER_USER=${GLOBAL_POSTGRES_PROVISIONER_USER}
-      - PROVISIONER_PASSWORD=${GLOBAL_POSTGRES_PROVISIONER_PASSWORD}
-      - MEALIE_DB_PASSWORD=${MEALIE_POSTGRES_PASSWORD}
+      - GLOBAL_DB_PROVISIONER_USER=${GLOBAL_DB_PROVISIONER_USER}
+    secrets:
+      - global_db_provisioner_password
+      - mealie_db_password
     configs:
-      - source: init_db_entrypoint
+      - source: mealie_init_db
         target: /init-db-entrypoint.sh
     networks:
       - infra_postgres

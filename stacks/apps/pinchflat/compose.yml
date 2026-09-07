@@ -50,7 +50,7 @@ volumes:
     driver_opts:
       type: cifs
       device: //${GLOBAL_CIFS_HOST}/media/youtube
-      o: "username=${GLOBAL_CIFS_USERNAME},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
+      o: "username=${GLOBAL_CIFS_USER},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
 
 networks:
   infra_gw-internal:

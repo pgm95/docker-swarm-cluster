@@ -19,4 +19,11 @@ while ! nc -z "${PGHOST}" "${PGPORT}" 2>/dev/null; do
 done
 echo "PostgreSQL reachable (${elapsed}s)"
 
+# Credentials arrive as Docker secrets; the stock entrypoint and config.yaml.local read env vars.
+BOUNCER_KEY_TRAEFIK="$(cat /run/secrets/gateway_external_bouncer_key)"
+GATEWAY_EXTERNAL_CROWDSEC_CTI_KEY="$(cat /run/secrets/gateway_external_crowdsec_cti_key)"
+GATEWAY_EXTERNAL_CROWDSEC_DB_PASSWORD="$(cat /run/secrets/gateway_external_crowdsec_db_password)"
+AGENT_PASSWORD="$(cat /run/secrets/widget_crowdsec_password)"
+export BOUNCER_KEY_TRAEFIK GATEWAY_EXTERNAL_CROWDSEC_CTI_KEY GATEWAY_EXTERNAL_CROWDSEC_DB_PASSWORD AGENT_PASSWORD
+
 exec /bin/bash /docker_start.sh "$@"

@@ -39,8 +39,8 @@ class TestLoginLocal:
 class TestRegistryAuth:
     def test_all_succeed(self, monkeypatch):
         monkeypatch.setenv("GLOBAL_SWARM_OCI_REGISTRY", "reg.example.com")
-        monkeypatch.setenv("REGISTRY_USER", "user")
-        monkeypatch.setenv("REGISTRY_PASS", "pass")
+        monkeypatch.setenv("GLOBAL_REGISTRY_USER", "user")
+        monkeypatch.setenv("GLOBAL_REGISTRY_PASSWORD", "pass")
         monkeypatch.setattr(
             "swarm.registry_auth.get_swarm_nodes",
             lambda: [{"hostname": "node1"}, {"hostname": "node2"}],
@@ -50,8 +50,8 @@ class TestRegistryAuth:
 
     def test_partial_failure(self, monkeypatch):
         monkeypatch.setenv("GLOBAL_SWARM_OCI_REGISTRY", "reg.example.com")
-        monkeypatch.setenv("REGISTRY_USER", "user")
-        monkeypatch.setenv("REGISTRY_PASS", "pass")
+        monkeypatch.setenv("GLOBAL_REGISTRY_USER", "user")
+        monkeypatch.setenv("GLOBAL_REGISTRY_PASSWORD", "pass")
         monkeypatch.setattr(
             "swarm.registry_auth.get_swarm_nodes",
             lambda: [{"hostname": "node1"}, {"hostname": "node2"}],
@@ -68,14 +68,14 @@ class TestRegistryAuth:
 
     def test_missing_env(self, monkeypatch):
         monkeypatch.delenv("GLOBAL_SWARM_OCI_REGISTRY", raising=False)
-        monkeypatch.delenv("REGISTRY_USER", raising=False)
-        monkeypatch.delenv("REGISTRY_PASS", raising=False)
+        monkeypatch.delenv("GLOBAL_REGISTRY_USER", raising=False)
+        monkeypatch.delenv("GLOBAL_REGISTRY_PASSWORD", raising=False)
         assert registry_auth() == 1
 
     def test_with_local(self, monkeypatch):
         monkeypatch.setenv("GLOBAL_SWARM_OCI_REGISTRY", "reg.example.com")
-        monkeypatch.setenv("REGISTRY_USER", "user")
-        monkeypatch.setenv("REGISTRY_PASS", "pass")
+        monkeypatch.setenv("GLOBAL_REGISTRY_USER", "user")
+        monkeypatch.setenv("GLOBAL_REGISTRY_PASSWORD", "pass")
         monkeypatch.setattr("swarm.registry_auth.get_swarm_nodes", list)
         monkeypatch.setattr("swarm.registry_auth.login_local", lambda *a: True)
         assert registry_auth(local=True) == 0
@@ -84,8 +84,8 @@ class TestRegistryAuth:
         """Concurrent login_node calls produce correct per-target results."""
         import time
         monkeypatch.setenv("GLOBAL_SWARM_OCI_REGISTRY", "reg.example.com")
-        monkeypatch.setenv("REGISTRY_USER", "user")
-        monkeypatch.setenv("REGISTRY_PASS", "pass")
+        monkeypatch.setenv("GLOBAL_REGISTRY_USER", "user")
+        monkeypatch.setenv("GLOBAL_REGISTRY_PASSWORD", "pass")
         monkeypatch.setattr(
             "swarm.registry_auth.get_swarm_nodes",
             lambda: [{"hostname": "alpha"}, {"hostname": "bravo"}, {"hostname": "charlie"}],
@@ -106,8 +106,8 @@ class TestMainCli:
     def test_no_flag_skips_local(self, monkeypatch):
         from swarm.registry_auth import main
         monkeypatch.setenv("GLOBAL_SWARM_OCI_REGISTRY", "reg")
-        monkeypatch.setenv("REGISTRY_USER", "u")
-        monkeypatch.setenv("REGISTRY_PASS", "p")
+        monkeypatch.setenv("GLOBAL_REGISTRY_USER", "u")
+        monkeypatch.setenv("GLOBAL_REGISTRY_PASSWORD", "p")
         monkeypatch.setattr("swarm.registry_auth.get_swarm_nodes", list)
         local_called = []
         monkeypatch.setattr(
@@ -122,8 +122,8 @@ class TestMainCli:
     def test_local_flag_invokes_login_local(self, monkeypatch):
         from swarm.registry_auth import main
         monkeypatch.setenv("GLOBAL_SWARM_OCI_REGISTRY", "reg")
-        monkeypatch.setenv("REGISTRY_USER", "u")
-        monkeypatch.setenv("REGISTRY_PASS", "p")
+        monkeypatch.setenv("GLOBAL_REGISTRY_USER", "u")
+        monkeypatch.setenv("GLOBAL_REGISTRY_PASSWORD", "p")
         monkeypatch.setattr("swarm.registry_auth.get_swarm_nodes", list)
         local_called = []
         monkeypatch.setattr(

@@ -9,7 +9,7 @@ postgresql_databases:
     hostname: immich_database
     port: 5432
     username: backup
-    password: "{credential container immich_backup_db_password}"
+    password: "{credential container backup_immich_db_password}"
     format: custom
     compression: none
     no_owner: true

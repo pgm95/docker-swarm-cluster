@@ -16,11 +16,11 @@ services:
       - DB_HOSTNAME=database
       - DB_USERNAME=postgres
       - DB_DATABASE_NAME=immich
-      - DB_PASSWORD_FILE=/run/secrets/db_password
+      - DB_PASSWORD_FILE=/run/secrets/immich_db_password
       # - IMMICH_IGNORE_MOUNT_CHECK_ERRORS=true
       # - CREDENTIALS_DIRECTORY=/run/secrets
     secrets:
-      - db_password
+      - immich_db_password
     configs:
       - source: immich_server_init
         target: /init.sh
@@ -88,7 +88,7 @@ services:
         - "homepage.widget.type=immich"
         - "homepage.widget.version=2"
         - "homepage.widget.url=https://immich.${DOMAIN_PRIVATE}"
-        - "homepage.widget.key={{HOMEPAGE_VAR_IMMICH_KEY}}"
+        - "homepage.widget.key={{HOMEPAGE_FILE_IMMICH_API_KEY}}"
         - 'homepage.widget.fields=["photos", "videos", "storage"]'
       mode: replicated
       replicas: 1
@@ -149,12 +149,12 @@ services:
       <<: *logging
     stop_grace_period: 60s
     environment:
-      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+      - POSTGRES_PASSWORD_FILE=/run/secrets/immich_db_password
       - POSTGRES_USER=postgres
       - POSTGRES_DB=immich
       - POSTGRES_INITDB_ARGS=--data-checksums
     secrets:
-      - db_password
+      - immich_db_password
     tmpfs:
       - /dev/shm:size=134217728
     volumes:
@@ -187,10 +187,10 @@ services:
       <<: *logging
     stop_grace_period: 30s
     secrets:
-      - db_password
-      - immich_backup_db_password
+      - immich_db_password
+      - backup_immich_db_password
     configs:
-      - source: init_backup_entrypoint
+      - source: immich_init_backup
         target: /init-backup-entrypoint.sh
     healthcheck:
       test: ["NONE"]
@@ -210,7 +210,7 @@ volumes:
     driver_opts:
       type: cifs
       device: //${GLOBAL_CIFS_HOST}/photos
-      o: "username=${GLOBAL_CIFS_USERNAME},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
+      o: "username=${GLOBAL_CIFS_USER},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
 
 networks:
   infra_gw-internal:

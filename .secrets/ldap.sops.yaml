@@ -1,0 +1,18 @@
+LDAP_AUTHENTIK_BIND_PASSWORD: ENC[AES256_GCM,data:CnwpU3UE4XFXNulqgzzbmsjG5Tfd0Hbr89bo5LsEGlq6OtqpyA+MKudFc2dqDQNzv0Tv562Z9hZ88duJOKfqmA==,iv:wZidzA6Ta2g9jOnC5WPb9Y8a94Vl+lmobeykFqXaRME=,tag:RjEh8RbAJisWzJ0mqJjpbw==,type:str]
+LDAP_JELLYFIN_BIND_PASSWORD: ENC[AES256_GCM,data:cClnSaVQa9ZDAevJLzFfjXz4IjgKh9TXYtADBwXRVLVJrfuALICqwNBmeRN8Bk8es0iFomZoHO8qvuTPKAXniA==,iv:JPpqfjWnjIB+3NvbQ7Bxe8z9lxYpgztAkzsJdSNRm5k=,tag:GTG0dtxElN2+UqPM3oZD3w==,type:str]
+LDAP_TEST_USER_PASSWORD: ENC[AES256_GCM,data:47SJ11cdflnIvmQOD5ZQpdUzQgKntf2ne6w6SjZzgfW6g/8p9Y+KGOUzSLlnj08CvM579U05i6ZI3LWQqnp5mQ==,iv:iWWPp+1icYzIWKdTm4TFjQeYhPBYllY9ZihiKQeVsAs=,tag:5Odv+BmNHtfTODnC3j3xjQ==,type:str]
+sops:
+  age:
+    - enc: |
+        -----BEGIN AGE ENCRYPTED FILE-----
+        YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBxNVdPZTE3Q3E3alQ5d0lZ
+        eDkvYlE2cXJKTU5adjE2bXdPejBmdGRaUFdVCnViaGtrTlQrbWJYMkpLemErblBD
+        NHhwR2dZQnZrY2dvM05LZHBVYlcyTVEKLS0tIHAzL1FuMXpUNGJkdVhlR0EzQmwz
+        dm9kSzJ0TzJNd1R1UE45Wi9TMlBtSDAKRoRpeFDdtRw3U8DtAeTB2F2LIqhP6uQK
+        6G5m8qSVG1criwAh7aWGmEvuPRtJAgBVwB8cOnvz2Sve2uGvGhhYJA==
+        -----END AGE ENCRYPTED FILE-----
+      recipient: age1xcnm9hkeyrrjxz33tvufpxwfwc8ydkwt3dax6kqsklpvggatj5usna7r2l
+  lastmodified: "2026-09-07T19:18:04Z"
+  mac: ENC[AES256_GCM,data:Dmij+cF5pPCMkrHiYXuylZrXl9HZFjx68yxtna/X5IDIVHpzSvEm5P5b04UV7C/WQRjQiBIK2w2BaI7JJ6+KzvsdfC3XAlH2cWExAhxqJoTh1+g25Qqw16C7kYSUVqVprut4VDxQc/YNvo88NJDgY5+XONxV+RPHK2/B9F/H/rE=,iv:WUNtzT4m5Qnn7gQIocOsxzQbXophj1q5jbEMkh2KJe0=,tag:k6yNvNh6ER+lidWTXgqSsQ==,type:str]
+  unencrypted_suffix: _unencrypted
+  version: 3.13.3

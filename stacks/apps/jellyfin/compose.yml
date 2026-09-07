@@ -59,7 +59,7 @@ services:
         - "homepage.widget.type=jellyfin"
         - "homepage.widget.version=2"
         - "homepage.widget.url=https://jellyfin.${DOMAIN_PRIVATE}"
-        - "homepage.widget.key={{HOMEPAGE_VAR_JELLYFIN_KEY}}"
+        - "homepage.widget.key={{HOMEPAGE_FILE_JELLYFIN_API_KEY}}"
         - "homepage.widget.enableNowPlaying=false"
         - "homepage.widget.enableBlocks=true"
         - 'homepage.widget.fields=["movies", "series", "episodes"]'
@@ -103,7 +103,7 @@ volumes:
     driver_opts:
       type: cifs
       device: //${GLOBAL_CIFS_HOST}/media
-      o: "username=${GLOBAL_CIFS_USERNAME},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
+      o: "username=${GLOBAL_CIFS_USER},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
 
 networks:
   infra_gw-external:

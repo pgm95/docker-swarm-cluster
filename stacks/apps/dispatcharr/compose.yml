@@ -6,6 +6,8 @@ include:
 services:
   web:
     image: ghcr.io/dispatcharr/dispatcharr:0.30.0
+    entrypoint: ["/bin/bash", "/init.sh"]
+    command: ["/app/docker/entrypoint.sh"]
     logging:
       <<: *logging
     stop_grace_period: 30s
@@ -20,10 +22,14 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_DB=dispatcharr
       - POSTGRES_USER=dispatcharr
-      - POSTGRES_PASSWORD=${DISPATCHARR_POSTGRES_PASSWORD}
       # Redis (stack-local)
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+    secrets:
+      - dispatcharr_db_password
+    configs:
+      - source: dispatcharr_init
+        target: /init.sh
     networks:
       - default
       - infra_gw-internal
@@ -52,8 +58,8 @@ services:
         - "homepage.href=https://tv.${DOMAIN_PRIVATE}"
         - "homepage.widget.type=dispatcharr"
         - "homepage.widget.url=https://tv.${DOMAIN_PRIVATE}"
-        - "homepage.widget.username=${GLOBAL_USERNAME}"
-        - "homepage.widget.password=${GLOBAL_PASSWORD}"
+        - "homepage.widget.username=${GLOBAL_ADMIN_USER}"
+        - "homepage.widget.password={{HOMEPAGE_FILE_GLOBAL_ADMIN_PASSWORD}}"
         - "homepage.widget.enableActiveStreams=false"
         - 'homepage.widget.fields=["channels", "streams"]'
       mode: replicated
@@ -66,7 +72,8 @@ services:
 
   celery:
     image: ghcr.io/dispatcharr/dispatcharr:0.30.0
-    entrypoint: ["/app/docker/entrypoint.celery.sh"]
+    entrypoint: ["/bin/bash", "/init.sh"]
+    command: ["/app/docker/entrypoint.celery.sh"]
     logging:
       <<: *logging
     stop_grace_period: 30s
@@ -82,10 +89,14 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_DB=dispatcharr
       - POSTGRES_USER=dispatcharr
-      - POSTGRES_PASSWORD=${DISPATCHARR_POSTGRES_PASSWORD}
       # Redis (stack-local)
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+    secrets:
+      - dispatcharr_db_password
+    configs:
+      - source: dispatcharr_init
+        target: /init.sh
     networks:
       - default
       - infra_postgres
@@ -156,7 +167,7 @@ services:
       - DELAY=2000
       - RUN_AT_STARTUP=true
     configs:
-      - source: epg_channels
+      - source: dispatcharr_epg_channels
         target: /epg/public/channels.xml
     networks:
       - default
@@ -183,11 +194,12 @@ services:
       <<: *logging
     stop_grace_period: 30s
     environment:
-      - PROVISIONER_USER=${GLOBAL_POSTGRES_PROVISIONER_USER}
-      - PROVISIONER_PASSWORD=${GLOBAL_POSTGRES_PROVISIONER_PASSWORD}
-      - DISPATCHARR_DB_PASSWORD=${DISPATCHARR_POSTGRES_PASSWORD}
+      - GLOBAL_DB_PROVISIONER_USER=${GLOBAL_DB_PROVISIONER_USER}
+    secrets:
+      - global_db_provisioner_password
+      - dispatcharr_db_password
     configs:
-      - source: init_db_entrypoint
+      - source: dispatcharr_init_db
         target: /init-db-entrypoint.sh
     networks:
       - infra_postgres

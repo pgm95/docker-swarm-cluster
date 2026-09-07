@@ -7,7 +7,7 @@ repositories:
   - path: /mnt/borg-repository
     label: local
 
-encryption_passphrase: "{credential container borg_passphrase}"
+encryption_passphrase: "{credential container backup_borg_passphrase}"
 
 archive_name_format: "swarm-cluster-{target}-{now:%Y-%m-%dT%H-%M-%S}"
 match_archives: "sh:swarm-cluster-{target}-*"

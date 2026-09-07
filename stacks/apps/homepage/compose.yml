@@ -13,21 +13,41 @@ services:
     environment:
       - LOG_TARGETS=stdout
       - HOMEPAGE_ALLOWED_HOSTS=dash.${DOMAIN_PRIVATE}
-      - HOMEPAGE_VAR_MAIN_USER=${GLOBAL_USERNAME}
-      - HOMEPAGE_VAR_MAIN_PASS=${GLOBAL_PASSWORD}
+      - HOMEPAGE_VAR_GLOBAL_ADMIN_USER=${GLOBAL_ADMIN_USER}
+      - HOMEPAGE_FILE_GLOBAL_ADMIN_PASSWORD=/run/secrets/global_admin_password
       - HOMEPAGE_VAR_DOMAIN_PRIVATE=${DOMAIN_PRIVATE}
       - HOMEPAGE_VAR_DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
-      - HOMEPAGE_VAR_JELLYFIN_KEY=${HOMEPAGE_VAR_JELLYFIN_KEY}
-      - HOMEPAGE_VAR_MEALIE_KEY=${HOMEPAGE_VAR_MEALIE_KEY}
-      - HOMEPAGE_VAR_IMMICH_KEY=${HOMEPAGE_VAR_IMMICH_KEY}
-      - HOMEPAGE_VAR_SEERR_KEY=${HOMEPAGE_VAR_SEERR_KEY}
-      - HOMEPAGE_VAR_PVE_NUC_USER=${HOMEPAGE_VAR_PVE_NUC_USER}
-      - HOMEPAGE_VAR_PVE_NUC_PASS=${HOMEPAGE_VAR_PVE_NUC_PASS}
-      - HOMEPAGE_VAR_PVE_NAS_USER=${HOMEPAGE_VAR_PVE_NAS_USER}
-      - HOMEPAGE_VAR_PVE_NAS_PASS=${HOMEPAGE_VAR_PVE_NAS_PASS}
-      - HOMEPAGE_VAR_HASS_KEY=${HOMEPAGE_VAR_HASS_KEY}
-      - HOMEPAGE_VAR_GLUETUN_KEY=${HOMEPAGE_VAR_GLUETUN_KEY}
-      - HOMEPAGE_VAR_AUTHENTIK_KEY=${HOMEPAGE_VAR_AUTHENTIK_KEY}
+      - HOMEPAGE_FILE_JELLYFIN_API_KEY=/run/secrets/homepage_jellyfin_api_key
+      - HOMEPAGE_FILE_MEALIE_API_KEY=/run/secrets/homepage_mealie_api_key
+      - HOMEPAGE_FILE_IMMICH_API_KEY=/run/secrets/homepage_immich_api_key
+      - HOMEPAGE_FILE_SEERR_API_KEY=/run/secrets/homepage_seerr_api_key
+      - HOMEPAGE_VAR_PVE_NUC_USER=${HOMEPAGE_PVE_NUC_USER}
+      - HOMEPAGE_FILE_PVE_NUC_PASSWORD=/run/secrets/homepage_pve_nuc_password
+      - HOMEPAGE_VAR_PVE_NAS_USER=${HOMEPAGE_PVE_NAS_USER}
+      - HOMEPAGE_FILE_PVE_NAS_PASSWORD=/run/secrets/homepage_pve_nas_password
+      - HOMEPAGE_FILE_HASS_TOKEN=/run/secrets/homepage_hass_token
+      - HOMEPAGE_FILE_WIDGET_SYNCTHING_API_KEY=/run/secrets/widget_syncthing_api_key
+      - HOMEPAGE_FILE_WIDGET_RADARR_API_KEY=/run/secrets/widget_radarr_api_key
+      - HOMEPAGE_FILE_WIDGET_SONARR_API_KEY=/run/secrets/widget_sonarr_api_key
+      - HOMEPAGE_FILE_WIDGET_PROWLARR_API_KEY=/run/secrets/widget_prowlarr_api_key
+      - HOMEPAGE_FILE_WIDGET_CROWDSEC_PASSWORD=/run/secrets/widget_crowdsec_password
+      - HOMEPAGE_VAR_GLUETUN_API_KEY=${HOMEPAGE_GLUETUN_API_KEY}
+      - HOMEPAGE_FILE_AUTHENTIK_API_KEY=/run/secrets/homepage_authentik_api_key
+    secrets:
+      - homepage_jellyfin_api_key
+      - homepage_mealie_api_key
+      - homepage_immich_api_key
+      - homepage_seerr_api_key
+      - homepage_authentik_api_key
+      - homepage_pve_nuc_password
+      - homepage_pve_nas_password
+      - homepage_hass_token
+      - global_admin_password
+      - widget_syncthing_api_key
+      - widget_radarr_api_key
+      - widget_sonarr_api_key
+      - widget_prowlarr_api_key
+      - widget_crowdsec_password
     configs:
       - source: homepage_settings
         target: /app/config/settings.yaml

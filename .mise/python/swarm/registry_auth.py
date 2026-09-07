@@ -41,11 +41,11 @@ def login_local(registry: str, user: str, password: str) -> bool:
 def registry_auth(local: bool = False) -> int:
     """Login all swarm nodes (+ optionally local) to private registry in parallel."""
     registry = os.environ.get("GLOBAL_SWARM_OCI_REGISTRY", "")
-    user = os.environ.get("REGISTRY_USER", "")
-    password = os.environ.get("REGISTRY_PASS", "")
+    user = os.environ.get("GLOBAL_REGISTRY_USER", "")
+    password = os.environ.get("GLOBAL_REGISTRY_PASSWORD", "")
 
     if not registry or not user or not password:
-        error("Missing GLOBAL_SWARM_OCI_REGISTRY, REGISTRY_USER, or REGISTRY_PASS")
+        error("Missing GLOBAL_SWARM_OCI_REGISTRY, GLOBAL_REGISTRY_USER, or GLOBAL_REGISTRY_PASSWORD")
         return 1
 
     nodes = get_swarm_nodes()

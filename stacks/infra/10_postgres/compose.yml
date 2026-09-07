@@ -10,11 +10,11 @@ services:
       <<: *logging
     stop_grace_period: 60s
     environment:
-      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
-      - PROVISIONER_DB_USER=${GLOBAL_POSTGRES_PROVISIONER_USER}
-      - PROVISIONER_DB_PASSWORD=${GLOBAL_POSTGRES_PROVISIONER_PASSWORD}
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_superuser_password
+      - GLOBAL_DB_PROVISIONER_USER=${GLOBAL_DB_PROVISIONER_USER}
     secrets:
-      - postgres_password
+      - postgres_superuser_password
+      - global_db_provisioner_password
     configs:
       - source: postgres_init
         target: /docker-entrypoint-initdb.d/init.sh

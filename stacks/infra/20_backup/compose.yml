@@ -13,24 +13,24 @@ services:
     environment:
       - TZ=${GLOBAL_TZ}
     secrets:
-      - borg_passphrase
-      - postgres_backup_db_password
-      - immich_backup_db_password
-      - dawarich_backup_db_password
+      - backup_borg_passphrase
+      - backup_central_db_password
+      - backup_immich_db_password
+      - backup_dawarich_db_password
     configs:
-      - source: borgmatic_config_common
+      - source: backup_borgmatic_config_common
         target: /etc/borgmatic.d/shared/common.yaml
-      - source: borgmatic_config_pg_central
+      - source: backup_borgmatic_config_pg_central
         target: /etc/borgmatic.d/pg-central.yaml
-      - source: borgmatic_config_pg_immich
+      - source: backup_borgmatic_config_pg_immich
         target: /etc/borgmatic.d/pg-immich.yaml
-      - source: borgmatic_config_pg_dawarich
+      - source: backup_borgmatic_config_pg_dawarich
         target: /etc/borgmatic.d/pg-dawarich.yaml
-      - source: borgmatic_crontab
+      - source: backup_borgmatic_crontab
         target: /etc/borgmatic.d/crontab.txt
-      - source: borgmatic_init
+      - source: backup_borgmatic_init
         target: /etc/borgmatic.d/init.sh
-      - source: borgmatic_exporter
+      - source: backup_borgmatic_exporter
         target: /etc/borgmatic.d/exporter.py
     volumes:
       - borgmatic-repo:/mnt/borg-repository
@@ -80,12 +80,12 @@ services:
       <<: *logging
     stop_grace_period: 30s
     environment:
-      - PROVISIONER_USER=${GLOBAL_POSTGRES_PROVISIONER_USER}
-      - PROVISIONER_PASSWORD=${GLOBAL_POSTGRES_PROVISIONER_PASSWORD}
+      - GLOBAL_DB_PROVISIONER_USER=${GLOBAL_DB_PROVISIONER_USER}
     secrets:
-      - postgres_backup_db_password
+      - backup_central_db_password
+      - global_db_provisioner_password
     configs:
-      - source: init_backup_entrypoint
+      - source: backup_init_backup
         target: /init-backup-entrypoint.sh
     networks:
       - infra_postgres

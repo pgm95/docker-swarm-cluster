@@ -3,10 +3,10 @@ set -e
 
 PGHOST="postgres"
 PGPORT="5432"
-PGUSER="${PROVISIONER_USER}"
+PGUSER="${GLOBAL_DB_PROVISIONER_USER}"
 PGDATABASE="postgres"
-PGPASSWORD="${PROVISIONER_PASSWORD}"
-BACKUP_PASSWORD="$(cat /run/secrets/postgres_backup_db_password)"
+PGPASSWORD="$(cat /run/secrets/global_db_provisioner_password)"
+BACKUP_PASSWORD="$(cat /run/secrets/backup_central_db_password)"
 export PGHOST PGPORT PGUSER PGDATABASE PGPASSWORD
 
 echo "Waiting for PostgreSQL..."

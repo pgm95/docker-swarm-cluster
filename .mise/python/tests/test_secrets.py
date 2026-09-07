@@ -198,7 +198,7 @@ def secrets_tree(tmp_path, stacks_tree, monkeypatch):
     """Global SOPS files next to the shared stacks tree; two stacks carry a secrets file."""
     secrets_dir = tmp_path / ".secrets"
     secrets_dir.mkdir()
-    for stem in ("shared", "dev", "prod"):
+    for stem in ("global", "dev", "prod"):
         (secrets_dir / f"{stem}.sops.yaml").write_text("K: v\n")
     (secrets_dir / "notes.txt").write_text("not a sops file\n")
     (stacks_tree / "infra/10_postgres/secrets.sops.yaml").write_text("K: v\n")
@@ -209,7 +209,7 @@ def secrets_tree(tmp_path, stacks_tree, monkeypatch):
 
 class TestSecretsTargets:
     def test_global_target_resolves(self, secrets_tree):
-        assert secrets_file_for("shared") == secrets_tree / ".secrets/shared.sops.yaml"
+        assert secrets_file_for("global") == secrets_tree / ".secrets/global.sops.yaml"
 
     def test_stack_target_by_bare_name(self, secrets_tree):
         p = secrets_file_for("metrics")
@@ -224,14 +224,14 @@ class TestSecretsTargets:
             secrets_file_for("nope")
 
     def test_targets_globals_then_stacks(self, secrets_tree):
-        assert secrets_targets() == ["dev", "prod", "shared", "mealie", "tools", "postgres", "metrics"]
+        assert secrets_targets() == ["dev", "global", "prod", "mealie", "tools", "postgres", "metrics"]
 
     def test_all_files_only_existing(self, secrets_tree):
         rel = [str(p.relative_to(secrets_tree)) for p in all_secrets_files()]
         assert rel == [
             ".secrets/dev.sops.yaml",
+            ".secrets/global.sops.yaml",
             ".secrets/prod.sops.yaml",
-            ".secrets/shared.sops.yaml",
             "stacks/apps/mealie/secrets.sops.yaml",
             "stacks/infra/10_postgres/secrets.sops.yaml",
         ]
@@ -260,7 +260,7 @@ class TestPathCli:
     def test_targets(self, secrets_tree, monkeypatch, capsys):
         rc, out = self._run(monkeypatch, capsys, "--targets")
         assert rc == 0
-        assert out.out.split() == ["dev", "prod", "shared", "mealie", "tools", "postgres", "metrics"]
+        assert out.out.split() == ["dev", "global", "prod", "mealie", "tools", "postgres", "metrics"]
 
     def test_no_args_is_usage_error(self, secrets_tree, monkeypatch, capsys):
         rc, out = self._run(monkeypatch, capsys)

@@ -1,5 +1,46 @@
-# Docker configs for homepage stack
-# Included via docker compose include directive
+secrets:
+  homepage_jellyfin_api_key:
+    name: homepage_jellyfin_api_key_${DEPLOY_VERSION}
+    external: true
+  homepage_mealie_api_key:
+    name: homepage_mealie_api_key_${DEPLOY_VERSION}
+    external: true
+  homepage_immich_api_key:
+    name: homepage_immich_api_key_${DEPLOY_VERSION}
+    external: true
+  homepage_seerr_api_key:
+    name: homepage_seerr_api_key_${DEPLOY_VERSION}
+    external: true
+  homepage_authentik_api_key:
+    name: homepage_authentik_api_key_${DEPLOY_VERSION}
+    external: true
+  homepage_pve_nuc_password:
+    name: homepage_pve_nuc_password_${DEPLOY_VERSION}
+    external: true
+  homepage_pve_nas_password:
+    name: homepage_pve_nas_password_${DEPLOY_VERSION}
+    external: true
+  homepage_hass_token:
+    name: homepage_hass_token_${DEPLOY_VERSION}
+    external: true
+  global_admin_password:
+    name: global_admin_password_${DEPLOY_VERSION}
+    external: true
+  widget_syncthing_api_key:
+    name: widget_syncthing_api_key_${DEPLOY_VERSION}
+    external: true
+  widget_radarr_api_key:
+    name: widget_radarr_api_key_${DEPLOY_VERSION}
+    external: true
+  widget_sonarr_api_key:
+    name: widget_sonarr_api_key_${DEPLOY_VERSION}
+    external: true
+  widget_prowlarr_api_key:
+    name: widget_prowlarr_api_key_${DEPLOY_VERSION}
+    external: true
+  widget_crowdsec_password:
+    name: widget_crowdsec_password_${DEPLOY_VERSION}
+    external: true
 
 configs:
   homepage_settings:

@@ -1,7 +1,7 @@
 configs:
-  loki_config:
-    name: loki_config_${DEPLOY_VERSION}
+  logging_loki_config:
+    name: logging_loki_config_${DEPLOY_VERSION}
     file: ./config/loki/loki.yml
-  alloy_config:
-    name: alloy_config_${DEPLOY_VERSION}
+  logging_alloy_config:
+    name: logging_alloy_config_${DEPLOY_VERSION}
     file: ./config/alloy/config.alloy

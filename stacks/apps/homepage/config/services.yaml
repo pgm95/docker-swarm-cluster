@@ -7,7 +7,7 @@
           type: proxmox
           url: https://nuc.lan.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}:8006
           username: {{HOMEPAGE_VAR_PVE_NUC_USER}}
-          password: {{HOMEPAGE_VAR_PVE_NUC_PASS}}
+          password: {{HOMEPAGE_FILE_PVE_NUC_PASSWORD}}
           fields: ["vms", "lxc", "resources.cpu", "resources.mem"]
     - Proxmox NAS:
         href: https://nas.lan.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}:8006
@@ -16,7 +16,7 @@
           type: proxmox
           url: https://nas.lan.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}:8006
           username: {{HOMEPAGE_VAR_PVE_NAS_USER}}
-          password: {{HOMEPAGE_VAR_PVE_NAS_PASS}}
+          password: {{HOMEPAGE_FILE_PVE_NAS_PASSWORD}}
           fields: ["vms", "lxc", "resources.cpu", "resources.mem"]
     - OpenWRT:
         href: https://luci.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}
@@ -25,7 +25,7 @@
           type: openwrt
           url: https://luci.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}
           username: root
-          password: {{HOMEPAGE_VAR_MAIN_PASS}}
+          password: {{HOMEPAGE_FILE_GLOBAL_ADMIN_PASSWORD}}
           # interfaceName: eth1
     - AdGuard Home:
         href: https://luci.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}/adguard/#logs
@@ -33,8 +33,8 @@
         widget:
           type: adguard
           url: https://luci.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}/adguard
-          username: {{HOMEPAGE_VAR_MAIN_USER}}
-          password: {{HOMEPAGE_VAR_MAIN_PASS}}
+          username: {{HOMEPAGE_VAR_GLOBAL_ADMIN_USER}}
+          password: {{HOMEPAGE_FILE_GLOBAL_ADMIN_PASSWORD}}
           fields: ["queries", "blocked", "latency"]
 
 - Applications:
@@ -44,7 +44,7 @@
         widget:
           type: homeassistant
           url: http://hass.home.arpa:8123
-          key: {{HOMEPAGE_VAR_HASS_KEY}}
+          key: {{HOMEPAGE_FILE_HASS_TOKEN}}
           # fields: ["people_home", "lights_on"]
           custom:
             - state: zone.home
@@ -60,7 +60,7 @@
           version: 2
           url: http://docker-lxc:8000
           fields: ["public_ip", "region", "country"]
-          # key: {{HOMEPAGE_VAR_GLUETUN_KEY}}
+          # key: {{HOMEPAGE_VAR_GLUETUN_API_KEY}}
 
 - Media:
     - qBittorrent:
@@ -70,7 +70,7 @@
           type: qbittorrent
           enableLeechSize: false
           enableLeechProgress: false
-          username: {{HOMEPAGE_VAR_MAIN_USER}}
-          password: {{HOMEPAGE_VAR_MAIN_PASS}}
+          username: {{HOMEPAGE_VAR_GLOBAL_ADMIN_USER}}
+          password: {{HOMEPAGE_FILE_GLOBAL_ADMIN_PASSWORD}}
           fields: ["leech", "seed", "download", "upload"]
           url: https://torrent.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}

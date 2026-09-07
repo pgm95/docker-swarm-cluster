@@ -17,11 +17,11 @@ entries:
     id: primary-admin
     state: present
     identifiers:
-      username: !Env GLOBAL_USERNAME
+      username: !Env GLOBAL_ADMIN_USER
     attrs:
-      name: !Env GLOBAL_USERNAME
-      email: !Format ["%s@%s", !Env GLOBAL_USERNAME, !Env DOMAIN_PUBLIC]
-      password: !File /run/secrets/global_password
+      name: !Env GLOBAL_ADMIN_USER
+      email: !Format ["%s@%s", !Env GLOBAL_ADMIN_USER, !Env DOMAIN_PUBLIC]
+      password: !File /run/secrets/global_admin_password
       is_active: true
       groups:
         - !Find [authentik_core.group, [name, authentik Admins]]

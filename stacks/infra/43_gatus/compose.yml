@@ -12,10 +12,12 @@ services:
     environment:
       - GATUS_CONFIG_PATH=/etc/gatus
       - GATUS_LOG_LEVEL=INFO
+      # Accepted residual: the image is FROM scratch (no shell) and Gatus only expands
+      # ${VAR} from its own environment, so these values have no file-delivery form.
       - GATUS_DB_PASSWORD=${GATUS_DB_PASSWORD}
       - GATUS_HASS_TOKEN=${GATUS_HASS_TOKEN}
       - GATUS_PROXY_URL=${GATUS_PROXY_URL}
-      - JELLYFIN_HEALTHCHECK_PASSWORD=${JELLYFIN_HEALTHCHECK_PASSWORD}
+      - LDAP_TEST_USER_PASSWORD=${LDAP_TEST_USER_PASSWORD}
       - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
       - DOMAIN_PRIVATE=${DOMAIN_PRIVATE}
     configs:
@@ -61,11 +63,12 @@ services:
       <<: *logging
     stop_grace_period: 30s
     environment:
-      - PROVISIONER_USER=${GLOBAL_POSTGRES_PROVISIONER_USER}
-      - PROVISIONER_PASSWORD=${GLOBAL_POSTGRES_PROVISIONER_PASSWORD}
-      - GATUS_DB_PASSWORD=${GATUS_DB_PASSWORD}
+      - GLOBAL_DB_PROVISIONER_USER=${GLOBAL_DB_PROVISIONER_USER}
+    secrets:
+      - global_db_provisioner_password
+      - gatus_db_password
     configs:
-      - source: init_db_entrypoint
+      - source: gatus_init_db
         target: /init-db-entrypoint.sh
     networks:
       - infra_postgres

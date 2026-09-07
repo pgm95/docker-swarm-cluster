@@ -19,5 +19,5 @@ http:
           crowdsecAppsecFailureBlock: false
           crowdsecAppsecUnreachableBlock: false
           crowdsecLapiHost: crowdsec:8085
-          crowdsecLapiKey: '{{ env "CROWDSEC_LAPI_KEY" }}'
+          crowdsecLapiKeyFile: /run/secrets/gateway_external_bouncer_key
           crowdsecLapiScheme: http

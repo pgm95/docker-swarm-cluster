@@ -69,13 +69,13 @@ services:
       - "--entryPoints.syncthing-udp.address=:22000/udp"
     environment:
       - DOMAIN_PRIVATE=${DOMAIN_PRIVATE}
-      - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/cf_acme_api_token
+      - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/global_cloudflare_acme_private_token
     secrets:
-      - cf_acme_api_token
+      - global_cloudflare_acme_private_token
     configs:
-      - source: traefik_dynamic_base
+      - source: gateway_internal_traefik_dynamic_base
         target: /etc/traefik/dynamic/base.yml
-      - source: traefik_dynamic_hass-private
+      - source: gateway_internal_traefik_dynamic_hass_private
         target: /etc/traefik/dynamic/hass-private.yml
     networks:
       - infra_socket

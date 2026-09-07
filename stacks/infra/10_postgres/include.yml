@@ -1,6 +1,9 @@
 secrets:
-  postgres_password:
-    name: postgres_password_${DEPLOY_VERSION}
+  global_db_provisioner_password:
+    name: global_db_provisioner_password_${DEPLOY_VERSION}
+    external: true
+  postgres_superuser_password:
+    name: postgres_superuser_password_${DEPLOY_VERSION}
     external: true
 
 configs:

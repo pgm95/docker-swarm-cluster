@@ -1,0 +1,9 @@
+secrets:
+  widget_syncthing_api_key:
+    name: widget_syncthing_api_key_${DEPLOY_VERSION}
+    external: true
+
+configs:
+  syncthing_init:
+    name: syncthing_init_${DEPLOY_VERSION}
+    file: ./config/init.sh

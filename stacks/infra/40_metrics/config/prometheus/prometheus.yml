@@ -95,7 +95,7 @@ scrape_configs:
   # Syncthing
   - job_name: syncthing
     metrics_path: /metrics
-    bearer_token_file: /run/secrets/syncthing_api_key
+    bearer_token_file: /run/secrets/widget_syncthing_api_key
     static_configs:
       - targets:
         - syncthing:8384

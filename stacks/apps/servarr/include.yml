@@ -1,4 +1,33 @@
+secrets:
+  widget_radarr_api_key:
+    name: widget_radarr_api_key_${DEPLOY_VERSION}
+    external: true
+  widget_sonarr_api_key:
+    name: widget_sonarr_api_key_${DEPLOY_VERSION}
+    external: true
+  widget_prowlarr_api_key:
+    name: widget_prowlarr_api_key_${DEPLOY_VERSION}
+    external: true
+  global_db_provisioner_password:
+    name: global_db_provisioner_password_${DEPLOY_VERSION}
+    external: true
+  servarr_seerr_db_password:
+    name: servarr_seerr_db_password_${DEPLOY_VERSION}
+    external: true
+  servarr_radarr_db_password:
+    name: servarr_radarr_db_password_${DEPLOY_VERSION}
+    external: true
+  servarr_sonarr_db_password:
+    name: servarr_sonarr_db_password_${DEPLOY_VERSION}
+    external: true
+  servarr_prowlarr_db_password:
+    name: servarr_prowlarr_db_password_${DEPLOY_VERSION}
+    external: true
+
 configs:
-  init_db_entrypoint:
-    name: servarr_init_db_entrypoint_${DEPLOY_VERSION}
+  servarr_seerr_init:
+    name: servarr_seerr_init_${DEPLOY_VERSION}
+    file: ./config/seerr/init.sh
+  servarr_init_db:
+    name: servarr_init_db_${DEPLOY_VERSION}
     file: ./config/bootstrap/init-db.sh

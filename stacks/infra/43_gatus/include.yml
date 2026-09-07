@@ -1,6 +1,14 @@
+secrets:
+  global_db_provisioner_password:
+    name: global_db_provisioner_password_${DEPLOY_VERSION}
+    external: true
+  gatus_db_password:
+    name: gatus_db_password_${DEPLOY_VERSION}
+    external: true
+
 configs:
-  init_db_entrypoint:
-    name: gatus_init_db_entrypoint_${DEPLOY_VERSION}
+  gatus_init_db:
+    name: gatus_init_db_${DEPLOY_VERSION}
     file: ./config/bootstrap/init-db.sh
   gatus_config_global:
     name: gatus_config_global_${DEPLOY_VERSION}

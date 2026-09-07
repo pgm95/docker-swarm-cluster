@@ -29,7 +29,7 @@ SOPS_SUFFIX = ".sops.yaml"
 
 
 def global_secrets_dir() -> Path:
-    """Directory holding the shared and per-environment SOPS files."""
+    """Directory holding the global, per-environment and topic SOPS files."""
     return Path(os.environ.get("PROJECT_SECRETS_DIR", ".secrets"))
 
 
@@ -44,8 +44,8 @@ def global_secrets_files() -> list[Path]:
 def secrets_file_for(target: str) -> Path:
     """Resolve a secrets target to its SOPS file path.
 
-    A target is either the stem of a global file (``shared``, ``dev``,
-    ``prod``) or anything :func:`resolve_stack_path` accepts (bare stack
+    A target is either the stem of a global file (``global``, ``dev``,
+    ``prod``, or a topic such as ``oidc``) or anything :func:`resolve_stack_path` accepts (bare stack
     name, ``NN_`` directory name, or path). Global names win on collision.
     The returned path may not exist yet; ``sops edit`` creates it.
     """
@@ -219,7 +219,7 @@ def main() -> int:
         configs_cmd.add_argument("stack_path", help="Path to stack directory")
 
         path_cmd = sub.add_parser("path", help="Print SOPS file path(s) to stdout")
-        path_cmd.add_argument("target", nargs="?", help="Global stem (shared, dev, prod) or stack name")
+        path_cmd.add_argument("target", nargs="?", help="Global stem (global, dev, prod, oidc, backup, ldap, widget) or stack name")
         path_group = path_cmd.add_mutually_exclusive_group()
         path_group.add_argument("--all", action="store_true", help="List every existing SOPS file")
         path_group.add_argument("--targets", action="store_true", help="List all target names")

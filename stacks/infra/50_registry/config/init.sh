@@ -20,6 +20,9 @@ for dir in /var/lib/registry; do
     fi
 done
 
+REGISTRY_HTTP_SECRET="$(cat /run/secrets/registry_http_secret_key)"
+export REGISTRY_HTTP_SECRET
+
 # Alpine/BusyBox setpriv only handles capabilities, not --reuid/--regid — use su instead
 # Args hardcoded: compose entrypoint override strips image CMD, so $@ is always empty
 exec su -s /bin/sh "${APP_USER}" -c 'exec /entrypoint.sh "$@"' -- sh registry serve /etc/distribution/config.yml

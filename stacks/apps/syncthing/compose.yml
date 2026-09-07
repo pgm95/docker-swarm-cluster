@@ -1,15 +1,23 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 
+include:
+  - include.yml
+
 services:
   syncthing:
     image: syncthing/syncthing:latest
+    entrypoint: ["/bin/sh", "/init.sh"]
     logging:
       <<: *logging
     stop_grace_period: 30s
     environment:
       - PUID=${GLOBAL_NONROOT_PUID}
       - PGID=${GLOBAL_NONROOT_PGID}
-      - STGUIAPIKEY=${SYNCTHING_API_KEY}
+    secrets:
+      - widget_syncthing_api_key
+    configs:
+      - source: syncthing_init
+        target: /init.sh
     networks:
       - infra_gw-internal
       - infra_metrics
@@ -46,7 +54,7 @@ services:
         - "homepage.href=https://syncthing.${DOMAIN_PRIVATE}"
         - "homepage.widget.type=syncthing"
         - "homepage.widget.url=https://syncthing.${DOMAIN_PRIVATE}"
-        - "homepage.widget.key=${SYNCTHING_API_KEY}"
+        - "homepage.widget.key={{HOMEPAGE_FILE_WIDGET_SYNCTHING_API_KEY}}"
         - 'homepage.widget.fields=["connected", "synced", "errors", "storage"]'
       mode: replicated
       replicas: 1
@@ -60,13 +68,13 @@ volumes:
     driver_opts:
       type: cifs
       device: //${GLOBAL_CIFS_HOST}/personal
-      o: "username=${GLOBAL_CIFS_USERNAME},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
+      o: "username=${GLOBAL_CIFS_USER},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
   cifs-photos:
     driver: local
     driver_opts:
       type: cifs
       device: //${GLOBAL_CIFS_HOST}/photos
-      o: "username=${GLOBAL_CIFS_USERNAME},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
+      o: "username=${GLOBAL_CIFS_USER},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
 
 networks:
   infra_gw-internal:

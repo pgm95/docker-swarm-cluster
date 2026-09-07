@@ -9,12 +9,11 @@ services:
     logging:
       <<: *logging
     stop_grace_period: 30s
-    entrypoint: web-entrypoint.sh
-    command: ['bin/rails', 'server', '-p', '3000', '-b', '::']
+    entrypoint: ["/bin/sh", "/init.sh"]
+    command: ["web-entrypoint.sh", "bin/rails", "server", "-p", "3000", "-b", "::"]
     environment:
       # Core
       - RAILS_ENV=production
-      - SECRET_KEY_BASE=${SECRET_KEY_BASE_DAWARICH}
       - RAILS_LOG_TO_STDOUT=true
       - SELF_HOSTED=true
       - TIME_ZONE=${GLOBAL_TZ_LOCAL}
@@ -22,13 +21,11 @@ services:
       - APPLICATION_PROTOCOL=http
       # Geocoding
       - PHOTON_API_HOST=photon.dawarich.app
-      - PHOTON_API_KEY=${PHOTON_API_KEY_DAWARICH}
       - PHOTON_API_USE_HTTPS=true
       # Database
       - DATABASE_HOST=database
       - DATABASE_PORT=5432
       - DATABASE_USERNAME=postgres
-      - DATABASE_PASSWORD=${DAWARICH_DB_PASSWORD}
       - DATABASE_NAME=dawarich_db
       # Redis
       - REDIS_URL=redis://redis:6379
@@ -38,16 +35,23 @@ services:
       - PROMETHEUS_EXPORTER_ENABLED=false
       - ALLOW_EMAIL_PASSWORD_REGISTRATION=false
       # OIDC
-      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID_DAWARICH}
-      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET_DAWARICH}
+      - OIDC_CLIENT_ID=${OIDC_DAWARICH_CLIENT_ID}
       - OIDC_ISSUER=https://auth.${DOMAIN_PUBLIC}/application/o/dawarich/
       - OIDC_REDIRECT_URI=https://maps.${DOMAIN_PRIVATE}/users/auth/openid_connect/callback
       - OIDC_PROVIDER_NAME=Authentik
       - OIDC_AUTO_REGISTER=true
       # 2FA
-      - OTP_ENCRYPTION_PRIMARY_KEY=${OTP_ENCRYPTION_PRIMARY_KEY}
-      - OTP_ENCRYPTION_DETERMINISTIC_KEY=${OTP_ENCRYPTION_DETERMINISTIC_KEY}
-      - OTP_ENCRYPTION_KEY_DERIVATION_SALT=${OTP_ENCRYPTION_KEY_DERIVATION_SALT}
+    secrets:
+      - dawarich_secret_key_base
+      - dawarich_photon_api_key
+      - dawarich_db_password
+      - oidc_dawarich_client_secret
+      - dawarich_otp_primary_key
+      - dawarich_otp_deterministic_key
+      - dawarich_otp_key_derivation_salt
+    configs:
+      - source: dawarich_init
+        target: /init.sh
     networks:
       - default
       - infra_gw-internal
@@ -84,12 +88,11 @@ services:
     logging:
       <<: *logging
     stop_grace_period: 30s
-    entrypoint: sidekiq-entrypoint.sh
-    command: ['sidekiq']
+    entrypoint: ["/bin/sh", "/init.sh"]
+    command: ["sidekiq-entrypoint.sh", "sidekiq"]
     environment:
       # Core
       - RAILS_ENV=production
-      - SECRET_KEY_BASE=${SECRET_KEY_BASE_DAWARICH}
       - RAILS_LOG_TO_STDOUT=true
       - SELF_HOSTED=true
       - TIME_ZONE=${GLOBAL_TZ_LOCAL}
@@ -99,7 +102,6 @@ services:
       - DATABASE_HOST=database
       - DATABASE_PORT=5432
       - DATABASE_USERNAME=postgres
-      - DATABASE_PASSWORD=${DAWARICH_DB_PASSWORD}
       - DATABASE_NAME=dawarich_db
       # Redis
       - REDIS_URL=redis://redis:6379
@@ -110,19 +112,25 @@ services:
       - PROMETHEUS_EXPORTER_PORT=9394
       # Geocoding
       - PHOTON_API_HOST=photon.dawarich.app
-      - PHOTON_API_KEY=${PHOTON_API_KEY_DAWARICH}
       - PHOTON_API_USE_HTTPS=true
       # OIDC
-      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID_DAWARICH}
-      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET_DAWARICH}
+      - OIDC_CLIENT_ID=${OIDC_DAWARICH_CLIENT_ID}
       - OIDC_ISSUER=https://auth.${DOMAIN_PUBLIC}/application/o/dawarich/
       - OIDC_REDIRECT_URI=https://maps.${DOMAIN_PRIVATE}/users/auth/openid_connect/callback
       - OIDC_PROVIDER_NAME=Authentik
       - OIDC_AUTO_REGISTER=true
       # 2FA
-      - OTP_ENCRYPTION_PRIMARY_KEY=${OTP_ENCRYPTION_PRIMARY_KEY}
-      - OTP_ENCRYPTION_DETERMINISTIC_KEY=${OTP_ENCRYPTION_DETERMINISTIC_KEY}
-      - OTP_ENCRYPTION_KEY_DERIVATION_SALT=${OTP_ENCRYPTION_KEY_DERIVATION_SALT}
+    secrets:
+      - dawarich_secret_key_base
+      - dawarich_photon_api_key
+      - dawarich_db_password
+      - oidc_dawarich_client_secret
+      - dawarich_otp_primary_key
+      - dawarich_otp_deterministic_key
+      - dawarich_otp_key_derivation_salt
+    configs:
+      - source: dawarich_init
+        target: /init.sh
     volumes:
       - app-watched:/var/app/tmp/imports/watched
       - app-storage:/var/app/storage
@@ -184,9 +192,9 @@ services:
     stop_grace_period: 30s
     secrets:
       - dawarich_db_password
-      - dawarich_backup_db_password
+      - backup_dawarich_db_password
     configs:
-      - source: init_backup_entrypoint
+      - source: dawarich_init_backup
         target: /init-backup-entrypoint.sh
     healthcheck:
       test: ["NONE"]

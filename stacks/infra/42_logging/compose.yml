@@ -12,7 +12,7 @@ services:
     command:
       - "-config.file=/etc/loki/loki.yml"
     configs:
-      - source: loki_config
+      - source: logging_loki_config
         target: /etc/loki/loki.yml
     networks:
       - infra_metrics
@@ -59,7 +59,7 @@ services:
       <<: *logging
     stop_grace_period: 30s
     configs:
-      - source: alloy_config
+      - source: logging_alloy_config
         target: /etc/alloy/config.alloy
     networks:
       - infra_metrics

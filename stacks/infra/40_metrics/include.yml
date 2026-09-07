@@ -1,63 +1,66 @@
 secrets:
-  grafana_oidc_client:
-    name: grafana_oidc_client_${DEPLOY_VERSION}
+  global_db_provisioner_password:
+    name: global_db_provisioner_password_${DEPLOY_VERSION}
     external: true
-  grafana_oidc_secret:
-    name: grafana_oidc_secret_${DEPLOY_VERSION}
+  oidc_grafana_client_id:
+    name: oidc_grafana_client_id_${DEPLOY_VERSION}
     external: true
-  grafana_postgres_password:
-    name: grafana_postgres_password_${DEPLOY_VERSION}
+  oidc_grafana_client_secret:
+    name: oidc_grafana_client_secret_${DEPLOY_VERSION}
     external: true
-  grafana_secret_key:
-    name: grafana_secret_key_${DEPLOY_VERSION}
+  metrics_grafana_db_password:
+    name: metrics_grafana_db_password_${DEPLOY_VERSION}
     external: true
-  syncthing_api_key:
-    name: syncthing_api_key_${DEPLOY_VERSION}
+  metrics_grafana_secret_key:
+    name: metrics_grafana_secret_key_${DEPLOY_VERSION}
+    external: true
+  widget_syncthing_api_key:
+    name: widget_syncthing_api_key_${DEPLOY_VERSION}
     external: true
 
 configs:
-  prometheus_config:
-    name: prometheus_config_${DEPLOY_VERSION}
+  metrics_prometheus_config:
+    name: metrics_prometheus_config_${DEPLOY_VERSION}
     file: ./config/prometheus/prometheus.yml
-  prometheus_rules:
-    name: prometheus_rules_${DEPLOY_VERSION}
+  metrics_prometheus_rules:
+    name: metrics_prometheus_rules_${DEPLOY_VERSION}
     file: ./config/prometheus/node_rules.yml
-  grafana_ini:
-    name: grafana_ini_${DEPLOY_VERSION}
+  metrics_grafana_ini:
+    name: metrics_grafana_ini_${DEPLOY_VERSION}
     file: ./config/grafana/grafana.ini
-  grafana_datasource:
-    name: grafana_datasource_${DEPLOY_VERSION}
+  metrics_grafana_datasource:
+    name: metrics_grafana_datasource_${DEPLOY_VERSION}
     file: ./config/grafana/datasource.yml
-  grafana_dashboards_provisioner:
-    name: grafana_dashboards_provisioner_${DEPLOY_VERSION}
+  metrics_grafana_dashboards_provisioner:
+    name: metrics_grafana_dashboards_provisioner_${DEPLOY_VERSION}
     file: ./config/grafana/dashboards.yml
-  grafana_dashboard_crowdsec_prom:
-    name: grafana_dashboard_crowdsec_prom_${DEPLOY_VERSION}
+  metrics_grafana_dashboard_crowdsec_prom:
+    name: metrics_grafana_dashboard_crowdsec_prom_${DEPLOY_VERSION}
     file: ./config/grafana/dashboards/crowdsec-prom.json
-  grafana_dashboard_crowdsec_loki:
-    name: grafana_dashboard_crowdsec_loki_${DEPLOY_VERSION}
+  metrics_grafana_dashboard_crowdsec_loki:
+    name: metrics_grafana_dashboard_crowdsec_loki_${DEPLOY_VERSION}
     file: ./config/grafana/dashboards/crowdsec-loki.json
-  grafana_dashboard_traefik:
-    name: grafana_dashboard_traefik_${DEPLOY_VERSION}
+  metrics_grafana_dashboard_traefik:
+    name: metrics_grafana_dashboard_traefik_${DEPLOY_VERSION}
     file: ./config/grafana/dashboards/traefik-standalone.json
-  grafana_dashboard_syncthing:
-    name: grafana_dashboard_syncthing_${DEPLOY_VERSION}
+  metrics_grafana_dashboard_syncthing:
+    name: metrics_grafana_dashboard_syncthing_${DEPLOY_VERSION}
     file: ./config/grafana/dashboards/syncthing-metrics.json
-  grafana_dashboard_borgmatic:
-    name: grafana_dashboard_borgmatic_${DEPLOY_VERSION}
+  metrics_grafana_dashboard_borgmatic:
+    name: metrics_grafana_dashboard_borgmatic_${DEPLOY_VERSION}
     file: ./config/grafana/dashboards/borgmatic-logs.json
-  grafana_dashboard_gatus:
-    name: grafana_dashboard_gatus_${DEPLOY_VERSION}
+  metrics_grafana_dashboard_gatus:
+    name: metrics_grafana_dashboard_gatus_${DEPLOY_VERSION}
     file: ./config/grafana/dashboards/gatus.json
-  grafana_dashboard_registry:
-    name: grafana_dashboard_registry_${DEPLOY_VERSION}
+  metrics_grafana_dashboard_registry:
+    name: metrics_grafana_dashboard_registry_${DEPLOY_VERSION}
     file: ./config/grafana/dashboards/docker-registry.json
-  grafana_dashboard_node_exporter:
-    name: grafana_dashboard_node_exporter_${DEPLOY_VERSION}
+  metrics_grafana_dashboard_node_exporter:
+    name: metrics_grafana_dashboard_node_exporter_${DEPLOY_VERSION}
     file: ./config/grafana/dashboards/node-exporter.json
-  grafana_dashboard_cadvisor:
-    name: grafana_dashboard_cadvisor_${DEPLOY_VERSION}
+  metrics_grafana_dashboard_cadvisor:
+    name: metrics_grafana_dashboard_cadvisor_${DEPLOY_VERSION}
     file: ./config/grafana/dashboards/cadvisor-overview.json
-  init_db_entrypoint:
+  metrics_init_db:
     name: metrics_init_db_${DEPLOY_VERSION}
     file: ./config/bootstrap/init-db.sh

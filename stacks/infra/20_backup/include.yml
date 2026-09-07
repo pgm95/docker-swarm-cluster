@@ -1,39 +1,42 @@
 secrets:
-  borg_passphrase:
-    name: borg_passphrase_${DEPLOY_VERSION}
+  global_db_provisioner_password:
+    name: global_db_provisioner_password_${DEPLOY_VERSION}
     external: true
-  postgres_backup_db_password:
-    name: postgres_backup_db_password_${DEPLOY_VERSION}
+  backup_borg_passphrase:
+    name: backup_borg_passphrase_${DEPLOY_VERSION}
     external: true
-  immich_backup_db_password:
-    name: immich_backup_db_password_${DEPLOY_VERSION}
+  backup_central_db_password:
+    name: backup_central_db_password_${DEPLOY_VERSION}
     external: true
-  dawarich_backup_db_password:
-    name: dawarich_backup_db_password_${DEPLOY_VERSION}
+  backup_immich_db_password:
+    name: backup_immich_db_password_${DEPLOY_VERSION}
+    external: true
+  backup_dawarich_db_password:
+    name: backup_dawarich_db_password_${DEPLOY_VERSION}
     external: true
 
 configs:
-  borgmatic_config_common:
-    name: borgmatic_config_common_${DEPLOY_VERSION}
+  backup_borgmatic_config_common:
+    name: backup_borgmatic_config_common_${DEPLOY_VERSION}
     file: ./config/borgmatic/common.yaml
-  borgmatic_config_pg_central:
-    name: borgmatic_config_pg_central_${DEPLOY_VERSION}
+  backup_borgmatic_config_pg_central:
+    name: backup_borgmatic_config_pg_central_${DEPLOY_VERSION}
     file: ./config/borgmatic/pg-central.yaml
-  borgmatic_config_pg_immich:
-    name: borgmatic_config_pg_immich_${DEPLOY_VERSION}
+  backup_borgmatic_config_pg_immich:
+    name: backup_borgmatic_config_pg_immich_${DEPLOY_VERSION}
     file: ./config/borgmatic/pg-immich.yaml
-  borgmatic_config_pg_dawarich:
-    name: borgmatic_config_pg_dawarich_${DEPLOY_VERSION}
+  backup_borgmatic_config_pg_dawarich:
+    name: backup_borgmatic_config_pg_dawarich_${DEPLOY_VERSION}
     file: ./config/borgmatic/pg-dawarich.yaml
-  borgmatic_crontab:
-    name: borgmatic_crontab_${DEPLOY_VERSION}
+  backup_borgmatic_crontab:
+    name: backup_borgmatic_crontab_${DEPLOY_VERSION}
     file: ./config/borgmatic/crontab.txt
-  borgmatic_init:
-    name: borgmatic_init_${DEPLOY_VERSION}
+  backup_borgmatic_init:
+    name: backup_borgmatic_init_${DEPLOY_VERSION}
     file: ./config/borgmatic/init.sh
-  borgmatic_exporter:
-    name: borgmatic_exporter_${DEPLOY_VERSION}
+  backup_borgmatic_exporter:
+    name: backup_borgmatic_exporter_${DEPLOY_VERSION}
     file: ./config/borgmatic/exporter.py
-  init_backup_entrypoint:
+  backup_init_backup:
     name: backup_init_backup_${DEPLOY_VERSION}
     file: ./config/bootstrap/init-backup.sh

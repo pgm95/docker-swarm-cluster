@@ -1,6 +1,6 @@
 #:schema https://mise.jdx.dev/schema/mise-task.json
 
-# Targets: a global stem (shared, dev, prod) or a stack name. Resolution and
+# Targets: a global stem (global, dev, prod, oidc, backup, ldap, widget) or a stack name. Resolution and
 # file discovery live in `python3 -m swarm.secrets path`.
 
 ["sops:init"]
@@ -28,7 +28,7 @@ fi
 ["sops:edit"]
 description = "Edit a SOPS file by target (creates it when missing)"
 usage = '''
-arg "<target>" help="Global stem (shared, dev, prod) or stack name"
+arg "<target>" help="Global stem (global, dev, prod, oidc, backup, ldap, widget) or stack name"
 complete "target" run="python3 -m swarm.secrets path --targets"
 '''
 env.SOPS_EDITOR = "{{ get_env(name='SOPS_EDITOR', default='code --wait') }}"

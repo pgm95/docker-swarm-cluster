@@ -3,9 +3,10 @@ set -e
 
 PGHOST="postgres"
 PGPORT="5432"
-PGUSER="${PROVISIONER_USER}"
+PGUSER="${GLOBAL_DB_PROVISIONER_USER}"
 PGDATABASE="postgres"
-PGPASSWORD="${PROVISIONER_PASSWORD}"
+PGPASSWORD="$(cat /run/secrets/global_db_provisioner_password)"
+GATUS_DB_PASSWORD="$(cat /run/secrets/gatus_db_password)"
 export PGHOST PGPORT PGUSER PGDATABASE PGPASSWORD
 
 echo "Waiting for PostgreSQL..."
@@ -21,7 +22,7 @@ psql -v ON_ERROR_STOP=1 <<-EOSQL
         END IF;
     END
     \$\$;
-    GRANT gatus TO ${PROVISIONER_USER};
+    GRANT gatus TO ${GLOBAL_DB_PROVISIONER_USER};
     SELECT 'CREATE DATABASE gatus OWNER gatus'
     WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'gatus')\gexec
 EOSQL

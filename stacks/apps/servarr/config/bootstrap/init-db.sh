@@ -3,9 +3,13 @@ set -e
 
 PGHOST="postgres"
 PGPORT="5432"
-PGUSER="${PROVISIONER_USER}"
+PGUSER="${GLOBAL_DB_PROVISIONER_USER}"
 PGDATABASE="postgres"
-PGPASSWORD="${PROVISIONER_PASSWORD}"
+PGPASSWORD="$(cat /run/secrets/global_db_provisioner_password)"
+SEERR_DB_PASSWORD="$(cat /run/secrets/servarr_seerr_db_password)"
+RADARR_DB_PASSWORD="$(cat /run/secrets/servarr_radarr_db_password)"
+SONARR_DB_PASSWORD="$(cat /run/secrets/servarr_sonarr_db_password)"
+PROWLARR_DB_PASSWORD="$(cat /run/secrets/servarr_prowlarr_db_password)"
 export PGHOST PGPORT PGUSER PGDATABASE PGPASSWORD
 
 echo "Waiting for PostgreSQL..."
@@ -21,7 +25,7 @@ psql -v ON_ERROR_STOP=1 <<-EOSQL
         END IF;
     END
     \$\$;
-    GRANT seerr TO ${PROVISIONER_USER};
+    GRANT seerr TO ${GLOBAL_DB_PROVISIONER_USER};
     SELECT 'CREATE DATABASE "seerr" OWNER seerr'
     WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'seerr')\gexec
 
@@ -32,7 +36,7 @@ psql -v ON_ERROR_STOP=1 <<-EOSQL
         END IF;
     END
     \$\$;
-    GRANT radarr TO ${PROVISIONER_USER};
+    GRANT radarr TO ${GLOBAL_DB_PROVISIONER_USER};
     SELECT 'CREATE DATABASE "radarr-main" OWNER radarr'
     WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'radarr-main')\gexec
     SELECT 'CREATE DATABASE "radarr-log" OWNER radarr'
@@ -45,7 +49,7 @@ psql -v ON_ERROR_STOP=1 <<-EOSQL
         END IF;
     END
     \$\$;
-    GRANT sonarr TO ${PROVISIONER_USER};
+    GRANT sonarr TO ${GLOBAL_DB_PROVISIONER_USER};
     SELECT 'CREATE DATABASE "sonarr-main" OWNER sonarr'
     WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'sonarr-main')\gexec
     SELECT 'CREATE DATABASE "sonarr-log" OWNER sonarr'
@@ -58,7 +62,7 @@ psql -v ON_ERROR_STOP=1 <<-EOSQL
         END IF;
     END
     \$\$;
-    GRANT prowlarr TO ${PROVISIONER_USER};
+    GRANT prowlarr TO ${GLOBAL_DB_PROVISIONER_USER};
     SELECT 'CREATE DATABASE "prowlarr-main" OWNER prowlarr'
     WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'prowlarr-main')\gexec
     SELECT 'CREATE DATABASE "prowlarr-log" OWNER prowlarr'

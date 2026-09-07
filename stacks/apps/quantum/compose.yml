@@ -15,11 +15,12 @@ services:
       - DOMAIN_PRIVATE=${DOMAIN_PRIVATE}
       - FILEBROWSER_DATABASE_PATH=/quantum/db/data.sqlite
       - FILEBROWSER_CONFIG=/home/filebrowser/config.yaml
-      - FILEBROWSER_ADMIN_USERNAME=${FILEBROWSER_ADMIN_USERNAME}
-      - FILEBROWSER_ADMIN_PASSWORD=${FILEBROWSER_ADMIN_PASSWORD}
-      - FILEBROWSER_OIDC_CLIENT_ID=${FILEBROWSER_OIDC_CLIENT_ID}
-      - FILEBROWSER_JWT_TOKEN_SECRET=${FILEBROWSER_JWT_TOKEN_SECRET}
-      - FILEBROWSER_OIDC_CLIENT_SECRET=${FILEBROWSER_OIDC_CLIENT_SECRET}
+      - FILEBROWSER_ADMIN_USERNAME=${QUANTUM_ADMIN_USER}
+      - FILEBROWSER_OIDC_CLIENT_ID=${OIDC_QUANTUM_CLIENT_ID}
+    secrets:
+      - quantum_admin_password
+      - quantum_jwt_secret_key
+      - oidc_quantum_client_secret
     configs:
       - source: quantum_config
         target: /tmp/config.yaml.tpl
@@ -64,19 +65,19 @@ volumes:
     driver_opts:
       type: cifs
       device: //${GLOBAL_CIFS_HOST}/personal
-      o: "username=${GLOBAL_CIFS_USERNAME},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
+      o: "username=${GLOBAL_CIFS_USER},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
   cifs-photos:
     driver: local
     driver_opts:
       type: cifs
       device: //${GLOBAL_CIFS_HOST}/photos
-      o: "username=${GLOBAL_CIFS_USERNAME},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
+      o: "username=${GLOBAL_CIFS_USER},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
   cifs-media:
     driver: local
     driver_opts:
       type: cifs
       device: //${GLOBAL_CIFS_HOST}/media
-      o: "username=${GLOBAL_CIFS_USERNAME},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
+      o: "username=${GLOBAL_CIFS_USER},password=${GLOBAL_CIFS_PASSWORD},uid=${GLOBAL_NONROOT_PUID},gid=${GLOBAL_NONROOT_PGID},iocharset=utf8"
 
 networks:
   infra_gw-internal:

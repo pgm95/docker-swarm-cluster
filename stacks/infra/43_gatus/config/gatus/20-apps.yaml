@@ -23,7 +23,7 @@ suites:
         headers:
           Content-Type: application/json
           X-Emby-Authorization: 'MediaBrowser Client="Gatus", Device="Gatus", DeviceId="gatus-healthcheck", Version="1.0.0"'
-        body: '{"Username":"_test_user","Pw":"${JELLYFIN_HEALTHCHECK_PASSWORD}"}'
+        body: '{"Username":"_test_user","Pw":"${LDAP_TEST_USER_PASSWORD}"}'
         client:
           proxy-url: "${GATUS_PROXY_URL}"
         store:

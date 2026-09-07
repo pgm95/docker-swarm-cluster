@@ -9,7 +9,7 @@ postgresql_databases:
     hostname: dawarich_database
     port: 5432
     username: backup
-    password: "{credential container dawarich_backup_db_password}"
+    password: "{credential container backup_dawarich_db_password}"
     format: custom
     compression: none
     no_owner: true

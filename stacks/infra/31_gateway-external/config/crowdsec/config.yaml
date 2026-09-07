@@ -1,7 +1,7 @@
 # CrowdSec Local API Configuration
 api:
   cti:
-    key: ${CTI_KEY}
+    key: ${GATEWAY_EXTERNAL_CROWDSEC_CTI_KEY}
     enabled: true
     log_level: info
   server:
@@ -20,7 +20,7 @@ db_config:
   port: 5432
   db_name: crowdsec
   user: crowdsec
-  password: ${CROWDSEC_POSTGRES_PASSWORD}
+  password: ${GATEWAY_EXTERNAL_CROWDSEC_DB_PASSWORD}
   sslmode: disable
   flush:
     max_items: 40000

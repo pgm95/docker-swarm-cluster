@@ -3,9 +3,10 @@ set -e
 
 PGHOST="postgres"
 PGPORT="5432"
-PGUSER="${PROVISIONER_USER}"
+PGUSER="${GLOBAL_DB_PROVISIONER_USER}"
 PGDATABASE="postgres"
-PGPASSWORD="${PROVISIONER_PASSWORD}"
+PGPASSWORD="$(cat /run/secrets/global_db_provisioner_password)"
+GATEWAY_EXTERNAL_CROWDSEC_DB_PASSWORD="$(cat /run/secrets/gateway_external_crowdsec_db_password)"
 export PGHOST PGPORT PGUSER PGDATABASE PGPASSWORD
 
 echo "Waiting for PostgreSQL..."
@@ -17,12 +18,12 @@ psql -v ON_ERROR_STOP=1 <<-EOSQL
     DO \$\$
     BEGIN
         IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'crowdsec') THEN
-            EXECUTE format('CREATE ROLE crowdsec LOGIN PASSWORD %L', '${CROWDSEC_POSTGRES_PASSWORD}');
+            EXECUTE format('CREATE ROLE crowdsec LOGIN PASSWORD %L', '${GATEWAY_EXTERNAL_CROWDSEC_DB_PASSWORD}');
         END IF;
     END
     \$\$;
-    ALTER ROLE crowdsec PASSWORD '${CROWDSEC_POSTGRES_PASSWORD}';
-    GRANT crowdsec TO ${PROVISIONER_USER};
+    ALTER ROLE crowdsec PASSWORD '${GATEWAY_EXTERNAL_CROWDSEC_DB_PASSWORD}';
+    GRANT crowdsec TO ${GLOBAL_DB_PROVISIONER_USER};
     SELECT 'CREATE DATABASE crowdsec OWNER crowdsec'
     WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'crowdsec')\gexec
 EOSQL

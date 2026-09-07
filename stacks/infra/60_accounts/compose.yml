@@ -11,16 +11,16 @@ services:
       <<: *logging
     stop_grace_period: 60s
     environment:
-      - AUTHENTIK_SECRET_KEY=file:///run/secrets/authentik_secret_key
+      - AUTHENTIK_SECRET_KEY=file:///run/secrets/accounts_authentik_secret_key
       - AUTHENTIK_POSTGRESQL__HOST=postgres
       - AUTHENTIK_POSTGRESQL__USER=authentik
       - AUTHENTIK_POSTGRESQL__NAME=authentik
-      - AUTHENTIK_POSTGRESQL__PASSWORD=file:///run/secrets/authentik_postgres_password
+      - AUTHENTIK_POSTGRESQL__PASSWORD=file:///run/secrets/accounts_authentik_db_password
       - AUTHENTIK_POSTGRESQL__SSLMODE=disable
       - AUTHENTIK_EMAIL__HOST=${GLOBAL_SMTP_HOST}
       - AUTHENTIK_EMAIL__PORT=587
       - AUTHENTIK_EMAIL__USERNAME=${GLOBAL_SMTP_USER}
-      - AUTHENTIK_EMAIL__PASSWORD=file:///run/secrets/smtp_pass
+      - AUTHENTIK_EMAIL__PASSWORD=file:///run/secrets/global_smtp_password
       - AUTHENTIK_EMAIL__USE_TLS=true
       - AUTHENTIK_EMAIL__FROM=Authentik <noreply@${DOMAIN_PUBLIC}>
       - AUTHENTIK_DISABLE_UPDATE_CHECK=true
@@ -30,13 +30,13 @@ services:
       - AUTHENTIK_LISTEN__TRUSTED_PROXY_CIDRS=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10
       - AUTHENTIK_AVATARS=attributes.avatar,initials
       ## Bootstrap vars are only read on first startup.
-      # - AUTHENTIK_BOOTSTRAP_PASSWORD=${GLOBAL_PASSWORD}
-      # - AUTHENTIK_BOOTSTRAP_TOKEN=${AUTHENTIK_BOOTSTRAP_TOKEN}
-      # - AUTHENTIK_BOOTSTRAP_EMAIL=${GLOBAL_USERNAME}@${DOMAIN_PUBLIC}
+      # - AUTHENTIK_BOOTSTRAP_PASSWORD=${GLOBAL_ADMIN_PASSWORD}
+      # - AUTHENTIK_BOOTSTRAP_TOKEN=${ACCOUNTS_AUTHENTIK_BOOTSTRAP_TOKEN}
+      # - AUTHENTIK_BOOTSTRAP_EMAIL=${GLOBAL_ADMIN_USER}@${DOMAIN_PUBLIC}
     secrets:
-      - authentik_secret_key
-      - authentik_postgres_password
-      - smtp_pass
+      - accounts_authentik_secret_key
+      - accounts_authentik_db_password
+      - global_smtp_password
     networks:
       - default
       - infra_postgres
@@ -78,7 +78,7 @@ services:
         - "homepage.href=https://auth.${DOMAIN_PUBLIC}"
         - "homepage.widget.type=authentik"
         - "homepage.widget.version=2"
-        - "homepage.widget.key={{HOMEPAGE_VAR_AUTHENTIK_KEY}}"
+        - "homepage.widget.key={{HOMEPAGE_FILE_AUTHENTIK_API_KEY}}"
         - "homepage.widget.url=https://auth.${DOMAIN_PUBLIC}"
         - 'homepage.widget.fields=["users", "loginsLast24H", "failedLoginsLast24H"]'
 
@@ -89,16 +89,16 @@ services:
       <<: *logging
     stop_grace_period: 30s
     environment:
-      - AUTHENTIK_SECRET_KEY=file:///run/secrets/authentik_secret_key
+      - AUTHENTIK_SECRET_KEY=file:///run/secrets/accounts_authentik_secret_key
       - AUTHENTIK_POSTGRESQL__HOST=postgres
       - AUTHENTIK_POSTGRESQL__USER=authentik
       - AUTHENTIK_POSTGRESQL__NAME=authentik
-      - AUTHENTIK_POSTGRESQL__PASSWORD=file:///run/secrets/authentik_postgres_password
+      - AUTHENTIK_POSTGRESQL__PASSWORD=file:///run/secrets/accounts_authentik_db_password
       - AUTHENTIK_POSTGRESQL__SSLMODE=disable
       - AUTHENTIK_EMAIL__HOST=${GLOBAL_SMTP_HOST}
       - AUTHENTIK_EMAIL__PORT=587
       - AUTHENTIK_EMAIL__USERNAME=${GLOBAL_SMTP_USER}
-      - AUTHENTIK_EMAIL__PASSWORD=file:///run/secrets/smtp_pass
+      - AUTHENTIK_EMAIL__PASSWORD=file:///run/secrets/global_smtp_password
       - AUTHENTIK_EMAIL__USE_TLS=true
       - AUTHENTIK_EMAIL__FROM=Authentik <noreply@${DOMAIN_PUBLIC}>
       - AUTHENTIK_DISABLE_UPDATE_CHECK=true
@@ -107,37 +107,37 @@ services:
       - AUTHENTIK_LOG_LEVEL=info
       - AUTHENTIK_AVATARS=attributes.avatar,initials
       # Env vars consumed by blueprints via !Env
-      - GLOBAL_USERNAME=${GLOBAL_USERNAME}
+      - GLOBAL_ADMIN_USER=${GLOBAL_ADMIN_USER}
       - GLOBAL_LDAP_BASE_DN=${GLOBAL_LDAP_BASE_DN}
       - GLOBAL_ADMIN_GROUP=${GLOBAL_ADMIN_GROUP}
       - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
       - DOMAIN_PRIVATE=${DOMAIN_PRIVATE}
       ## Bootstrap vars are only read on first startup.
-      # - AUTHENTIK_BOOTSTRAP_PASSWORD=${GLOBAL_PASSWORD}
-      # - AUTHENTIK_BOOTSTRAP_TOKEN=${AUTHENTIK_BOOTSTRAP_TOKEN}
-      # - AUTHENTIK_BOOTSTRAP_EMAIL=${GLOBAL_USERNAME}@${DOMAIN_PUBLIC}
+      # - AUTHENTIK_BOOTSTRAP_PASSWORD=${GLOBAL_ADMIN_PASSWORD}
+      # - AUTHENTIK_BOOTSTRAP_TOKEN=${ACCOUNTS_AUTHENTIK_BOOTSTRAP_TOKEN}
+      # - AUTHENTIK_BOOTSTRAP_EMAIL=${GLOBAL_ADMIN_USER}@${DOMAIN_PUBLIC}
     secrets:
-      - authentik_secret_key
-      - authentik_postgres_password
-      - smtp_pass
-      - global_password
-      - authentik_bind_pass
-      - oidc_client_secret_mealie
-      - oidc_client_secret_dawarich
-      - oidc_client_secret_quantum
-      - oidc_client_secret_immich
-      - oidc_client_secret_grafana
-      - oidc_client_secret_tailscale
+      - accounts_authentik_secret_key
+      - accounts_authentik_db_password
+      - global_smtp_password
+      - global_admin_password
+      - ldap_authentik_bind_password
+      - oidc_mealie_client_secret
+      - oidc_dawarich_client_secret
+      - oidc_quantum_client_secret
+      - oidc_immich_client_secret
+      - oidc_grafana_client_secret
+      - oidc_tailscale_client_secret
     configs:
-      - source: blueprint_directory
+      - source: accounts_authentik_blueprint_directory
         target: /blueprints/custom/10_directory.yaml
-      - source: blueprint_scope_mappings
+      - source: accounts_authentik_blueprint_scope_mappings
         target: /blueprints/custom/20_scope-mappings.yaml
-      - source: blueprint_providers
+      - source: accounts_authentik_blueprint_providers
         target: /blueprints/custom/30_providers.yaml
-      - source: blueprint_ldap_source
+      - source: accounts_authentik_blueprint_ldap_source
         target: /blueprints/custom/25_ldap-source.yaml
-      - source: blueprint_brand
+      - source: accounts_authentik_blueprint_brand
         target: /blueprints/custom/50_brand.yaml
     networks:
       - default
@@ -166,24 +166,26 @@ services:
       <<: *logging
     stop_grace_period: 30s
     environment:
-      - LLDAP_JWT_SECRET_FILE=/run/secrets/lldap_jwt_secret
-      - LLDAP_KEY_SEED_FILE=/run/secrets/lldap_key_seed
-      - LLDAP_LDAP_USER_DN=${GLOBAL_USERNAME}
-      - LLDAP_LDAP_USER_EMAIL=${GLOBAL_USERNAME}@${DOMAIN_PUBLIC}
-      - LLDAP_LDAP_USER_PASS_FILE=/run/secrets/global_password
+      - LLDAP_JWT_SECRET_FILE=/run/secrets/accounts_lldap_jwt_secret_key
+      - LLDAP_KEY_SEED_FILE=/run/secrets/accounts_lldap_key_seed
+      - LLDAP_LDAP_USER_DN=${GLOBAL_ADMIN_USER}
+      - LLDAP_LDAP_USER_EMAIL=${GLOBAL_ADMIN_USER}@${DOMAIN_PUBLIC}
+      - LLDAP_LDAP_USER_PASS_FILE=/run/secrets/global_admin_password
       - LLDAP_LDAP_BASE_DN=${GLOBAL_LDAP_BASE_DN}
       - LLDAP_HTTP_URL=https://lldap.${DOMAIN_PRIVATE}
-      - LLDAP_DATABASE_URL=postgres://lldap:${LLDAP_POSTGRES_PASSWORD}@postgres:5432/lldap
+      - LLDAP_DATABASE_URL_FILE=/run/secrets/accounts_lldap_db_url
       - LLDAP_SMTP_OPTIONS__USER=${GLOBAL_SMTP_USER}
       - LLDAP_SMTP_OPTIONS__SERVER=${GLOBAL_SMTP_HOST}
-      - LLDAP_SMTP_OPTIONS__PASSWORD=${GLOBAL_SMTP_PASS}
+      - LLDAP_SMTP_OPTIONS__PASSWORD_FILE=/run/secrets/global_smtp_password
       - LLDAP_SMTP_OPTIONS__FROM=Accounts <noreply@${DOMAIN_PUBLIC}>
     secrets:
-      - lldap_jwt_secret
-      - lldap_key_seed
-      - global_password
+      - accounts_lldap_jwt_secret_key
+      - accounts_lldap_key_seed
+      - global_admin_password
+      - accounts_lldap_db_url
+      - global_smtp_password
     configs:
-      - source: lldap_config
+      - source: accounts_lldap_config
         target: /data/lldap_config.toml
     networks:
       default: {}
@@ -220,12 +222,13 @@ services:
       <<: *logging
     stop_grace_period: 30s
     environment:
-      - PROVISIONER_USER=${GLOBAL_POSTGRES_PROVISIONER_USER}
-      - PROVISIONER_PASSWORD=${GLOBAL_POSTGRES_PROVISIONER_PASSWORD}
-      - AUTHENTIK_DB_PASSWORD=${AUTHENTIK_POSTGRES_PASSWORD}
-      - LLDAP_DB_PASSWORD=${LLDAP_POSTGRES_PASSWORD}
+      - GLOBAL_DB_PROVISIONER_USER=${GLOBAL_DB_PROVISIONER_USER}
+    secrets:
+      - global_db_provisioner_password
+      - accounts_authentik_db_password
+      - accounts_lldap_db_password
     configs:
-      - source: init_db_entrypoint
+      - source: accounts_init_db
         target: /init-db-entrypoint.sh
     networks:
       - infra_postgres
@@ -246,25 +249,25 @@ services:
     stop_grace_period: 30s
     environment:
       - LLDAP_URL=http://lldap:17170
-      - LLDAP_ADMIN_USERNAME=${GLOBAL_USERNAME}
-      - LLDAP_ADMIN_PASSWORD_FILE=/run/secrets/global_password
+      - LLDAP_ADMIN_USERNAME=${GLOBAL_ADMIN_USER}
+      - LLDAP_ADMIN_PASSWORD_FILE=/run/secrets/global_admin_password
       - GLOBAL_ADMIN_GROUP=${GLOBAL_ADMIN_GROUP}
       - GLOBAL_USER_GROUP=${GLOBAL_USER_GROUP}
       - AUTHENTIK_BIND_USER=_bind_authentik
-      - AUTHENTIK_BIND_PASSWORD_FILE=/run/secrets/authentik_bind_pass
+      - AUTHENTIK_BIND_PASSWORD_FILE=/run/secrets/ldap_authentik_bind_password
       - JELLYFIN_BIND_USER=_bind_jellyfin
-      - JELLYFIN_BIND_PASSWORD_FILE=/run/secrets/jellyfin_bind_pass
+      - JELLYFIN_BIND_PASSWORD_FILE=/run/secrets/ldap_jellyfin_bind_password
       - TEST_USER=_test_user
-      - TEST_USER_PASSWORD_FILE=/run/secrets/test_user_pass
+      - TEST_USER_PASSWORD_FILE=/run/secrets/ldap_test_user_password
       - USER_CONFIGS_DIR=/tmp/bootstrap/user-configs
       - GROUP_CONFIGS_DIR=/tmp/bootstrap/group-configs
     secrets:
-      - global_password
-      - authentik_bind_pass
-      - jellyfin_bind_pass
-      - test_user_pass
+      - global_admin_password
+      - ldap_authentik_bind_password
+      - ldap_jellyfin_bind_password
+      - ldap_test_user_password
     configs:
-      - source: init_ldap_entrypoint
+      - source: accounts_init_ldap
         target: /init-ldap-entrypoint.sh
     networks:
       - default

@@ -12,13 +12,13 @@ services:
     stop_grace_period: 30s
     environment:
       # Secret file references
-      - IMAP_SERVER_FILE=/run/secrets/imap_server
-      - SMTP_SERVER_FILE=/run/secrets/smtp_server
-      - EMAIL_ADDRESS_FILE=/run/secrets/email_address
-      - EMAIL_PASSWORD_FILE=/run/secrets/email_password
-      - FWD_RECIPIENT_1_FILE=/run/secrets/fwd_recipient_1
-      - FWD_RECIPIENT_2_FILE=/run/secrets/fwd_recipient_2
-      - FWD_RECIPIENT_3_FILE=/run/secrets/fwd_recipient_3
+      - IMAP_SERVER_FILE=/run/secrets/forwarder_imap_server
+      - SMTP_SERVER_FILE=/run/secrets/forwarder_smtp_server
+      - EMAIL_ADDRESS_FILE=/run/secrets/forwarder_email_address
+      - EMAIL_PASSWORD_FILE=/run/secrets/forwarder_email_password
+      - FWD_RECIPIENT_1_FILE=/run/secrets/forwarder_recipient_1
+      - FWD_RECIPIENT_2_FILE=/run/secrets/forwarder_recipient_2
+      - FWD_RECIPIENT_3_FILE=/run/secrets/forwarder_recipient_3
       # Non-secret configuration
       - CONFIG_FILE=/config/config.json
       - IMAP_PORT=993
@@ -32,13 +32,13 @@ services:
       - HEARTBEAT_INTERVAL=300
       - MAX_EMAILS_PER_CYCLE=50
     secrets:
-      - imap_server
-      - smtp_server
-      - email_address
-      - email_password
-      - fwd_recipient_1
-      - fwd_recipient_2
-      - fwd_recipient_3
+      - forwarder_imap_server
+      - forwarder_smtp_server
+      - forwarder_email_address
+      - forwarder_email_password
+      - forwarder_recipient_1
+      - forwarder_recipient_2
+      - forwarder_recipient_3
     configs:
       - source: forwarder_config
         target: /config/config.json

@@ -3,9 +3,11 @@ set -e
 
 PGHOST="postgres"
 PGPORT="5432"
-PGUSER="${PROVISIONER_USER}"
+PGUSER="${GLOBAL_DB_PROVISIONER_USER}"
 PGDATABASE="postgres"
-PGPASSWORD="${PROVISIONER_PASSWORD}"
+PGPASSWORD="$(cat /run/secrets/global_db_provisioner_password)"
+AUTHENTIK_DB_PASSWORD="$(cat /run/secrets/accounts_authentik_db_password)"
+LLDAP_DB_PASSWORD="$(cat /run/secrets/accounts_lldap_db_password)"
 export PGHOST PGPORT PGUSER PGDATABASE PGPASSWORD
 
 echo "Waiting for PostgreSQL..."
@@ -21,7 +23,7 @@ psql -v ON_ERROR_STOP=1 <<-EOSQL
         END IF;
     END
     \$\$;
-    GRANT authentik TO ${PROVISIONER_USER};
+    GRANT authentik TO ${GLOBAL_DB_PROVISIONER_USER};
     SELECT 'CREATE DATABASE authentik OWNER authentik'
     WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'authentik')\gexec
 
@@ -32,7 +34,7 @@ psql -v ON_ERROR_STOP=1 <<-EOSQL
         END IF;
     END
     \$\$;
-    GRANT lldap TO ${PROVISIONER_USER};
+    GRANT lldap TO ${GLOBAL_DB_PROVISIONER_USER};
     SELECT 'CREATE DATABASE lldap OWNER lldap'
     WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'lldap')\gexec
 EOSQL
