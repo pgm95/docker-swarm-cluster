@@ -236,8 +236,6 @@ Tasks address files by **target** rather than path. A target is a global stem (`
 | `sops:encrypt` | Encrypt in place any `*.sops.yaml` that is still plaintext |
 | `validate:secrets` | Hidden. Verify files are encrypted and decryptable (`sops filestatus` plus a decrypt); all files when called without arguments, the changed files when called by pre-commit |
 
-`env:setup` registers a git textconv driver for `*.sops.yaml` (declared in `.gitattributes`), so `git diff`, `git show`, and `git log -p` render plaintext locally while the repository keeps ciphertext.
-
 ### Custom Image Builds
 
 Stacks with `build/<service>/` directories trigger automatic builds. Tags are content-based (12-char SHA-256 of build context, excluding `.md` files). The hash inputs are each file's relative path, contents, and `st_mode` — so an `entrypoint.sh` getting `chmod +x` produces a different tag than the same content without the exec bit, avoiding false cache hits.

@@ -118,9 +118,8 @@ Secrets are organized in three layers by scope:
 | **Per-environment** | `.secrets/{env}.sops.yaml` | Auto-injected by mise `_.file` per profile |
 | **Per-stack** | `<stack>/secrets.sops.yaml` | Decrypted at deploy time by `swarm:deploy` |
 
-Every encrypted file is YAML and carries the `.sops.yaml` suffix, so one SOPS creation rule,
-one git textconv rule, and one pre-commit check cover them all. Git shows them decrypted on
-this machine only; the committed blobs stay ciphertext.
+Every encrypted file is YAML and carries the `.sops.yaml` suffix, so one SOPS creation rule
+and one pre-commit check cover them all.
 
 Secrets reach containers as either **versioned Swarm secrets** (mounted at `/run/secrets/`,
 triggered by `${DEPLOY_VERSION}` in the stack's `include.yml`) or **env var injection** (compose

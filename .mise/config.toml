@@ -45,9 +45,7 @@ description = " "  # Complete environment setup via mise
 run = [
   "mise trust || true",
   "mise install",
-  "mise x -- pre-commit install --config {{ env.PROJECT_CONFIGS_DIR }}/pre-commit.yaml",
-  "git config diff.sops.textconv 'sops decrypt --input-type yaml --output-type yaml'",
-  "git config diff.sops.cachetextconv true"
+  "mise x -- pre-commit install --config {{ env.PROJECT_CONFIGS_DIR }}/pre-commit.yaml"
 ]
 
 [tasks."env:clean"]
