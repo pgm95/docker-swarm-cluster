@@ -7,12 +7,14 @@ from swarm.secrets import (
     all_secrets_files,
     create_versioned_secrets,
     main,
+    mounted_secret_files,
     referenced_config_files,
     required_versioned_secrets,
     secrets_file_for,
     secrets_targets,
     validate_config_files,
     validate_required_secrets,
+    validate_secret_paths,
 )
 
 
@@ -271,3 +273,38 @@ class TestPathCli:
         rc, out = self._run(monkeypatch, capsys, "nope")
         assert rc != 0
         assert out.out == ""
+
+
+class TestValidateSecretPaths:
+    def _stack(self, tmp_path, refs: str):
+        (tmp_path / "config").mkdir()
+        (tmp_path / "config/app.ini").write_text(refs)
+        (tmp_path / "compose.yml").write_text("services: {}\n")
+        return tmp_path
+
+    def test_mounted_names_from_source_and_target(self):
+        rendered = {"services": {"a": {"secrets": [
+            {"source": "x_db_password", "target": "/run/secrets/x_db_password"},
+            {"source": "y_key", "target": "custom_name"},
+            "plain",
+        ]}}}
+        assert mounted_secret_files(rendered) == {"x_db_password", "custom_name", "plain"}
+
+    def test_all_referenced_are_mounted(self, tmp_path):
+        stack = self._stack(tmp_path, "password = $__file{/run/secrets/x_db_password}\n")
+        validate_secret_paths(stack, {"services": {"a": {"secrets": [{"source": "x_db_password", "target": "/run/secrets/x_db_password"}]}}})
+
+    def test_stale_reference_raises(self, tmp_path):
+        stack = self._stack(tmp_path, "password = $__file{/run/secrets/old_name}\n")
+        with pytest.raises(ValidationError, match="config/app.ini: old_name"):
+            validate_secret_paths(stack, {"services": {"a": {"secrets": [{"source": "new_name", "target": "/run/secrets/new_name"}]}}})
+
+    def test_no_config_dir(self, tmp_path):
+        (tmp_path / "compose.yml").write_text("services: {}\n")
+        validate_secret_paths(tmp_path, {"services": {}})
+
+    def test_borgmatic_credential_syntax(self, tmp_path):
+        stack = self._stack(tmp_path, 'encryption_passphrase: "{credential container backup_borg_passphrase}"\n')
+        with pytest.raises(ValidationError, match="backup_borg_passphrase"):
+            validate_secret_paths(stack, {"services": {"a": {"secrets": []}}})
+        validate_secret_paths(stack, {"services": {"a": {"secrets": [{"source": "backup_borg_passphrase", "target": "/run/secrets/backup_borg_passphrase"}]}}})

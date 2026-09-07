@@ -15,7 +15,7 @@ from ._ssh import parallel_run, ssh_node
 from ._stack import all_stacks, oci_tag_var
 from .deploy import compute_content_hash
 from .nodes import resolve_service_nodes
-from .secrets import validate_config_files
+from .secrets import validate_config_files, validate_secret_paths
 
 
 def _set_oci_tags(stack_dir: Path) -> None:
@@ -197,9 +197,11 @@ def validate(stack_file: str | None = None) -> int:
             json_cache[f] = {}
             continue
 
-        # Verify any `configs.<x>.file:` paths actually exist on disk.
+        # Verify any `configs.<x>.file:` paths actually exist on disk, and that
+        # every /run/secrets/<name> the stack mentions is actually mounted.
         try:
             validate_config_files(json_cache[f])
+            validate_secret_paths(f.parent, json_cache[f])
         except ValidationError as e:
             info(f"✗ {f}")
             for line in str(e).splitlines()[:5]:

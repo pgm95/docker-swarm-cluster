@@ -8,6 +8,7 @@ just inspects the final document.
 
 import argparse
 import os
+import re
 import sys
 from collections.abc import Mapping
 from pathlib import Path
@@ -184,6 +185,52 @@ def create_versioned_secrets(
 
     debug(f"    Created: {counts['created']}, Skipped: {counts['skipped']}")
     return counts
+
+
+def mounted_secret_files(compose_json: dict) -> set[str]:
+    """File names under ``/run/secrets/`` that any service in the rendered compose mounts."""
+    names: set[str] = set()
+    for svc in (compose_json.get("services") or {}).values():
+        for entry in svc.get("secrets") or []:
+            if isinstance(entry, str):
+                names.add(entry)
+                continue
+            target = (entry or {}).get("target") or (entry or {}).get("source") or ""
+            names.add(target.rsplit("/", 1)[-1])
+    return names
+
+
+# A mounted secret is referenced by path, or by name in borgmatic's credential syntax.
+_SECRET_PATH = re.compile(r"(?:/run/secrets/|credential container )([A-Za-z0-9_.-]+)")
+
+
+def validate_secret_paths(stack_dir: Path, compose_json: dict) -> None:
+    """Every ``/run/secrets/<name>`` mentioned by the stack must be a mounted secret.
+
+    Scans ``compose.yml`` and everything under ``config/`` for ``/run/secrets/<name>``
+    and borgmatic's ``{credential container <name>}``. Catches a renamed
+    alias that a config file (grafana.ini, a blueprint, an init script) still
+    references under its old name, which ``docker stack config`` cannot see.
+
+    Raises :class:`ValidationError` listing ``<file>: <name>`` for each miss.
+    """
+    mounted = mounted_secret_files(compose_json)
+    candidates = [stack_dir / "compose.yml", *sorted((stack_dir / "config").rglob("*"))]
+    missing: list[str] = []
+    for f in candidates:
+        if not f.is_file():
+            continue
+        try:
+            text = f.read_text()
+        except UnicodeDecodeError:
+            continue
+        for name in sorted(set(_SECRET_PATH.findall(text))):
+            if name not in mounted:
+                missing.append(f"{f.relative_to(stack_dir)}: {name}")
+    if missing:
+        raise ValidationError(
+            "Secret paths referenced but not mounted by any service:\n" + "\n".join(f"  {m}" for m in missing)
+        )
 
 
 def validate_config_files(compose_json: dict) -> None:
