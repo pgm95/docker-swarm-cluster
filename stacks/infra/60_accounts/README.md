@@ -127,24 +127,26 @@ even when matched by `default: true` identifier.
 
 ## Secret delivery
 
-Three subsystems read secrets in three incompatible ways. A single credential
-value sometimes ships twice because the consumers cannot agree on a format.
+Four subsystems read secrets in four different ways. Every value is defined
+once and mounted as a versioned secret; the consumers differ only in how they
+address the mounted file.
 
 | Mode | Consumed by | Compose form |
 |---|---|---|
 | Python config loader (`file://`) | Select `AUTHENTIK_*` keys (secret key, Postgres password, SMTP password) | `KEY=file:///run/secrets/<name>` plus Docker secret mount |
-| Plain env var | Go bootstrap (`AUTHENTIK_BOOTSTRAP_*`), Postgres URI interpolation (`LLDAP_DATABASE_URL`) | `KEY=${VAR}` with value from SOPS env |
+| lldap `_FILE` suffix | Every lldap credential (JWT secret, key seed, admin password, database URL, SMTP password) | `LLDAP_*_FILE=/run/secrets/<name>` plus Docker secret mount |
+| Plain env var | Go bootstrap (`AUTHENTIK_BOOTSTRAP_*`), commented out and unused on a seeded database | `KEY=${VAR}` with value from SOPS env |
 | Blueprint `!File` tag | Worker at blueprint apply time (OIDC client secrets, admin password, LDAP bind password) | Docker secret mount read at YAML parse time |
 
-`GLOBAL_PASSWORD` is the canonical dual-delivery example. It feeds:
+`GLOBAL_ADMIN_PASSWORD` is the canonical shared-consumer example. It feeds:
 
 1. lldap admin via `LLDAP_LDAP_USER_PASS_FILE`
 2. lldap bootstrap admin via `LLDAP_ADMIN_PASSWORD_FILE` (init-ldap)
-3. Authentik primary admin via `!File /run/secrets/global_password` in
+3. Authentik primary admin via `!File /run/secrets/global_admin_password` in
    `10_directory.yaml`
 
-All three consumers mount the same versioned `global_password` secret
-(remapped from `GLOBAL_PASSWORD` via the `name:` indirection in `include.yml`).
+All three consumers mount the same versioned `global_admin_password` secret
+(remapped from `GLOBAL_ADMIN_PASSWORD` via the `name:` indirection in `include.yml`).
 
 `AUTHENTIK_BOOTSTRAP_PASSWORD` and friends are commented out in compose.
 They are only read on first startup; the directory blueprint owns the admin
@@ -163,7 +165,7 @@ internally before bootstrapping the bind users.
 ### LDAP_KEY_SEED preservation
 
 If lldap's Postgres database is being migrated in (rather than freshly
-seeded), the `LLDAP_KEY_SEED` value in SOPS must match the seed that
+seeded), the `ACCOUNTS_LLDAP_KEY_SEED` value in SOPS must match the seed that
 produced the existing argon2 password hashes. Changing the seed renders
 every existing hash unverifiable.
 
@@ -185,6 +187,6 @@ intra-stack via `lldap:389` on the default network.
 ### Bootstrap admin
 
 `AUTHENTIK_BOOTSTRAP_*` env vars are commented out and only honored on first
-startup of a fresh DB. The `10_directory.yaml` blueprint creates `pggm95`
-(value of `GLOBAL_USERNAME`) with admin group memberships and deactivates the
-default `akadmin` account.
+startup of a fresh DB. The `10_directory.yaml` blueprint creates the primary
+admin named by `GLOBAL_ADMIN_USER` with admin group memberships and deactivates
+the default `akadmin` account.

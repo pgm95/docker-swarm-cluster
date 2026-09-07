@@ -32,7 +32,7 @@ Per-instance `init-backup` sidecars (in their owning stacks) create a dedicated 
 
 - For the central Postgres, the provisioner has `pg_read_all_data WITH ADMIN OPTION` to delegate read access.
 - For the standalone Postgres instances (immich, dawarich), there is no provisioner role: the local DB superuser creates the `backup` role directly.
-  The same credentials must appear in both the backup stack's secrets and the target stack's secrets. Alternatively, promote them to global-scope secrets.
+  Each backup role password is a pairing defined once in the `backup` topic file; the owning stack's `init-backup` sidecar and borgmatic both mount that one key, and borgmatic resolves it through its `credential container` syntax against the mounted secret name.
 
 ### Backup behavior
 
@@ -60,7 +60,7 @@ Metrics emitted (per-target carry a `target` label; repo-wide carry only `reposi
 
 ### Repository initialization
 
-The init script (`config/borgmatic/init.sh`) wraps the stock entrypoint: waits for the central postgres to be reachable, runs `borgmatic repo-create --encryption repokey-blake2` (which iterates every config in `/etc/borgmatic.d/` against the shared repo path — first creates, rest skip as already initialized), then execs `/init` (s6-overlay + crond). The passphrase resolves from the secret file via borgmatic's credential loader; the wrapper itself doesn't touch it.
+The init script (`config/borgmatic/init.sh`) wraps the stock entrypoint: waits for the central postgres to be reachable, runs `borgmatic repo-create --encryption repokey-blake2` (which iterates every config in `/etc/borgmatic.d/` against the shared repo path; the first creates, the rest skip as already initialized), then execs `/init` (s6-overlay + crond). The passphrase is a stack-local secret that borgmatic resolves through its `credential container` syntax against the mounted secret name; the wrapper itself doesn't touch it.
 
 ## Restore Procedures
 

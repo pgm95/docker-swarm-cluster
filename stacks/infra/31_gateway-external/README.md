@@ -34,13 +34,27 @@ Middleware Chain, in order: security-headers -> geoblock -> crowdsec
 - Log acquisition reads Traefik swarm logs via central socket-proxy
 - Postgres-backed for persistent decisions across restarts
 - Wrapper entrypoint waits for Postgres overlay DNS before starting
+- The bouncer key, the CTI key, the database password and the widget agent password
+  arrive as Docker secrets. The wrapper reads them from `/run/secrets/` and exports
+  them for the stock entrypoint, so none of them appears in the service spec or on the
+  VPS disk. The Traefik bouncer plugin reads its key through its file option from the
+  same mounted secret
 - A dedicated LAPI machine for the homepage widget is registered on every container
   start through the image's `AGENT_USERNAME` / `AGENT_PASSWORD` path (idempotent
-  `cscli machines add --force`, no credentials file written). The container's own
+  `cscli machines add --force`, no credentials file written). The password is a key in
+  the `widget` topic file, mounted by this stack and by Homepage. The container's own
   `localhost` agent is disposable: the entrypoint regenerates it with a random password
   whenever its credentials file and the machine table disagree, so no external consumer
   may borrow it. LAPI has no read-only machine type and bouncer keys cannot read alerts,
   so the widget credential is write-capable by necessity
+
+### Operating cscli inside the container
+
+A shell started with `docker exec` does not run under the wrapper, so the variables it
+exported are absent and any `cscli` command that touches the database (machines,
+bouncers, decisions) fails to connect. Read PID 1's environment first and export the
+variables into the shell, then run `cscli`. This is the accepted cost of keeping the
+database password out of the service spec and off the VPS disk.
 
 ### Self-Ban Guard
 

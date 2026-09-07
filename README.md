@@ -38,7 +38,7 @@ Only the final `docker stack deploy` command executes over SSH.
 
 3. **Configure secrets:** Populate SOPS-encrypted secrets files by target:
    - `mise run sops:edit dev|prod` for per-environment values (domains, OIDC URL, LDAP base DN)
-   - `mise run sops:edit shared` for shared credentials (registry, SMTP, Postgres provisioner)
+   - `mise run sops:edit global` for infrastructure credentials (registry, SMTP, Postgres provisioner); `oidc`, `backup`, `ldap` and `widget` for values two stacks share
    - `mise run sops:edit <stack>` for stack-local API keys and passwords
 
 4. **Deploy:**
@@ -73,7 +73,7 @@ Overlay networks partition traffic by function:
 
 | Network | Purpose |
 |---------|---------|
-| `infra_socket` | Docker API access (read-only socket-proxy) |
+| `infra_socket` | Docker API access (GET-only socket-proxy with a per-consumer allowlist) |
 | `infra_gw-internal` | Internal Traefik routing (LAN/Tailscale) |
 | `infra_gw-external` | External Traefik routing (public internet) |
 | `infra_metrics` | Prometheus scraping |
@@ -114,18 +114,30 @@ Secrets are organized in three layers by scope:
 
 | Layer | Location | Delivery |
 |-------|----------|----------|
-| **Shared** | `.secrets/shared.sops.yaml` | Auto-injected by mise `_.file` to all stacks |
+| **Global** | `.secrets/global.sops.yaml` and the topic files `oidc`, `backup`, `ldap`, `widget` | Auto-injected by mise `_.file` to all stacks |
 | **Per-environment** | `.secrets/{env}.sops.yaml` | Auto-injected by mise `_.file` per profile |
 | **Per-stack** | `<stack>/secrets.sops.yaml` | Decrypted at deploy time by `swarm:deploy` |
 
 Every encrypted file is YAML and carries the `.sops.yaml` suffix, so one SOPS creation rule
 and one pre-commit check cover them all.
 
+Every value is defined in exactly one file and classified by relationship, not by who reads it.
+A singleton has one consumer and lives in that stack's file. A pairing is a value two parties
+must agree on, one of which writes it, and lives in the global topic file named after the
+topic. Infrastructure values consumed by many stacks live in the global file, or in the
+per-environment file when they differ by environment. Each value carries one identifier of the
+form scope, subject, purpose, and that identifier is the SOPS key in upper case and the compose
+alias, the Swarm object base name and the file under `/run/secrets/` in lower case. The
+[secrets rule](.claude/rules/secrets.md) holds the vocabulary and the placement rules.
+
 Secrets reach containers as either **versioned Swarm secrets** (mounted at `/run/secrets/`,
 triggered by `${DEPLOY_VERSION}` in the stack's `include.yml`) or **env var injection** (compose
-interpolation). Credentials that another stack consumes through service labels (dashboard
-widgets) stay in the owning stack and are interpolated into its labels at deploy time; the
-consumer holds no copy. Multi-line values are plain YAML block scalars.
+interpolation). File delivery is the default: apps read the mounted file through a native file
+reference, an s6 `FILE__` variable or an entrypoint wrapper that exports it. Plain env is the
+exception and carries a comment saying why, because anything compose interpolates lands in the
+service spec. Credentials another stack consumes through dashboard widgets are never
+interpolated into labels: the owning stack's label carries a `{{HOMEPAGE_FILE_*}}` placeholder
+and both sides mount the same global key. Multi-line values are plain YAML block scalars.
 Versioned secrets are immutable: each deploy creates new ones with a unique suffix; old
 versions persist until `swarm:cleanup`.
 
@@ -138,7 +150,7 @@ versions persist until `swarm:cleanup`.
 | Bulk storage | `cifs-<share>` named volume | Docker CIFS volume |
 
 CIFS volumes use Docker's local driver with `type: cifs`, mounting SMB shares directly.
-Credentials come from `GLOBAL_CIFS_*` in shared secrets.
+Credentials come from `GLOBAL_CIFS_*` in the global secrets file.
 
 Services needing non-root volume ownership use entrypoint wrappers (Docker Config init
 scripts) that chown and drop privileges (`setpriv` on Debian, `su` on Alpine).
@@ -148,7 +160,7 @@ scripts) that chown and drop privileges (`setpriv` on Debian, `su` on Alpine).
 Stacks are organized by namespace: A subdir of `SWARM_STACKS_DIR` is considered a namespace.
 `site:deploy-<namespace>` auto-discovers and deploys stacks in alphabetical order.
 
-- **Socket Proxy:** Central read-only Docker API gateway for consumers needing node-agnostic Swarm API info.
+- **Socket Proxy:** Central GET-only Docker API gateway with a per-consumer allowlist, for consumers needing node-agnostic Swarm API info.
 - **Postgres:** Central database server.
   All stateful services share one instance via dedicated roles provisioned by init-db sidecars.
 - **Backup:** Borgmatic with scheduled backups, deduplication, and encryption.
