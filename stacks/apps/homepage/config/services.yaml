@@ -43,7 +43,7 @@
         icon: home-assistant.svg
         widget:
           type: homeassistant
-          url: http://hass.home.arpa:8123
+          url: https://home.{{HOMEPAGE_VAR_DOMAIN_PRIVATE}}
           key: {{HOMEPAGE_FILE_HASS_TOKEN}}
           # fields: ["people_home", "lights_on"]
           custom:

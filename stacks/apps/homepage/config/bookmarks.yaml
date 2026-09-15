@@ -6,22 +6,27 @@
         - icon: glinet-dark
           abbr: GL
           description: " "
-          href: https://comet.home.arpa
-    - Ruckus:
-        - icon: https://www.ruckusnetworks.com/favicon.ico
-          abbr: RU
-          description: " "
-          href: https://ruckus.home.arpa
+          href: https://comet
+    # - Ruckus:
+    #     - icon: https://www.ruckusnetworks.com/favicon.ico
+    #       abbr: RU
+    #       description: " "
+    #       href: https://ruckus
     - Binardat:
         - icon: mdi-switch
           abbr: BN
           description: " "
-          href: http://binardat.home.arpa
+          href: http://binardat
+    - Marble:
+        - icon: openwrt.svg
+          abbr: MA
+          description: " "
+          href: http://marble.las.arpa
     - PiGM:
         - icon: home-assistant-alt
           abbr: PI
           description: " "
-          href: http://pigm:8123
+          href: http://pigm.las.arpa:8123
     - Tailscale:
         - icon: tailscale-light
           abbr: TS

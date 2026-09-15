@@ -12,4 +12,4 @@ http:
     hass:
       loadBalancer:
         servers:
-          - url: http://hass.home.arpa:8123
+          - url: http://hass.lan.home.arpa:8123
