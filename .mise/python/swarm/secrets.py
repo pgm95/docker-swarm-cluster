@@ -13,11 +13,12 @@ import sys
 from collections.abc import Mapping
 from pathlib import Path
 
+from core.cli import cli_main
+from core.output import debug, info
+
 from . import SecretError, ValidationError
-from ._cli import cli_main
-from ._compose import compose_json
 from ._docker import secret_create, secret_list
-from ._output import debug, info
+from ._render import compose_json
 from ._stack import SECRETS_FILE, all_stacks, resolve_stack_path, stack_name
 
 StackSecrets = list[tuple[str, str]]

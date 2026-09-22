@@ -3,7 +3,9 @@
 import os
 import sys
 
-from ._cli import cli_main
+from core.cli import cli_main
+from core.output import table
+
 from ._docker import (
     inspect_nodes,
     parse_replicas,
@@ -11,7 +13,6 @@ from ._docker import (
     service_ps_multi,
     task_name_to_service,
 )
-from ._output import table
 from ._stack import all_stacks, stack_name
 
 

@@ -1,0 +1,5 @@
+# Prometheus file_sd target list for the prod relay VPS (tunnel address, port 8405).
+- targets:
+    - swarm-vps.wg.home.arpa:8405
+  labels:
+    relay: swarm-vps

@@ -14,6 +14,7 @@ auto_install = false
 "aqua:pre-commit/pre-commit" = "latest"
 
 [env]
+PROJECT_ENV = "{{ mise_env | first }}"
 PROJECT_CONFIGS_DIR = "{{config_root}}/.config"
 PROJECT_SECRETS_DIR = "{{config_root}}/.secrets"
 
@@ -24,6 +25,7 @@ SOPS_CONFIG = "{{ env.PROJECT_CONFIGS_DIR }}/sops.yaml"
 
 SWARM_STACKS_DIR = "{{config_root}}/stacks"
 SWARM_ANCHORS_FILE = "{{ env.SWARM_STACKS_DIR }}/_shared/anchors.yml"
+COMPOSE_PROJECTS_DIR = "{{config_root}}/compose"
 
 GLOBAL_SECRETS = "{{ env.PROJECT_SECRETS_DIR }}/global.sops.yaml"
 _.file = [

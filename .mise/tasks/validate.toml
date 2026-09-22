@@ -17,9 +17,21 @@ description = "Run ruff check"
 dir = "{{ env.PYTHONPATH }}"
 run = "ruff check"
 
+["validate:stack"]
+description = "Validate stack compose files for Swarm compatibility (rendering, configs, secret paths, bind mounts); all stacks when none given"
+usage = '''
+arg "[stacks]..." help="Stack name(s) or path(s)"
+complete "stacks" run="python3 -m swarm.stacks"
+'''
+run = "python3 -m swarm.validate ${usage_stacks:-}"
+
 ["validate:compose"]
-description = "Validate all compose files for Swarm compatibility"
-run = "python3 -m swarm.validate"
+description = "Validate Compose projects client side (compose config plus build contexts); all projects when none given"
+usage = '''
+arg "[projects]..." help="Project name(s) (host/project) or path(s)"
+complete "projects" run="python3 -m compose.projects"
+'''
+run = "python3 -m compose.validate ${usage_projects:-}"
 
 ["validate:secrets"]
 description = "Internal: verify *.sops.yaml files are encrypted and decryptable (all files when none given)"

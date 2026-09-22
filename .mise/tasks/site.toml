@@ -9,6 +9,7 @@ run = '''
 #!/usr/bin/env bash
 failed=()
 for d in stacks/infra/*/; do
+    [[ -f "$d/.nodeploy" ]] && continue
     python3 -m swarm.deploy "$d" || failed+=("$(basename "$d")")
 done
 [[ ${#failed[@]} -eq 0 ]] || { echo "Failed: ${failed[*]}" >&2; exit 1; }
@@ -48,6 +49,6 @@ done
 '''
 
 ["site:registry"]
-description = "Login all swarm nodes to the private registry"
+description = "Login all swarm nodes and the local machine to the private registry"
 raw_args = true
-run = "python3 -m swarm.registry_auth"
+run = "python3 -m swarm.registry_auth --local"

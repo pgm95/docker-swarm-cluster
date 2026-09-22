@@ -8,7 +8,8 @@ directory paths with ``--paths``.
 import argparse
 import sys
 
-from ._cli import cli_main
+from core.cli import cli_main
+
 from ._stack import all_stacks, stack_name
 
 

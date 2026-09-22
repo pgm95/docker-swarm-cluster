@@ -1,10 +1,10 @@
-"""Compose config preprocessing.
+"""Swarm compose document rendering.
 
 Concatenates centralized anchors with a stack's compose file, pipes the
 result through `docker compose config` on stdin, and applies fixups for
 `docker stack deploy` compatibility.
 
-Also callable as: python3 -m swarm._compose <stack-file> [extra-args...]
+Also callable as: python3 -m swarm._render <stack-file> [extra-args...]
 """
 
 import argparse
@@ -15,8 +15,9 @@ import sys
 from functools import cache
 from pathlib import Path
 
+from core.cli import cli_main
+
 from . import _docker
-from ._cli import cli_main
 from ._stack import stack_name
 
 # docker compose config stringifies certain integer fields that
@@ -115,7 +116,7 @@ def compose_json(stack_file: str | Path) -> dict:
 
 def main() -> int:
     def run() -> int:
-        parser = argparse.ArgumentParser(prog="swarm._compose")
+        parser = argparse.ArgumentParser(prog="swarm._render")
         parser.add_argument("stack_file", help="Path to stack's compose.yml")
         parser.add_argument("extra", nargs="*", help="Additional args for docker compose config")
         args = parser.parse_args()

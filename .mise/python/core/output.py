@@ -1,4 +1,4 @@
-"""Logging and output formatting for swarm CLI tools.
+"""Logging and output formatting for the CLI tools.
 
 Strict I/O contract:
   - stdout: machine-parseable data only (tables, lists, network names).
@@ -8,15 +8,15 @@ Strict I/O contract:
 in `table()` is the only function that writes to stdout, and only with data
 that is meaningful to pipe.
 
-When a single Python invocation is operating on a known stack, call
-`init_stack_prefix(name)` once at entry. `info`/`warn`/`error` will then
+When a single Python invocation is operating on a known stack or project,
+call `set_prefix(name)` once at entry. `info`/`warn`/`error` will then
 prepend `[<name>] ` to every line, making sequential mise-task loops easy
 to follow visually.
 
 The prefix is held in a `contextvars.ContextVar`, which gives proper
 context-local isolation for the (currently hypothetical) cases of nested
 CLI calls or per-thread/per-asyncio-task scoping. For today's
-single-stack-per-process model the behavior is identical to a global,
+one-target-per-process model the behavior is identical to a global,
 but the shape is the right one for any future concurrency.
 """
 
@@ -24,10 +24,10 @@ import contextvars
 import logging
 import sys
 
-log = logging.getLogger("swarm")
+log = logging.getLogger("tooling")
 
-_stack_prefix: contextvars.ContextVar[str] = contextvars.ContextVar(
-    "swarm_stack_prefix", default="",
+_prefix: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "output_prefix", default="",
 )
 
 
@@ -42,34 +42,34 @@ def setup(verbose: bool = False) -> None:
     log.setLevel(level)
 
 
-def init_stack_prefix(name: str) -> None:
-    """Set a per-context stack-name prefix prepended to every info/warn/error line."""
-    _stack_prefix.set(f"[{name}] " if name else "")
+def set_prefix(name: str) -> None:
+    """Set a per-context name prefix prepended to every info/warn/error line."""
+    _prefix.set(f"[{name}] " if name else "")
 
 
-def get_stack_prefix() -> str:
-    """Return the current stack prefix (empty string if unset).
+def get_prefix() -> str:
+    """Return the current output prefix (empty string if unset).
 
-    Public accessor so callers (notably `_docker.stream(line_prefixed=True)`)
+    Public accessor so callers (notably `engine.stream(line_prefixed=True)`)
     don't reach into the ContextVar object directly.
     """
-    return _stack_prefix.get()
+    return _prefix.get()
 
 
 def debug(msg: str) -> None:
-    log.debug("%s%s", _stack_prefix.get(), msg)
+    log.debug("%s%s", _prefix.get(), msg)
 
 
 def info(msg: str) -> None:
-    log.info("%s%s", _stack_prefix.get(), msg)
+    log.info("%s%s", _prefix.get(), msg)
 
 
 def warn(msg: str) -> None:
-    log.warning("%sWARNING: %s", _stack_prefix.get(), msg)
+    log.warning("%sWARNING: %s", _prefix.get(), msg)
 
 
 def error(msg: str) -> None:
-    log.error("%sERROR: %s", _stack_prefix.get(), msg)
+    log.error("%sERROR: %s", _prefix.get(), msg)
 
 
 def table(headers: list[str], rows: list[list[str]], wrap_width: int = 3, file=None) -> None:

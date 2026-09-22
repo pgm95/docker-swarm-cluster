@@ -8,28 +8,35 @@ Task orchestration, deployment pipeline, and development tooling for swarm-clust
 .mise/
   config.toml             # Base env vars, tool versions
   config.{dev,prod}.toml  # Per-environment secrets, nodes, domains
-  tasks/                  # Task definitions (TOML) — what to run
+  tasks/                  # Task definitions (TOML): what to run
     swarm.toml            #   Stack operations: deploy, remove, cleanup
+    compose.toml          #   Standalone Compose projects: deploy, remove
     site.toml             #   Cluster-wide: deploy-infra, deploy-apps, drain, registry
     sops.toml             #   Secrets: init, edit, encrypt (targets: global, dev, prod, a topic, or stack name)
-    validate.toml         #   Validation: all (pre-commit), pytest, ruff, compose, secrets
+    validate.toml         #   Validation: all (pre-commit), pytest, ruff, stack, compose, secrets
   python/                 # Self-contained Python project
     pyproject.toml        #   Pytest and ruff config
-    swarm/                #   Python package — how tasks work
-      _*.py               #     Internal: cli helper, docker CLI, SSH, SOPS, compose, output, stack resolution
+    core/                 #   Shared by both packages: exceptions, docker CLI engine, SOPS, output, cli wrapper
+    swarm/                #   Docker Swarm stacks
+      _*.py               #     Internal: docker wrappers bound to SWARM_HOST, SSH, render, stack resolution
       *.py                #     User-facing: deploy, convergence, status, validate, cleanup, nodes, etc.
+    compose/              #   Standalone Compose projects deployed over ssh
+      _project.py         #     Internal: project discovery, host resolution
+      *.py                #     User-facing: deploy, remove, validate, projects
     tests/                #   Pytest suite (mocked Docker/SSH, no live cluster needed)
 ```
 
 Three layers split the work cleanly:
 
 - **mise** owns env loading (SOPS, tool versions), task entry points, `depends`/`depends_post` ordering, and `confirm` gates.
-- **bash inside task `run` blocks** owns per-stack iteration (over positional args or filesystem globs) and failure collection.
-- **The Python lib** owns per-stack work (`deploy_stack`, `remove_stack`) and cluster-wide ops (`cleanup`, `status`, `networks`, `registry_auth`, `validate`).
+- **bash inside task `run` blocks** owns per-target iteration (over positional args or filesystem globs) and failure collection.
+- **The Python lib** owns per-target work (`deploy_stack`, `remove_stack`, `deploy_project`, `remove_project`) and cluster-wide ops (`cleanup`, `status`, `networks`, `registry_auth`, `validate`).
 
-Python only ever operates on **one stack at a time**. Multi-stack iteration lives in mise tasks' bash, never in Python. `site.py` no longer exists — `site:*` tasks are pure mise+bash that shell out to single-stack Python invocations and report which stacks failed.
+Python only ever operates on **one stack or project at a time**. Multi-target iteration lives in mise tasks' bash, never in Python. `site.py` no longer exists: `site:*` tasks are pure mise+bash that shell out to single-stack Python invocations and report which stacks failed.
 
-The Python package centralizes Docker CLI and SSH calls through `_docker.py` and `_ssh.py`, making the logic testable without a live cluster. Mise provides the environment (`PYTHONPATH`, SOPS keys, Docker host) and the task interface (`mise run swarm:deploy ...`).
+The library is three packages. `core` holds what both targets share and knows nothing about stacks, projects or where a daemon lives: every docker call takes an explicit `host`. `swarm` is everything Swarm; its `_docker` wrappers default `host` to `SWARM_HOST`. `compose` deploys standalone Compose projects to remote daemons and looks the host up per project.
+
+Docker CLI calls go through `core/engine.py` (Swarm modules via the `swarm/_docker.py` wrappers) and SSH calls through `swarm/_ssh.py`, making the logic testable without a live cluster. A module that shells out to docker always goes through `core.engine.run` or `stream` with an explicit host and never through `subprocess` directly; `registry_auth.login_local` is the one deliberate call against the local daemon. Mise provides the environment (`PYTHONPATH`, SOPS keys, Docker host) and the task interface (`mise run swarm:deploy ...`).
 
 Inline tasks run under strict bash (`errexit`, `nounset`, `pipefail`) via `[task_config].shell` in the base config. Since mise 2026.7.14 the old `[settings]` shell args are global-only and ignored in project config, so `task_config.shell` is the committed replacement. Multi-line tasks with a `#!/usr/bin/env bash` shebang bypass this default entirely: they run plain bash without strict flags and handle failures explicitly.
 
@@ -38,7 +45,7 @@ Inline tasks run under strict bash (`errexit`, `nounset`, `pipefail`) via `[task
 Dev/prod separation uses mise's `MISE_ENV` profile system. Dev is default (set in the gitignored `.miserc.toml`).
 
 ```bash
-# Dev (default) — accepts bare name, dir name, or full path
+# Dev (default): accepts bare name, dir name, or full path
 mise run swarm:deploy socket
 
 # Prod
@@ -53,7 +60,7 @@ Each profile provides:
 - `GLOBAL_SWARM_OCI_REGISTRY`: derived from `DOMAIN_PRIVATE`
 - `GLOBAL_ACME_CA_SERVER`: staging CA in dev, production in prod
 
-`DOCKER_HOST` is deliberately NOT exported into the shell — it would pin the local Docker CLI and IDE integrations to the remote Swarm. Instead, `SWARM_HOST` is the source of truth; the swarm Python library (`_docker.docker_env()`) maps it to `DOCKER_HOST` on each subprocess invocation. The `swarm:deploy` bash wrapper does the same with an `export` scoped to its shell. Local `docker context` stays free to switch between daemons.
+`DOCKER_HOST` is deliberately NOT exported into the shell, since it would pin the local Docker CLI and IDE integrations to the remote Swarm. Instead, `SWARM_HOST` is the source of truth; `core.engine.docker_env(host)` sets `DOCKER_HOST` only for each subprocess it spawns, and `swarm._docker` passes `SWARM_HOST` as that host. Local `docker context` stays free to switch between daemons.
 
 ### Processing Order
 
@@ -67,12 +74,14 @@ This is why `GLOBAL_SWARM_OCI_REGISTRY` (uses `DOMAIN_PRIVATE` from SOPS) lives 
 |----------|--------|----------|
 | `DOMAIN_PUBLIC`, `DOMAIN_PRIVATE`, `GLOBAL_OIDC_URL`, `GLOBAL_LDAP_BASE_DN` | SOPS | `PROJECT_SECRETS_DIR/{env}.sops.yaml` |
 | `SWARM_HOST`, `SWARM_SSH_USER` | Plaintext | `.mise/config.{env}.toml` |
+| `PROJECT_ENV` | Plaintext | mise profile (`dev` or `prod`); available to compose interpolation, used to select per-environment config files |
+| `COMPOSE_HOST_<HOST>` | Plaintext | `.mise/config.{env}.toml` (one per Compose host role) |
 | `GLOBAL_SWARM_OCI_REGISTRY` | Derived | `.mise/config.{env}.toml` |
 | `GLOBAL_SMTP_*`, `GLOBAL_REGISTRY_*`, `GLOBAL_DB_PROVISIONER_*`, `GLOBAL_ADMIN_*` | SOPS | `PROJECT_SECRETS_DIR/global.sops.yaml` |
-| `GLOBAL_CIFS_*`, `GLOBAL_CLOUDFLARE_ACME_*` | SOPS | `PROJECT_SECRETS_DIR/{env}.sops.yaml` |
+| `GLOBAL_CIFS_*`, `GLOBAL_CLOUDFLARE_ACME_*`, `GLOBAL_VPS_IP_*` | SOPS | `PROJECT_SECRETS_DIR/{env}.sops.yaml` |
 | `OIDC_*`, `BACKUP_*`, `LDAP_*`, `WIDGET_*` | SOPS | `PROJECT_SECRETS_DIR/{oidc,backup,ldap,widget}.sops.yaml` |
 | `GLOBAL_TZ`, `GLOBAL_NONROOT_*` | Plaintext | `.mise/config.toml` (base) |
-| `SWARM_STACKS_DIR`, `SWARM_ANCHORS_FILE` | Plaintext | `.mise/config.toml` (base) |
+| `SWARM_STACKS_DIR`, `SWARM_ANCHORS_FILE`, `COMPOSE_PROJECTS_DIR` | Plaintext | `.mise/config.toml` (base) |
 
 ### Tunable Knobs
 
@@ -86,7 +95,9 @@ Operational defaults set on individual tasks via `env.<NAME>`:
 | `CONVERGE_MAX_INTERVAL` | `swarm:deploy` task | `15` | Cap on the polling interval. Polling starts at 2s and grows 1.5× per iteration up to this cap. Larger = fewer docker calls during slow deploys, longer worst-case detection latency |
 | `STATUS_SERVICE_WRAP` | `status` task | `2` | Max words per line in the SERVICES column of `mise run status` |
 | `SWARM_INTERNAL_NETWORKS` | `swarm:init-networks` task | `infra_socket` | Space-separated overlay networks to create with `--internal` |
-| `SWARM_OVERLAY_MTU` | `swarm:init-networks` task | `1280` | VXLAN MTU for newly created overlay networks (set lower than path MTU to account for VXLAN encapsulation; 1280 fits inside Tailscale's 1280-byte underlay) |
+| `SWARM_OVERLAY_MTU` | `swarm:init-networks` task | `1500` | VXLAN MTU for newly created overlay networks. Docker subtracts 50 bytes for the VXLAN header itself; 1500 is right for nodes on one LAN segment. Existing overlays keep their MTU |
+| `COMPOSE_PROJECTS_DIR` | `[env]` (base) | `<project>/compose` | Root of the Compose projects tree (`<host>/<project>/compose.yml`) |
+| `COMPOSE_WAIT_TIMEOUT` | `compose:deploy` task | `120` | Seconds `compose up --wait` allows for every container to be running, and healthy where it has a healthcheck |
 
 ## Stacks Tree Contract
 
@@ -97,21 +108,21 @@ The lib operates on a stacks tree of shape:
   <namespace>/                # Any non-underscore-prefixed subdir
     <stack>/                  # Optional NN_ numeric prefix is stripped from the Swarm stack name
       compose.yml             # REQUIRED
-      secrets.sops.yaml       # OPTIONAL — SOPS-encrypted YAML with stack-local secret values
-      include.yml             # CONVENTION — compose fragment declaring Swarm secrets and Docker configs
-      build/<service>/        # OPTIONAL — Dockerfile context, content-hash tagged automatically
+      secrets.sops.yaml       # OPTIONAL: SOPS-encrypted YAML with stack-local secret values
+      include.yml             # CONVENTION: compose fragment declaring Swarm secrets and Docker configs
+      build/<service>/        # OPTIONAL: Dockerfile context, content-hash tagged automatically
     ...
   _shared/                    # Underscore-prefixed dirs are skipped during enumeration
     anchors.yml               # Default location for SWARM_ANCHORS_FILE
 ```
 
-The lib has no awareness of which namespace is which (no special-casing for `infra` vs `apps`). Deploy ordering across stacks is the caller's responsibility — `site:deploy-infra` and `site:deploy-apps` simply iterate filesystem globs over their respective directories.
+The lib has no awareness of which namespace is which (no special-casing for `infra` vs `apps`). Deploy ordering across stacks is the caller's responsibility: `site:deploy-infra` and `site:deploy-apps` simply iterate filesystem globs over their respective directories.
 
-**Per-stack file vocabulary the lib touches:** `compose.yml`, `secrets.sops.yaml`, `build/`. Nothing else. `include.yml` is a project convention consumed by compose, not by the lib. How a stack organizes its compose document — inlined, split via compose's `include:`, anchors, multi-`-f` — is the user's choice. The lib only ever sees the rendered output of `docker compose config`.
+**Per-stack file vocabulary the lib touches:** `compose.yml`, `secrets.sops.yaml`, `build/`. Nothing else. `include.yml` is a project convention consumed by compose, not by the lib. How a stack organizes its compose document (inlined, split via compose's `include:`, anchors, multi-`-f`) is the user's choice. The lib only ever sees the rendered output of `docker compose config`.
 
 ## Compose Preprocessing
 
-Docker Swarm doesn't natively support cross-file YAML anchors. `compose_config()` in `_compose.py` bridges this by concatenating an optional shared anchors file with the stack's `compose.yml` and piping the result through `docker compose config` on stdin:
+Docker Swarm doesn't natively support cross-file YAML anchors. `compose_config()` in `swarm/_render.py` bridges this by concatenating an optional shared anchors file with the stack's `compose.yml` and piping the result through `docker compose config` on stdin:
 
 ```text
 [SWARM_ANCHORS_FILE if present] + <stack>/compose.yml
@@ -124,7 +135,7 @@ Docker Swarm doesn't natively support cross-file YAML anchors. `compose_config()
 
 `--project-name` uses the folder name with `NN_` prefix stripped, so default network names match the Swarm stack name. The anchors file is read once per process (cached via `@functools.cache`) since `validate` and bulk-deploy paths render compose 20-30 times.
 
-`docker compose config` stringifies certain integer fields that `docker stack deploy` requires as raw integers. `_fixup_config()` in `_compose.py` corrects this automatically before returning output. Currently fixes:
+`docker compose config` stringifies certain integer fields that `docker stack deploy` requires as raw integers. `_fixup_config()` in `swarm/_render.py` corrects this automatically before returning output. Currently fixes:
 
 - `name:` property at root level (rejected by stack deploy)
 - `published: "443"` → `published: 443` (port numbers)
@@ -132,7 +143,9 @@ Docker Swarm doesn't natively support cross-file YAML anchors. `compose_config()
 
 **Compose `include:` is fully supported.** The `docker compose config` invocation resolves any `include:` directives the stack uses, so a compose document split across `compose.yml` and `include.yml` is merged before anything reaches the lib.
 
-**Docker Config note:** `docker compose config` resolves `file:` paths to absolute local paths but does NOT inline contents. `docker stack deploy` reads files from local disk at deploy time. Config file contents cannot be modified by sed/envsubst in the piped output — preprocessing must happen on source files before `docker compose config` runs.
+**Docker Config note:** `docker compose config` resolves `file:` paths to absolute local paths but does NOT inline contents. `docker stack deploy` reads files from local disk at deploy time. Config file contents cannot be modified by sed/envsubst in the piped output; preprocessing must happen on source files before `docker compose config` runs.
+
+The `file:` path itself is interpolated, which is the supported way to pick a config per environment: the metrics stack declares `file: ./config/prometheus/targets/relay.${PROJECT_ENV}.yml` and ships `relay.dev.yml` and `relay.prod.yml`, so the mounted file differs per profile while the Prometheus configuration that reads it is identical. `validate:stack` checks the file for the active profile exists.
 
 ## Deploy Pipeline
 
@@ -142,24 +155,24 @@ The `<stack>` argument accepts a bare stack name (`metrics`), a directory name (
 
 A single Python invocation runs the full per-stack pipeline in-process:
 
-1. **Prepare** — sets `STACK_NAME`/`STACK_PATH`/`DEPLOY_VERSION`, decrypts `secrets.sops.yaml` once into env vars (these feed every `${VAR}` in the compose document, `deploy.labels` included), discovers `build/<service>/` directories and builds+pushes images.
-2. **Render** — concatenates the shared anchors file (if any) with the stack's `compose.yml` and runs `docker compose config` to produce both the YAML form (for `docker stack deploy -c -`) and the JSON form (for discovery).
-3. **Discover from rendered JSON** — walks the document for:
+1. **Prepare**: sets `STACK_NAME`/`STACK_PATH`/`DEPLOY_VERSION`, decrypts `secrets.sops.yaml` once into env vars (these feed every `${VAR}` in the compose document, `deploy.labels` included), discovers `build/<service>/` directories and builds+pushes images.
+2. **Render**: concatenates the shared anchors file (if any) with the stack's `compose.yml` and runs `docker compose config` to produce both the YAML form (for `docker stack deploy -c -`) and the JSON form (for discovery).
+3. **Discover from rendered JSON**: walks the document for:
     - `secrets.<x>.name` ending in `_<DEPLOY_VERSION>` → versioned Docker secrets to create
     - `configs.<x>.file` paths → must exist on disk
-4. **Stack deploy** — `docker stack deploy --detach --prune --with-registry-auth --resolve-image changed -c -`. The `changed` mode only re-resolves digests when the image string in compose actually changes; unrelated stack edits leave the previously pinned digest alone. Pass `--update` to switch to `--resolve-image always` for intentional upgrades of floating tags (`latest`, `release`).
-5. **Convergence verify** — polls until services converge (default 180s, configurable via `CONVERGE_TIMEOUT`), then reports any unhealthy services. Polling sleep starts at 2s and grows 1.5× per iteration up to `CONVERGE_MAX_INTERVAL` (default 15s) — fast deploys stay responsive, slow ones avoid flooding the Swarm manager.
+4. **Stack deploy**: `docker stack deploy --detach --prune --with-registry-auth --resolve-image changed -c -`. The `changed` mode only re-resolves digests when the image string in compose actually changes; unrelated stack edits leave the previously pinned digest alone. Pass `--update` to switch to `--resolve-image always` for intentional upgrades of floating tags (`latest`, `release`).
+5. **Convergence verify**: polls until services converge (default 180s, configurable via `CONVERGE_TIMEOUT`), then reports any unhealthy services. Polling sleep starts at 2s and grows 1.5× per iteration up to `CONVERGE_MAX_INTERVAL` (default 15s), so fast deploys stay responsive, slow ones avoid flooding the Swarm manager.
 
 `deploy_stack()` returns 0 on success and 1 on any failure. When something goes wrong, the failing phase emits a clear `error()` line describing the cause (`Convergence timeout after 180s`, `docker stack deploy returned non-zero`, `Missing required secrets: AUTHENTIK_SECRET_KEY`, etc.) before returning. The bash wrapper just collects the failed stack names.
 
 ## Strict I/O Contract
 
-- **stdout**: machine-parseable data only. `swarm.status`, `swarm.networks list`, and `swarm.nodes list` are the canonical stdout emitters.
+- **stdout**: machine-parseable data only. `swarm.status`, `swarm.networks list`, `swarm.nodes list`, `swarm.stacks` and `compose.projects` are the canonical stdout emitters.
 - **stderr**: everything humans read (deploy progress, build/push streams, summaries, warnings, errors).
 
-The Python lib's `_output.info()`/`warn()`/`error()` route to stderr via `logging.StreamHandler(sys.stderr)`. Subprocess streams (`docker build`, `docker push`, `docker stack deploy`) get `stdout=sys.stderr` so their progress doesn't pollute the data channel.
+The Python lib's `core.output.info()`/`warn()`/`error()` route to stderr via `logging.StreamHandler(sys.stderr)`. Subprocess streams (`docker build`, `docker push`, `docker stack deploy`) get `stdout=sys.stderr` so their progress doesn't pollute the data channel.
 
-For `docker stack deploy` specifically, the lib enables a line-prefixed mode (`stream(line_prefixed=True)` in `_docker.py`) that reads the subprocess output line by line and prepends `_output.get_stack_prefix()`. This makes Docker's own progress messages (`Creating service X`, `Updating config Y (id: ...)`) carry the `[stackname]` prefix, matching our own `info()` calls and keeping multi-stack output cleanly attributed. Build/push streams stay in raw byte-pass-through mode so progress bars (`\r`-overwriting) keep their dynamic refresh.
+For `docker stack deploy`, `compose up` and `compose down`, the lib enables a line-prefixed mode (`stream(line_prefixed=True)` in `core/engine.py`) that reads the subprocess output line by line and prepends `core.output.get_prefix()`. This makes Docker's own progress messages (`Creating service X`, `Container relay-haproxy Recreated`) carry the `[stackname]` or `[host/project]` prefix, matching our own `info()` calls and keeping multi-target output cleanly attributed. Build/push streams stay in raw byte-pass-through mode so progress bars (`\r`-overwriting) keep their dynamic refresh.
 
 The prefix itself lives in a `contextvars.ContextVar`, so it's properly context-local rather than a process-wide mutable global. Each Python invocation handles one stack, so context isolation isn't load-bearing today, but the shape is right for any future concurrency.
 
@@ -187,7 +200,7 @@ The deploy task creates immutable Docker secrets named `<key>_<deploy_version>`.
 
 Values are resolved from two sources in priority order:
 
-1. **`secrets.sops.yaml`** (stack-local) — SOPS-decrypted at deploy time. Use for secrets scoped to a single stack.
+1. **`secrets.sops.yaml`** (stack-local): SOPS-decrypted at deploy time. Use for secrets scoped to a single stack.
 2. **Environment variables** (global), already loaded by mise from `global.sops.yaml`, the topic files and `{env}.sops.yaml`. Use for secrets shared across stacks or that differ per environment.
 
 Stack-local secrets always take precedence over global env vars when both have the same name.
@@ -204,7 +217,7 @@ GLOBAL_CLOUDFLARE_ACME_PRIVATE_TOKEN: <token>
 Reference it as a versioned Docker secret. You can put this in `compose.yml` directly, or in any included file:
 
 ```yaml
-# compose.yml — or split into a sibling file pulled in via `include:`
+# compose.yml, or split into a sibling file pulled in via `include:`
 secrets:
   global_cloudflare_acme_private_token:
     name: global_cloudflare_acme_private_token_${DEPLOY_VERSION}
@@ -239,7 +252,7 @@ Tasks address files by **target** rather than path. A target is a global stem (`
 
 ### Custom Image Builds
 
-Stacks with `build/<service>/` directories trigger automatic builds. Tags are content-based (12-char SHA-256 of build context, excluding `.md` files). The hash inputs are each file's relative path, contents, and `st_mode` — so an `entrypoint.sh` getting `chmod +x` produces a different tag than the same content without the exec bit, avoiding false cache hits.
+Stacks with `build/<service>/` directories trigger automatic builds. Tags are content-based (12-char SHA-256 of build context, excluding `.md` files). The hash inputs are each file's relative path, contents, and `st_mode`, so an `entrypoint.sh` getting `chmod +x` produces a different tag than the same content without the exec bit, avoiding false cache hits.
 
 ```text
 Image:    ${GLOBAL_SWARM_OCI_REGISTRY}/<stack>/<service>:<content-hash>
@@ -261,23 +274,66 @@ Other namespace conventions (`platform/`, `infra/`, `services/`, etc.) are valid
 
 Stacks needing external resources use `init-` prefixed sidecar services. These run idempotent setup (DB roles, LDAP users) and exit cleanly. The `*deploy-init` anchor (`condition: on-failure`, `failure_action: continue`, `monitor: 0s`) lets Swarm treat exit 0 as "done" without restart loops or false rollbacks. Provisioner credentials are global SOPS keys delivered as versioned secret files, mounted by the sidecar and read from `/run/secrets/`; they never enter the service spec.
 
+## Compose Projects
+
+Some hosts are not Swarm nodes but still run something this repo owns. Today that is the
+relay VPS. Those run as standalone Docker Compose projects at
+`<COMPOSE_PROJECTS_DIR>/<host>/<project>/compose.yml` (underscore-prefixed host dirs are
+skipped). `mise run compose:deploy <host>/<project>` and `compose:remove` accept one or more
+projects; `python3 -m compose.projects` lists them for completion.
+
+- **Host resolution.** The directory name is the host role. The active profile maps it to a
+  Docker URL through `COMPOSE_HOST_<HOST>` (upper case, hyphens to underscores), so
+  `swarm-vps/haproxy` deploys to `ssh://root@swarm-vps-dev` from the dev profile and to
+  `ssh://root@swarm-vps` from prod, with one directory. An unset variable is a hard error: a host
+  with no counterpart in the environment is not deployable there.
+- **Pipeline.** `compose config --quiet` on the operator's machine as a syntax gate, a
+  `docker version` probe against the host so an unreachable daemon fails in seconds instead of
+  hanging inside `up`, then `compose up -d --build --remove-orphans --wait` streamed with a
+  `[host/project]` prefix, then a `compose ps` table on stderr. `--wait` makes an unhealthy
+  container a failed deploy.
+- **Nothing is copied to the host.** The local Compose client drives the remote daemon; `build:`
+  contexts travel with the request and images are built there, so config files ship inside an
+  image (`COPY` in a `build/<service>/Dockerfile`) and containers stay `read_only`. A config change
+  is a container recreate. No registry is involved.
+- **Secrets.** A project that needs one declares `secrets.<x>.environment: <IDENTIFIER>` in the
+  compose file and the deploy step decrypts the project's `secrets.sops.yaml` into the environment
+  before `up`; Compose copies environment-sourced secrets and configs into containers over ssh, but
+  refuses to on a `read_only` service, so that service drops `read_only`.
+- **Validation.** `mise run validate:compose [<host>/<project> ...]` renders each project with
+  `compose config` on the operator's machine (no daemon) and checks that every `build:` context
+  exists; all projects when none are given. The `validate-compose` pre-commit hook runs it
+  whenever a `compose.yml` or a `build/` file under `compose/` changes. Swarm stacks have their
+  own task and hook (`validate:stack [<stack> ...]`, `validate-stack`) with the same optional
+  targets and completion.
+
+The Swarm renderer (`swarm/_render.py`) is not used here: it concatenates anchors and strips
+`name:`, which would corrupt a plain Compose document.
+
 ## Python Library
 
-Task logic lives in the `swarm` Python package at `.mise/python/swarm/`, invoked by mise tasks as `python3 -m swarm.<module>`. `PYTHONPATH` is set in mise `[env]` to `.mise/python`.
+Task logic lives in three packages under `.mise/python/`, invoked by mise tasks as `python3 -m swarm.<module>` or `python3 -m compose.<module>`. `PYTHONPATH` is set in mise `[env]` to `.mise/python`.
 
-### Internal modules (prefixed `_`)
+### `core` (shared)
 
 | Module | Purpose |
 |--------|---------|
-| `_cli` | Shared `cli_main(work)` wrapper for module CLI entry points: `setup()` logging + `SwarmError` formatting in one place |
-| `_compose` | Compose config preprocessing. `compose_config(path)` returns rendered YAML (anchors concatenation + `docker compose config` via stdin + stack-deploy fixups). `compose_json(path)` returns the same render parsed to a dict — canonical entry point for any code that inspects the rendered compose structurally (secret/config/network discovery, bind-mount extraction, placement constraints). Anchors content cached per resolved path via `@functools.cache`. |
-| `_docker` | Docker CLI subprocess wrappers — all docker calls go through here. Resource helpers (`secret_*`, `config_*`, `network_*`) follow a `list()` / `rm() -> bool` pattern. `stream(line_prefixed=True)` adds `[stackname]` to each line of subprocess output (used for `docker stack deploy`); on non-zero exit, the captured tail of output is surfaced through `DockerError.stderr`. Includes `task_name_to_service()` and `parse_replicas()` helpers |
-| `_ssh` | SSH execution helpers for remote node commands. `parallel_run(items, fn)` is the canonical fan-out helper — bounded ThreadPoolExecutor, returns a per-item result dict preserving identity regardless of completion order. Used by `cleanup`, `registry_auth`, and `validate` for cluster-wide SSH workloads |
-| `_output` | Logging and output formatting (strict I/O contract: data to stdout, diagnostics to stderr). Stack-name prefix held in a `ContextVar`; set via `init_stack_prefix(name)`, read via `get_stack_prefix()` |
-| `_sops` | SOPS decryption. Renders the file through `sops decrypt --output-type json`, accepts a flat mapping only, and stringifies scalars (`true`/`false`, numbers) so multi-line values survive and the store format never matters |
+| `core` | Exception hierarchy: `ToolError` base, `DockerError`, `SSHError`, `SopsError`, `ValidationError`. `swarm` re-exports them under its historical names (`SwarmError` is `ToolError`) and adds `SecretError` |
+| `core.engine` | Docker CLI subprocess wrappers, daemon-agnostic: `run`, `stream`, `build`, `push`, `manifest_exists`, each taking an explicit `host` (Docker URL) and setting `DOCKER_HOST` for that child only. `stream(line_prefixed=True)` prepends the output prefix to each line; on non-zero exit the captured tail is surfaced through `DockerError.stderr` |
+| `core.cli` | Shared `cli_main(work)` wrapper for module CLI entry points: `setup()` logging + `ToolError` formatting in one place |
+| `core.output` | Logging and output formatting (strict I/O contract: data to stdout, diagnostics to stderr). Name prefix held in a `ContextVar`; set via `set_prefix(name)`, read via `get_prefix()` |
+| `core.sops` | SOPS decryption. Renders the file through `sops decrypt --output-type json`, accepts a flat mapping only, and stringifies scalars (`true`/`false`, numbers) so multi-line values survive and the store format never matters |
+
+### `swarm` internal modules (prefixed `_`)
+
+| Module | Purpose |
+|--------|---------|
+| `_render` | Swarm compose document rendering. `compose_config(path)` returns rendered YAML (anchors concatenation + `docker compose config` via stdin + stack-deploy fixups). `compose_json(path)` returns the same render parsed to a dict, the canonical entry point for any code that inspects the rendered compose structurally (secret/config/network discovery, bind-mount extraction, placement constraints). Anchors content cached per resolved path via `@functools.cache`. |
+| `_docker` | Docker CLI wrappers bound to the Swarm manager: `run`, `stream`, `build`, `push`, `manifest_exists` delegate to `core.engine` with `host` defaulted to `SWARM_HOST`, so every Swarm module targets the manager without naming it (tests patch `swarm._docker.run`). Resource helpers (`secret_*`, `config_*`, `network_*`) follow a `list()` / `rm() -> bool` pattern. Includes `task_name_to_service()` and `parse_replicas()` helpers |
+| `_ssh` | SSH execution helpers for remote node commands. `parallel_run(items, fn)` is the canonical fan-out helper: bounded ThreadPoolExecutor, returns a per-item result dict preserving identity regardless of completion order. Used by `cleanup`, `registry_auth`, and `validate` for cluster-wide SSH workloads |
 | `_stack` | Stacks-tree discovery: `stacks_root()`, `find_namespaces()` (excludes `_*` dirs), `find_stacks()`, `all_stacks()` (the single deploy-order walk every other module uses), `resolve_stack_path()`, `stack_name()` (`NN_` prefix stripping), `SECRETS_FILE`. `oci_tag_var(service)` is the single source of truth for the `OCI_TAG_<SERVICE>` env-var formula used by both `deploy.discover_build_dirs` and `validate._set_oci_tags` |
 
-### Public modules (CLI entry points)
+### `swarm` public modules (CLI entry points)
 
 | Module | Task | Purpose |
 |--------|------|---------|
@@ -285,19 +341,29 @@ Task logic lives in the `swarm` Python package at `.mise/python/swarm/`, invoked
 | `convergence` | (library + CLI) | Convergence polling + replica-health verification in one call. Polling uses exponential backoff (2s initial → `max_interval`, 1.5x ramp). CLI: `python3 -m swarm.convergence <stack> [--timeout N] [--max-interval N]` |
 | `remove` | `swarm:remove` | Stack removal with drain wait |
 | `status` | `status` | Cluster node and stack health display. Uses `all_stacks()` for stack discovery; O(N) service-stack matching via `partition("_")` (assumes no underscores in stack names) |
-| `validate` | `validate:compose` | Compose validation, config-file existence check (from rendered JSON), and bind-mount path checks (parallel SSH; YAML+JSON cached per file) |
-| `cleanup` | `swarm:cleanup` | Three phases: (1) prune unused versioned secrets/configs, (2) prune orphaned swarm-scoped overlay networks (excludes `ingress`), (3) `docker system prune --all --volumes --force` per node (parallel SSH). All phases use Docker's "in use" check as the safety net — items currently attached to running services are skipped. |
+| `validate` | `validate:stack` | Swarm compatibility (`docker stack config`), config-file existence check (from rendered JSON), secret path check, and bind-mount path checks (parallel SSH; YAML+JSON cached per file). Takes stack names or paths, all stacks when none given |
+| `cleanup` | `swarm:cleanup` | Three phases: (1) prune unused versioned secrets/configs, (2) prune orphaned swarm-scoped overlay networks (excludes `ingress`), (3) `docker system prune --all --volumes --force` per node (parallel SSH). All phases use Docker's "in use" check as the safety net; items currently attached to running services are skipped. |
 | `networks` | `swarm:init-networks` | Walks every stack's rendered compose for `networks.*.external == true` entries and creates them on the cluster. `SWARM_INTERNAL_NETWORKS` (space-separated) controls which get `--internal`. `SWARM_OVERLAY_MTU` sets the VXLAN MTU at creation time |
 | `nodes` | (library) | Swarm node discovery and placement constraint matching |
 | `secrets` | (library + CLI) | Compose-JSON-driven secret/config discovery: `required_versioned_secrets()`, `validate_required_secrets()`, `create_versioned_secrets()`, `validate_config_files()`, `referenced_config_files()`. Accepts pre-decrypted `(key, value)` pairs to avoid double SOPS calls. CLI `path` subcommand resolves secrets targets to file paths for the sops tasks |
 | `stacks` | (completion) | Prints stack names (or paths with `--paths`) in deploy order; backs the `complete` blocks on `swarm:deploy` and `swarm:remove` |
 | `registry_auth` | `site:registry` | Registry login across swarm nodes (parallel SSH) |
 
-Site-wide tasks (`site:deploy-infra`, `site:deploy-apps`, `site:drain`) are pure mise+bash — they iterate the stacks directory and call `python3 -m swarm.deploy`/`python3 -m swarm.remove` per stack. There is no `site` Python module.
+Site-wide tasks (`site:deploy-infra`, `site:deploy-apps`, `site:drain`) are pure mise+bash: they iterate the stacks directory and call `python3 -m swarm.deploy`/`python3 -m swarm.remove` per stack. There is no `site` Python module.
+
+### `compose` modules
+
+| Module | Task | Purpose |
+|--------|------|---------|
+| `_project` | (library) | `projects_root()`, `all_projects()`, `resolve_project()` (a `host/project` name or a path under the root; a Swarm stack path is refused), `project_host()` (`COMPOSE_HOST_<HOST>` lookup, unset is an error) |
+| `deploy` | `compose:deploy` | Config gate, daemon probe, `up -d --build --remove-orphans --wait`, `ps` table. See Compose Projects above |
+| `remove` | `compose:remove` | `down --remove-orphans`, `--volumes` optional |
+| `validate` | `validate:compose` | Client-side `compose config --format json` plus a `build:` context existence check; `✓`/`✗ host/project` per project on stderr, non-zero exit on any failure |
+| `projects` | (completion) | Prints `host/project` names (or paths with `--paths`); backs the `complete` blocks on the compose tasks. The package's only stdout writer |
 
 ### Testing
 
-Tests live at `.mise/python/tests/`. All Docker/SSH calls are mocked at the subprocess boundary — no live cluster required.
+Tests live at `.mise/python/tests/`. All Docker/SSH calls are mocked at the subprocess boundary, no live cluster required. `mock_docker` patches `swarm._docker.run` for the Swarm modules; the `compose` tests patch `core.engine.run` and `core.engine.stream` directly and assert which host each call was sent to. `test_engine.py` pins the `host` contract: the engine sets `DOCKER_HOST` only for the child it spawns and never maps `SWARM_HOST` itself, and `swarm._docker` is what defaults `host` to `SWARM_HOST`. The `stacks_tree` fixture also points `COMPOSE_PROJECTS_DIR` at a non-existent path so the real `compose/` tree never leaks into Swarm tests.
 
 ```bash
 mise run pytest     # alias for validate:pytest
@@ -306,7 +372,7 @@ mise run validate   # alias for validate:all (all pre-commit hooks)
 
 ### Error handling
 
-All modules use a `SwarmError` exception hierarchy (`DockerError`, `SSHError`, `SopsError`, `SecretError`, `ValidationError`). The `_cli.cli_main(work)` wrapper catches `SwarmError` from any module's CLI entry point and routes the message through `_output.error()` (stderr, non-zero exit). Unexpected exceptions produce full tracebacks.
+All modules use one exception hierarchy rooted at `core.ToolError` (`DockerError`, `SSHError`, `SopsError`, `ValidationError`, plus `swarm.SecretError`; `swarm.SwarmError` is the same base under its historical name). The `core.cli.cli_main(work)` wrapper catches it from any module's CLI entry point and routes the message through `core.output.error()` (stderr, non-zero exit). Unexpected exceptions produce full tracebacks.
 
 ```python
 # Every public module's main() follows this shape:
@@ -333,10 +399,11 @@ Pre-commit hooks run on every commit (`.config/pre-commit.yaml`):
 | `ruff` | `.mise/` Python | Linting (unused imports, bugs, style) via `validate:ruff` |
 | `pytest` | Always | Python test suite via `validate:pytest` |
 | `check-secrets-encrypted` | `*.sops.yaml` | Encrypted and decryptable, via `validate:secrets` |
-| `compose-validate` | `compose.yml`, `include.yml`, `config/`, `anchors.yml` | Full Swarm compatibility plus the secret path check via `validate:compose` |
+| `validate-stack` | `stacks/**`: `compose.yml`, `include.yml`, `config/`, `anchors.yml` | Full Swarm compatibility plus the secret path check via `validate:stack` |
+| `validate-compose` | `compose/**`: `compose.yml`, `build/` | Client-side render plus build context check via `validate:compose` |
 | `gitleaks` | All files | Secret detection; `.config/gitleaks.toml` allowlists `*.sops.yaml` paths, whose ciphertext otherwise trips the entropy rules |
 
-`compose-validate` runs the full pipeline (anchors + compose config + fixups + `docker stack config`) and checks bind mount paths on target nodes. It also checks that every `/run/secrets/<name>` path and every borgmatic `credential container <name>` reference found in `compose.yml` or under `config/` is mounted by some service of that stack, so a stale alias in a config file or init script fails before deploy. It does not decrypt `secrets.sops.yaml`, so `${VAR}` references to stack-local secrets render empty during validation; compose warns and the check still passes.
+`validate-stack` runs the full pipeline (anchors + compose config + fixups + `docker stack config`) and checks bind mount paths on target nodes. It also checks that every `/run/secrets/<name>` path and every borgmatic `credential container <name>` reference found in `compose.yml` or under `config/` is mounted by some service of that stack, so a stale alias in a config file or init script fails before deploy. It does not decrypt `secrets.sops.yaml`, so `${VAR}` references to stack-local secrets render empty during validation; compose warns and the check still passes.
 
 ## Adding a New Stack
 
@@ -349,4 +416,4 @@ Pre-commit hooks run on every commit (`.config/pre-commit.yaml`):
 7. For Postgres consumers: add an `init-db` sidecar (project-internal pattern, see existing infra stacks)
 8. Validate: `mise run validate`
 
-App stacks are auto-discovered. A `.nodeploy` file opts out of bulk `site:deploy-apps`.
+App stacks are auto-discovered. A `.nodeploy` file opts out of bulk `site:deploy-apps`; the marker is gitignored, so it does not survive a clone.

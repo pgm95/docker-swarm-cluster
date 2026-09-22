@@ -132,3 +132,11 @@ scrape_configs:
     static_configs:
       - targets:
         - borgmatic-exporter:9099
+
+  # Relay VPS: HAProxy's built-in exporter, reached over the WireGuard tunnel.
+  # The target file is a Docker config chosen per environment at deploy time
+  # (relay.${PROJECT_ENV}.yml), so this document stays environment-agnostic.
+  - job_name: relay
+    file_sd_configs:
+      - files:
+        - /etc/prometheus/targets/relay.yml

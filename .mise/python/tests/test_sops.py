@@ -1,9 +1,9 @@
-"""Tests for swarm._sops — SOPS decryption helpers."""
+"""Tests for core.sops — SOPS decryption helpers."""
 
 import pytest
 
+from core.sops import sops_decrypt
 from swarm import SopsError
-from swarm._sops import sops_decrypt
 
 
 class TestSopsDecrypt:

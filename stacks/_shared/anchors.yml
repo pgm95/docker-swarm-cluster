@@ -1,6 +1,6 @@
 # Centralized YAML anchors for all compose files.
 # Concatenated with compose.yml before docker compose config processes it.
-# See compose_config in .mise/lib/swarm/_compose.py
+# See compose_config in .mise/python/swarm/_render.py
 
 # --- Logging ---
 
@@ -45,19 +45,6 @@ x-deploy-init: &deploy-init
     order: stop-first
 
 # --- Placement ---
-
-x-place-onprem: &place-onprem
-  placement:
-    constraints:
-      - node.labels.location == onprem
-      - node.labels.ip == private
-
-x-place-cloud: &place-cloud
-  placement:
-    constraints:
-      - node.labels.location == cloud
-      - node.labels.ip == public
-      - node.labels.type == vps
 
 x-place-main: &place-main
   placement:

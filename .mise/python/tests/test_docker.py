@@ -1,4 +1,4 @@
-"""Tests for swarm._docker — Docker CLI wrappers."""
+"""Tests for swarm._docker: Swarm resource helpers and the manager-bound wrappers over core.engine."""
 
 import json
 
@@ -164,15 +164,16 @@ class _FakeProc:
 
 
 class TestStreamLinePrefixed:
-    """`stream(line_prefixed=True)` reads docker's output line by line and
-    prepends `_output.get_stack_prefix()` to each. Goal: lines like
-    `Creating service X` from `docker stack deploy` get attributed to the
-    current stack visually."""
+    """`swarm._docker.stream(line_prefixed=True)` delegates to `core.engine.stream`,
+    which reads docker's output line by line and prepends `output.get_prefix()`
+    to each. Goal: lines like `Creating service X` from `docker stack deploy`
+    get attributed to the current stack visually."""
 
     def test_prefixes_each_line(self, monkeypatch, capsys):
-        from swarm import _docker, _output
+        from core import output as _output
+        from swarm import _docker
 
-        _output.init_stack_prefix("mystack")
+        _output.set_prefix("mystack")
         proc = _FakeProc(
             lines=[
                 "Creating service mystack_web\n",
@@ -189,11 +190,12 @@ class TestStreamLinePrefixed:
         assert "[mystack] Creating service mystack_web" in captured
         assert "[mystack] Creating config mystack_cfg" in captured
         assert "[mystack] Updating service mystack_db (id: abc)" in captured
-        _output.init_stack_prefix("")
+        _output.set_prefix("")
 
     def test_no_prefix_when_unset(self, monkeypatch, capsys):
-        from swarm import _docker, _output
-        _output.init_stack_prefix("")
+        from core import output as _output
+        from swarm import _docker
+        _output.set_prefix("")
         monkeypatch.setattr(
             "subprocess.Popen",
             lambda cmd, **kw: _FakeProc(lines=["plain line\n"]),
@@ -226,58 +228,6 @@ class TestStreamLinePrefixed:
         with pytest.raises(DockerError) as exc_info:
             _docker.stream("stack", "deploy", line_prefixed=True)
         assert "image not found" in exc_info.value.stderr
-
-
-class TestComposeConfigStdinPipe:
-    def test_pipes_combined_yaml_via_stdin(self, mock_docker, tmp_path, monkeypatch):
-        """compose_config concatenates anchors+compose and pipes via input=."""
-        from swarm._compose import _read_anchors_file, compose_config
-
-        anchors = tmp_path / "anchors.yml"
-        anchors.write_text("x-anchor: &a value\n")
-        monkeypatch.setenv("SWARM_ANCHORS_FILE", str(anchors))
-        # The path-keyed cache is fresh for new tmp_path values, but clear
-        # to keep tests independent.
-        _read_anchors_file.cache_clear()
-
-        stack_dir = tmp_path / "mystack"
-        stack_dir.mkdir()
-        compose_file = stack_dir / "compose.yml"
-        compose_file.write_text("services:\n  web:\n    image: nginx\n")
-
-        mock_docker.set_response("compose", stdout="services:\n  web:\n    image: nginx\n")
-        compose_config(compose_file)
-
-        assert len(mock_docker.calls) == 1
-        args = mock_docker.calls[0]
-        assert args[0] == "compose"
-        assert "-f" in args
-        # The "-f" value is "-" meaning stdin
-        assert args[args.index("-f") + 1] == "-"
-        # The combined anchors+compose YAML was piped on stdin
-        piped = mock_docker.inputs[0]
-        assert "x-anchor: &a value" in piped
-        assert "image: nginx" in piped
-
-    def test_missing_anchors_file_renders_compose_alone(self, mock_docker, tmp_path, monkeypatch):
-        """SWARM_ANCHORS_FILE pointing at a nonexistent file is not an error;
-        the lib renders the stack's compose.yml as-is."""
-        from swarm._compose import _read_anchors_file, compose_config
-
-        monkeypatch.setenv("SWARM_ANCHORS_FILE", str(tmp_path / "does-not-exist.yml"))
-        _read_anchors_file.cache_clear()
-
-        stack_dir = tmp_path / "mystack"
-        stack_dir.mkdir()
-        compose_file = stack_dir / "compose.yml"
-        compose_file.write_text("services:\n  web:\n    image: nginx\n")
-
-        mock_docker.set_response("compose", stdout="services: {}\n")
-        compose_config(compose_file)
-
-        piped = mock_docker.inputs[0]
-        assert "image: nginx" in piped
-        assert "x-anchor" not in piped
 
 
 class TestMockDockerTupleKeys:

@@ -15,7 +15,9 @@ Strict I/O: per-resource summaries on stderr, no machine-readable output.
 import re
 import sys
 
-from ._cli import cli_main
+from core.cli import cli_main
+from core.output import info
+
 from ._docker import (
     config_list,
     config_rm,
@@ -24,7 +26,6 @@ from ._docker import (
     secret_list,
     secret_rm,
 )
-from ._output import info
 from ._ssh import parallel_run, ssh_node
 from .nodes import get_swarm_nodes
 

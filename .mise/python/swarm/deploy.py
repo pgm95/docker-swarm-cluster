@@ -17,13 +17,14 @@ import sys
 import time
 from pathlib import Path
 
+from core.cli import cli_main
+from core.output import error, info, set_prefix, table
+from core.sops import sops_decrypt
+
 from . import SwarmError, _docker
 from . import convergence as _convergence
-from ._cli import cli_main
-from ._compose import compose_config, compose_json
 from ._docker import build, manifest_exists, push, stack_services
-from ._output import error, info, init_stack_prefix, table
-from ._sops import sops_decrypt
+from ._render import compose_config, compose_json
 from ._stack import SECRETS_FILE, oci_tag_var, resolve_stack_path, stack_name
 from .secrets import (
     create_versioned_secrets,
@@ -274,7 +275,7 @@ def _print_services(stack_nm: str) -> None:
 
 def deploy_stack(stack_path: Path, *, update: bool = False) -> int:
     """Run the full deploy pipeline for one stack. Returns 0 on success, 1 otherwise."""
-    init_stack_prefix(stack_name(stack_path))
+    set_prefix(stack_name(stack_path))
 
     try:
         ctx = _prepare_stack(stack_path)

@@ -57,6 +57,11 @@ services:
       - "--entryPoints.metrics.address=:9091"
       # HTTPS (websecure)
       - "--entryPoints.websecure.address=:443"
+      # Public 443 terminates on the relay VPS, which forwards each client as its own TCP
+      # connection with a PROXY protocol v2 header: directly over the WAN (flint DNATs 8443
+      # from the relay's address, source preserved) or over the WireGuard tunnel as fallback.
+      # Trust the header from those two sources only; any other peer keeps its TCP source.
+      - "--entryPoints.websecure.proxyProtocol.trustedIPs=${GLOBAL_VPS_IP_TUNNEL},${GLOBAL_VPS_IP_PUBLIC}"
       - "--entryPoints.websecure.asDefault=true"
       - "--entryPoints.websecure.http.middlewares=security-headers@file,geoblock@file,crowdsec@file"
       - "--entryPoints.websecure.http.tls.certResolver=letsencrypt"
@@ -74,8 +79,8 @@ services:
       - "--entryPoints.websecure.http.encodedCharacters.allowEncodedQuestionMark=false"
       - "--entryPoints.websecure.http.encodedCharacters.allowEncodedHash=false"
     environment:
+      - GOMEMLIMIT=920MiB
       - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
-      - DOMAIN_TAILNET=${DOMAIN_TAILNET}
       - AUTHENTIK_URL=${GATEWAY_EXTERNAL_AUTHENTIK_URL}
       - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/global_cloudflare_acme_public_token
       - GEOBLOCK_IP2LOCATION_TOKEN=${GATEWAY_EXTERNAL_GEOBLOCK_TOKEN}
@@ -99,8 +104,10 @@ services:
       - infra_gw-external
       - infra_metrics
     ports:
+      # 8443 on the node: the internal gateway owns host 443 on the same node, and only the
+      # relay VPS talks to this entrypoint, through the router's DNATs (WAN and tunnel).
       - target: 443
-        published: 443
+        published: 8443
         protocol: tcp
         mode: host
     volumes:
@@ -113,7 +120,7 @@ services:
       retries: 3
       start_period: 10s
     deploy:
-      <<: [*place-cloud, *deploy]
+      <<: [*place-main, *deploy]
       update_config:
         order: stop-first
       labels:
@@ -124,7 +131,7 @@ services:
       mode: replicated
       replicas: 1
       resources:
-        <<: *resources-medium
+        <<: *resources-huge
 
   crowdsec:
     image: crowdsecurity/crowdsec:v1.7.8
@@ -182,7 +189,7 @@ services:
       retries: 3
       start_period: 30s
     deploy:
-      <<: [*place-cloud, *deploy]
+      <<: [*place-main, *deploy]
       update_config:
         failure_action: continue
         order: stop-first

@@ -22,6 +22,8 @@ services:
         target: /etc/prometheus/prometheus.yml
       - source: metrics_prometheus_rules
         target: /etc/prometheus/node_rules.yml
+      - source: metrics_prometheus_relay_targets
+        target: /etc/prometheus/targets/relay.yml
     networks:
       - infra_metrics
       - infra_gw-internal

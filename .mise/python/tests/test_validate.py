@@ -3,9 +3,10 @@
 import os
 from pathlib import Path
 
+import pytest
 from conftest import SAMPLE_NODES, make_completed
 
-from swarm._compose import _fixup_config
+from swarm._render import _fixup_config
 from swarm.validate import (
     _find_all_compose,
     _set_oci_tags,
@@ -285,3 +286,41 @@ class TestFindAllCompose:
             stacks_tree / "apps/mealie/compose.yml",
             stacks_tree / "infra/40_metrics/compose.yml",
         ]
+
+
+class TestValidateStackSelection:
+    """`validate()` resolves stack references like every other Swarm task."""
+
+    def test_unknown_stack_fails_before_rendering(self, stacks_tree, monkeypatch, caplog):
+        from swarm import validate as v
+        monkeypatch.setattr("swarm.validate.compose_config", lambda *a, **k: pytest.fail("rendered"))
+        assert v.validate(["nope"]) == 1
+        assert "Stack not found: nope" in caplog.text
+
+    def test_bare_name_resolves_to_the_stack_compose(self, stacks_tree, monkeypatch):
+        from swarm import validate as v
+        target = stacks_tree / "infra" / "40_metrics"
+        (target / "compose.yml").write_text("services: {}\n")
+        seen = []
+
+        def fake_config(path, *a, **k):
+            seen.append(Path(path))
+            raise RuntimeError("stop here")   # fail fast after resolution
+
+        monkeypatch.setattr("swarm.validate.compose_config", fake_config)
+        assert v.validate(["metrics"]) == 1
+        assert seen == [target / "compose.yml"]
+
+    def test_no_args_means_all_stacks(self, stacks_tree, monkeypatch):
+        from swarm import validate as v
+        for rel in ("apps/mealie", "infra/10_postgres"):
+            (stacks_tree / rel / "compose.yml").write_text("services: {}\n")
+        seen = []
+
+        def fake_config(path, *a, **k):
+            seen.append(Path(path).parent.name)
+            raise RuntimeError("stop")
+
+        monkeypatch.setattr("swarm.validate.compose_config", fake_config)
+        v.validate()
+        assert seen == ["mealie", "10_postgres"]

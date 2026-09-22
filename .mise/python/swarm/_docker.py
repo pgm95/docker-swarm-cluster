@@ -1,27 +1,22 @@
-"""Docker CLI subprocess wrappers.
+"""Docker CLI wrappers bound to the Swarm manager, plus Swarm resource helpers.
 
-All Docker commands in the swarm package go through this module,
-making them easy to mock in tests.
+``run``, ``stream``, ``build``, ``push`` and ``manifest_exists`` delegate to
+``core.engine`` with ``host`` defaulted to ``SWARM_HOST``, so every Swarm
+module targets the manager without naming it. Tests patch ``swarm._docker.run``
+and the helpers below go through it. The resource helpers (nodes, stacks,
+services, secrets, configs, networks) only make sense against a manager.
 """
 
 import json
 import os
 import subprocess
-import sys
 
-from . import DockerError
-from ._output import log
+from core import engine
 
 
-def docker_env() -> dict[str, str]:
-    """Return a subprocess env that maps SWARM_HOST to DOCKER_HOST.
-
-    Keeps DOCKER_HOST out of the user's shell so local Docker contexts stay free.
-    """
-    env = os.environ.copy()
-    if swarm_host := env.get("SWARM_HOST"):
-        env["DOCKER_HOST"] = swarm_host
-    return env
+def swarm_host() -> str | None:
+    """Docker URL of the Swarm manager (``SWARM_HOST``), None when unset."""
+    return os.environ.get("SWARM_HOST") or None
 
 
 def run(
@@ -30,23 +25,29 @@ def run(
     capture: bool = True,
     input: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    """Run a docker command.
+    """Run a docker command against the Swarm manager (see ``core.engine.run``)."""
+    return engine.run(*args, host=swarm_host(), check=check, capture=capture, input=input)
 
-    Args:
-        *args: Docker subcommand and arguments (without 'docker' prefix).
-        check: Raise DockerError on non-zero exit.
-        capture: Capture stdout/stderr.
-        input: String to pass to stdin.
 
-    Returns:
-        CompletedProcess with stdout/stderr as strings.
-    """
-    cmd = ["docker", *args]
-    log.debug("$ %s", " ".join(cmd))
-    result = subprocess.run(cmd, capture_output=capture, text=True, input=input, env=docker_env(), check=False)
-    if check and result.returncode != 0:
-        raise DockerError(cmd, result.returncode, result.stderr.strip())
-    return result
+def stream(*args: str, input: str | None = None, line_prefixed: bool = False) -> None:
+    """Stream a docker command against the Swarm manager (see ``core.engine.stream``)."""
+    engine.stream(*args, host=swarm_host(), input=input, line_prefixed=line_prefixed)
+
+
+def manifest_exists(image: str) -> bool:
+    """Check if a Docker image manifest exists in a registry."""
+    result = run("manifest", "inspect", image, check=False)
+    return result.returncode == 0
+
+
+def build(tag: str, context_dir: str) -> None:
+    """Build a Docker image on the manager, streaming output to stderr."""
+    stream("build", "-t", tag, context_dir)
+
+
+def push(image: str) -> None:
+    """Push a Docker image from the manager, streaming output to stderr."""
+    stream("push", image)
 
 
 def inspect_nodes() -> list[dict]:
@@ -216,26 +217,6 @@ def network_rm(name: str) -> bool:
     return result.returncode == 0
 
 
-def manifest_exists(image: str) -> bool:
-    """Check if a Docker image manifest exists in a registry."""
-    result = run("manifest", "inspect", image, check=False)
-    return result.returncode == 0
-
-
-def build(tag: str, context_dir: str) -> None:
-    """Build a Docker image, streaming output to stderr.
-
-    Stdout is redirected to stderr to keep the strict I/O contract: build
-    diagnostics are not pipeable data.
-    """
-    stream("build", "-t", tag, context_dir)
-
-
-def push(image: str) -> None:
-    """Push a Docker image to a registry, streaming output to stderr."""
-    stream("push", image)
-
-
 def task_name_to_service(task_name: str) -> str:
     """Strip Swarm's `.<slot>.<id>` suffix from a task name to recover the service name.
 
@@ -263,73 +244,3 @@ def parse_replicas(replicas: str) -> tuple[int, int] | None:
         return int(parts[0]), int(parts[1])
     except ValueError:
         return None
-
-
-def stream(*args: str, input: str | None = None, line_prefixed: bool = False) -> None:
-    """Run a docker command streaming output, with stdout redirected to stderr.
-
-    Used for commands whose stdout would otherwise pollute the strict I/O
-    contract (build progress, push progress, stack deploy diagnostics). When
-    `input` is provided, it is piped on stdin (e.g. compose YAML for
-    `docker stack deploy -c -`).
-
-    When `line_prefixed=True`, output is read line by line and
-    `_output.get_stack_prefix()` is prepended to each line before writing.
-    This keeps `docker stack deploy`'s own output (`Creating service X`,
-    `Updating config Y`) attributable to the stack the lib is currently
-    handling, matching the formatting of our own `info()` calls.
-
-    `line_prefixed=False` (the default) preserves the raw byte stream so
-    that progress output with carriage-return refresh (e.g. `docker build`,
-    `docker push`) renders correctly on a TTY.
-    """
-    cmd = ["docker", *args]
-    log.debug("$ %s", " ".join(cmd))
-
-    if line_prefixed:
-        from . import _output  # avoid import cycle at module load time
-        prefix = _output.get_stack_prefix()
-        # Track the tail of the streamed output so a non-zero exit can
-        # surface Docker's actual error message, not just the exit code.
-        tail: list[str] = []
-        TAIL_MAX = 20
-        with subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            stdin=subprocess.PIPE if input is not None else None,
-            text=True,
-            env=docker_env(),
-        ) as proc:
-            if input is not None:
-                assert proc.stdin is not None
-                try:
-                    proc.stdin.write(input)
-                    proc.stdin.close()
-                except BrokenPipeError:
-                    # Child died before consuming all of stdin; the tail of
-                    # captured output and the eventual non-zero exit code
-                    # below describe what happened.
-                    pass
-            assert proc.stdout is not None
-            for line in proc.stdout:
-                sys.stderr.write(f"{prefix}{line}")
-                sys.stderr.flush()
-                tail.append(line)
-                if len(tail) > TAIL_MAX:
-                    tail.pop(0)
-            proc.wait()
-            if proc.returncode != 0:
-                raise DockerError(cmd, proc.returncode, "".join(tail).rstrip())
-        return
-
-    result = subprocess.run(
-        cmd,
-        stdout=sys.stderr,
-        input=input,
-        text=input is not None,
-        check=False,
-        env=docker_env(),
-    )
-    if result.returncode != 0:
-        raise DockerError(cmd, result.returncode, "")

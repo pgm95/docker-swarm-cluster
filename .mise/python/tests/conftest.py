@@ -1,4 +1,4 @@
-"""Shared test fixtures for the swarm package.
+"""Shared test fixtures for the core, swarm and compose packages.
 
 All Docker/SSH calls are mocked at the subprocess boundary.
 No live cluster required.
@@ -188,4 +188,6 @@ def stacks_tree(tmp_path, monkeypatch):
         (root / rel).mkdir(parents=True)
     (root / "apps" / "README.md").write_text("not a stack\n")
     monkeypatch.setenv("SWARM_STACKS_DIR", str(root))
+    # Keep the real compose/ tree out of Swarm tests that run from the repo root.
+    monkeypatch.setenv("COMPOSE_PROJECTS_DIR", str(tmp_path / "no-compose"))
     return root

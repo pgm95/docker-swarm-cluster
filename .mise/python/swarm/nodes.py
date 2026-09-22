@@ -3,9 +3,10 @@
 import argparse
 import sys
 
-from ._cli import cli_main
-from ._compose import compose_json
+from core.cli import cli_main
+
 from ._docker import inspect_nodes
+from ._render import compose_json
 
 
 def get_swarm_nodes(filters: list[str] | None = None) -> list[dict]:

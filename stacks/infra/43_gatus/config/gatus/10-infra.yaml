@@ -44,6 +44,19 @@ endpoints:
       - "len([BODY].data.result) == 0"
     alerts:
       - type: homeassistant
+    ui:
+      resolve-successful-conditions: true
 
+  # The relay's direct TCP path to the home gateway. While it is DOWN the wg tunnel carries traffic, so users see nothing; this is the only place it surfaces.
+  - name: Relay direct path
+    group: infra
+    url: "http://prometheus:9090/api/v1/query?query=haproxy_server_status{proxy=%22relay_out%22,server=%22home%22,state=%22UP%22}==0"
+    interval: 60s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == success"
+      - "len([BODY].data.result) == 0"
+    alerts:
+      - type: homeassistant
     ui:
       resolve-successful-conditions: true

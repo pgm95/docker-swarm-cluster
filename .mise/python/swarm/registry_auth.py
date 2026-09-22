@@ -5,9 +5,10 @@ import os
 import shlex
 import sys
 
+from core.cli import cli_main
+from core.output import error, info
+
 from . import _docker
-from ._cli import cli_main
-from ._output import error, info
 from ._ssh import parallel_run, ssh_node
 from .nodes import get_swarm_nodes
 

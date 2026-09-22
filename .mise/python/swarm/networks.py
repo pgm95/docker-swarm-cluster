@@ -13,11 +13,12 @@ import argparse
 import os
 import sys
 
+from core.cli import cli_main
+from core.output import debug, error, info
+
 from . import SwarmError
-from ._cli import cli_main
-from ._compose import compose_json
 from ._docker import run as docker_run
-from ._output import debug, error, info
+from ._render import compose_json
 from ._stack import all_stacks
 
 
@@ -43,7 +44,7 @@ def get_external_networks() -> list[str]:
             rendered = compose_json(compose)
         except Exception as e:
             # Stack with a broken compose; skip and let
-            # `validate:compose` surface the error elsewhere.
+            # `validate:stack` surface the error elsewhere.
             debug(f"skipping {compose}: {e}")
             continue
         for key, spec in (rendered.get("networks") or {}).items():

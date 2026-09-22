@@ -53,6 +53,23 @@ Swarm prefixes service names with the stack name: `metrics_node-exporter`, `cadv
 `logging_alloy`. The `relabel_configs` filter on `__meta_dockerswarm_service_name` must use the
 full prefixed name.
 
+## Relay VPS
+
+The relay is not a Swarm node, so Swarm service discovery never sees it. Its HAProxy exposes
+the built-in Prometheus exporter on the tunnel interface, and the `relay` job scrapes it over
+the WireGuard tunnel through a `file_sd_configs` target list.
+
+The target list is the one environment-specific piece of Prometheus configuration: the
+relay's tunnel name differs between dev and prod. `include.yml` maps the mounted file to
+`config/prometheus/targets/relay.${PROJECT_ENV}.yml`, so compose picks the right file at
+deploy time and `prometheus.yml` itself stays identical in both environments. Adding a relay
+means adding a line to those two files, not touching the scrape config.
+
+`haproxy_server_status{proxy="relay_out",server="home"}` is the health of the direct TCP path
+to the gateway; while it is DOWN the relay falls back to the tunnel and users notice nothing,
+which is why Gatus queries that series and alerts on it. The exporter being unreachable at all
+(relay or tunnel down) shows up through the existing `up==0` probe.
+
 ## Grafana
 
 Uses `stop-first` update order. Grafana's bleve search index (in `grafana-data` volume) requires
@@ -82,5 +99,5 @@ exclusion flags filter Docker overlay mounts, `tmpfs`, `nsfs`, `tracefs`, and `c
 
 All rules filter on `{job="node"}` — the Prometheus scrape job name must match. Network
 rules exclude `lo|docker.*|veth.*|vx-.*|br-.*` to avoid summing Docker virtual interfaces
-with physical traffic. Remaining interfaces are physical NICs and Tailscale.
+with physical traffic. Remaining interfaces are the physical NICs.
 Omitted: per-device disk IO (no aggregation over raw metrics) and network drops (inflated by virtual interfaces).

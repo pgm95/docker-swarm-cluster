@@ -4,7 +4,9 @@ import argparse
 import sys
 import time
 
-from ._cli import cli_main
+from core.cli import cli_main
+from core.output import error, info, warn
+
 from ._docker import (
     parse_replicas,
     service_ps,
@@ -12,7 +14,6 @@ from ._docker import (
     stack_services,
     task_name_to_service,
 )
-from ._output import error, info, warn
 
 PENDING_STATES = {"Pending", "Preparing", "Starting", "Ready"}
 

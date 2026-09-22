@@ -1,38 +1,18 @@
-"""swarm — Python library for Docker Swarm cluster management."""
+"""swarm: Docker Swarm stack management (deploy, remove, status, cleanup, validation).
 
+Shared plumbing lives in ``core``; the exceptions are re-exported here under
+the names the Swarm modules and their tests use. ``SwarmError`` is the
+``core.ToolError`` base, so a ``DockerError`` raised by the engine is still
+caught by ``except SwarmError``.
+"""
 
-class SwarmError(Exception):
-    """Base exception for all swarm operations."""
+from core import DockerError, SopsError, SSHError, ToolError, ValidationError
 
-
-class DockerError(SwarmError):
-    """Docker CLI command failure."""
-
-    def __init__(self, cmd: list[str], returncode: int, stderr: str):
-        self.cmd = cmd
-        self.returncode = returncode
-        self.stderr = stderr
-        cmd_str = " ".join(cmd)
-        super().__init__(f"docker command failed (exit {returncode}): {cmd_str}\n{stderr}")
-
-
-class SSHError(SwarmError):
-    """SSH command failure."""
-
-    def __init__(self, hostname: str, returncode: int, stderr: str):
-        self.hostname = hostname
-        self.returncode = returncode
-        self.stderr = stderr
-        super().__init__(f"SSH to {hostname} failed (exit {returncode}): {stderr}")
-
-
-class SopsError(SwarmError):
-    """SOPS decryption failure."""
+SwarmError = ToolError
 
 
 class SecretError(SwarmError):
     """Secret validation or creation failure."""
 
 
-class ValidationError(SwarmError):
-    """Compose or config validation failure."""
+__all__ = ["DockerError", "SSHError", "SecretError", "SopsError", "SwarmError", "ValidationError"]

@@ -6,13 +6,14 @@ import shlex
 import sys
 from pathlib import Path
 
+from core.cli import cli_main
+from core.output import error, info, warn
+
 from . import SwarmError, ValidationError, _docker
-from ._cli import cli_main
-from ._compose import compose_config, compose_json
 from ._docker import inspect_nodes
-from ._output import info, warn
+from ._render import compose_config, compose_json
 from ._ssh import parallel_run, ssh_node
-from ._stack import all_stacks, oci_tag_var
+from ._stack import all_stacks, oci_tag_var, resolve_stack_path
 from .deploy import compute_content_hash
 from .nodes import resolve_service_nodes
 from .secrets import validate_config_files, validate_secret_paths
@@ -155,9 +156,19 @@ def check_paths_on_node(node: str, paths: set[str]) -> list[dict]:
     return results
 
 
-def validate(stack_file: str | None = None) -> int:
-    """Full validation run. Returns exit code."""
-    files = [Path(stack_file)] if stack_file else _find_all_compose()
+def validate(stacks: list[str] | None = None) -> int:
+    """Full validation run over the given stacks (names, ``NN_`` dirs or paths), or all of them.
+
+    Returns exit code. An unresolvable stack reference fails before anything is rendered.
+    """
+    if stacks:
+        try:
+            files = [resolve_stack_path(s) / "compose.yml" for s in stacks]
+        except SwarmError as e:
+            error(str(e))
+            return 1
+    else:
+        files = _find_all_compose()
 
     # Set OCI_TAG_* once per stack with build dirs (deploy.py uses the same
     # formula; consistent env between validate and deploy is mandatory).
@@ -285,9 +296,9 @@ def _find_all_compose() -> list[Path]:
 def main() -> int:
     def run() -> int:
         parser = argparse.ArgumentParser(prog="swarm.validate")
-        parser.add_argument("--stack", help="Validate a single compose file")
+        parser.add_argument("stacks", nargs="*", help="Stack names or paths; all stacks when omitted")
         args = parser.parse_args()
-        return validate(args.stack)
+        return validate(args.stacks)
     return cli_main(run)
 
 

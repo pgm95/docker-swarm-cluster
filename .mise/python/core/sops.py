@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 
 from . import SopsError
-from ._output import log
+from .output import log
 
 
 def _scalar_to_str(key: str, value: object, path_str: str) -> str:

@@ -25,7 +25,8 @@ containerd-snapshotter support.
 ## Disabled metrics
 
 `disk` (per container filesystem usage) is disabled via `--disable_metrics`. cadvisor reads
-container layers at the data root path the Docker daemon reports, but that root is not the default
-and is not uniform across the cluster, so those paths are absent inside the container and every
-housekeeping cycle logged a filesystem stat error. Block IO (`diskIO`) is unaffected and stays
-enabled; host level disk usage is covered by node-exporter.
+container layers at the data root path the Docker daemon reports, which is not the default, so
+those paths are absent inside the container and every housekeeping cycle logged a filesystem
+stat error. The root was not uniform across the cluster when this was disabled; it is now, so a
+single bind mount of the data root would let the metric be re-enabled. Block IO (`diskIO`) is
+unaffected and stays enabled; host level disk usage is covered by node-exporter.

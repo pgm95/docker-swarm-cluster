@@ -1,0 +1,37 @@
+#:schema https://mise.jdx.dev/schema/mise-task.json
+
+["compose:deploy"]
+description = "Deploy one or more Compose projects to their hosts"
+usage = '''
+arg "<projects>..." help="Project name(s) (host/project) or path(s)"
+complete "projects" run="python3 -m compose.projects"
+'''
+env.COMPOSE_WAIT_TIMEOUT = "120"
+run = '''
+{% raw %}
+#!/usr/bin/env bash
+failed=()
+for p in $usage_projects; do
+    python3 -m compose.deploy "$p" || failed+=("$p")
+done
+[[ ${#failed[@]} -eq 0 ]] || { echo "Failed: ${failed[*]}" >&2; exit 1; }
+{% endraw %}
+'''
+
+["compose:remove"]
+description = "Remove one or more Compose projects from their hosts"
+usage = '''
+arg "<projects>..." help="Project name(s) (host/project) or path(s)"
+flag "--volumes" help="Also remove the projects' named volumes"
+complete "projects" run="python3 -m compose.projects"
+'''
+run = '''
+{% raw %}
+#!/usr/bin/env bash
+failed=()
+for p in $usage_projects; do
+    python3 -m compose.remove "$p" ${usage_volumes:+--volumes} || failed+=("$p")
+done
+[[ ${#failed[@]} -eq 0 ]] || { echo "Failed: ${failed[*]}" >&2; exit 1; }
+{% endraw %}
+'''

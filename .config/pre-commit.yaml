@@ -68,9 +68,16 @@ repos:
         language: system
         files: \.sops\.yaml$
 
-      - id: compose-validate
-        name: Validate compose files
-        entry: mise run validate:compose
+      - id: validate-stack
+        name: Validate stack compose files
+        entry: mise run validate:stack
         language: system
         files: ^stacks/(.*/(compose|include)\.yml|.*/config/|_shared/anchors\.yml)
+        pass_filenames: false
+
+      - id: validate-compose
+        name: Validate standalone compose projects
+        entry: mise run validate:compose
+        language: system
+        files: ^compose/.*/(compose\.yml|build/)
         pass_filenames: false

@@ -1,6 +1,8 @@
 # External Gateway
 
-Uses `mode: host` for port 443 directly. No HTTP entrypoint; ACME uses DNS-01 via Cloudflare.
+Sits behind the relay VPS (see the main README, Public Ingress Relay). Publishes host port
+8443 on the gateway node; the relay forwards public 443 to it with a PROXY protocol v2
+header. No HTTP entrypoint; ACME uses DNS-01 via Cloudflare.
 
 Static config via CLI flags in compose `command:`. Dynamic config via Docker Configs (file provider).
 
@@ -10,8 +12,11 @@ Static config via CLI flags in compose `command:`. Dynamic config via Docker Con
 Internet :443
      │
      ▼
+ Relay VPS (HAProxy, PROXY v2)
+     │ direct WAN DNAT :8443, WireGuard tunnel as backup
+     ▼
 ┌──────────────────────────────────────────┐
-│              Traefik                     │
+│              Traefik :8443               │
 │  ┌──────────────┐   ┌─────────────────┐  │
 │  │  Middlewares │   │   Providers     │  │
 │  │  - CrowdSec  │   │  - Docker/Swarm │  │
@@ -37,7 +42,7 @@ Middleware Chain, in order: security-headers -> geoblock -> crowdsec
 - The bouncer key, the CTI key, the database password and the widget agent password
   arrive as Docker secrets. The wrapper reads them from `/run/secrets/` and exports
   them for the stock entrypoint, so none of them appears in the service spec or on the
-  VPS disk. The Traefik bouncer plugin reads its key through its file option from the
+  node's disk. The Traefik bouncer plugin reads its key through its file option from the
   same mounted secret
 - A dedicated LAPI machine for the homepage widget is registered on every container
   start through the image's `AGENT_USERNAME` / `AGENT_PASSWORD` path (idempotent
@@ -52,9 +57,10 @@ Middleware Chain, in order: security-headers -> geoblock -> crowdsec
 
 A shell started with `docker exec` does not run under the wrapper, so the variables it
 exported are absent and any `cscli` command that touches the database (machines,
-bouncers, decisions) fails to connect. Read PID 1's environment first and export the
-variables into the shell, then run `cscli`. This is the accepted cost of keeping the
-database password out of the service spec and off the VPS disk.
+bouncers, decisions) fails to connect. Read the value from `/run/secrets/` as root
+(`docker exec -u 0`; PID 1's environment is not readable from an exec shell) and export it
+into the shell, then run `cscli`. This is the accepted
+cost of keeping the database password out of the service spec and off the node's disk.
 
 ### Self-Ban Guard
 
@@ -92,9 +98,28 @@ access log keeps them. Query those fields in Loki instead of a separate log stre
 
 ## Forwarded-Header Trust
 
-Deliberately absent everywhere (no entrypoint `trustedIPs`, no proxy protocol, no
-middleware or bouncer trust lists). Nothing proxies into this gateway, so every
-client-IP decision uses the unspoofable TCP peer and inbound `X-Forwarded-*` is always stripped.
+The gateway runs on prem behind the relay VPS, which owns public 443 and forwards each
+client as its own TCP connection with a PROXY protocol v2 header, directly over the WAN
+(the router DNATs 8443 from the relay's address, source preserved) or over the WireGuard
+tunnel as fallback. The `websecure` entrypoint accepts that header from exactly those two
+sources (`proxyProtocol.trustedIPs`); every other peer keeps its TCP source address. The
+client's own TLS session runs end to end, the relay never terminates it.
+
+Nothing else is trusted: no `forwardedHeaders.trustedIPs`, no middleware or bouncer trust
+lists, so inbound `X-Forwarded-*` is always stripped and every client-IP decision (bouncer,
+geoblock, access log) uses the address the PROXY header delivered.
+
+## Memory Limit
+
+Traefik runs with `*resources-huge` and `GOMEMLIMIT` set to 90 % of that limit. Go's
+collector paces itself against heap growth, not against the cgroup: with the default
+`GOGC=100` the heap may double between collections, and under many concurrent high-rate
+flows (a burst of parallel downloads or uploads) that doubling crossed the container limit
+and the kernel killed the process, dropping every open connection while the relay failed
+over to the tunnel. `GOMEMLIMIT` makes the collector work harder as the heap approaches
+the value instead, which is what the Traefik Helm chart does by default. Memory is released
+in steps for a minute or two after a burst; a short sample can look like a leak and is not.
+If the limit changes, change `GOMEMLIMIT` with it.
 
 ## Catch-All Router
 

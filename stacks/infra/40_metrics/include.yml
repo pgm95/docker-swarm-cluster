@@ -25,6 +25,9 @@ configs:
   metrics_prometheus_rules:
     name: metrics_prometheus_rules_${DEPLOY_VERSION}
     file: ./config/prometheus/node_rules.yml
+  metrics_prometheus_relay_targets:
+    name: metrics_prometheus_relay_targets_${DEPLOY_VERSION}
+    file: ./config/prometheus/targets/relay.${PROJECT_ENV}.yml
   metrics_grafana_ini:
     name: metrics_grafana_ini_${DEPLOY_VERSION}
     file: ./config/grafana/grafana.ini

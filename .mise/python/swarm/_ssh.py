@@ -6,8 +6,9 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from typing import TypeVar
 
+from core.output import log
+
 from . import SSHError
-from ._output import log
 
 _T = TypeVar("_T")
 _R = TypeVar("_R")
@@ -28,7 +29,7 @@ def ssh_node(
     """Execute a command on a swarm node via SSH.
 
     Args:
-        hostname: Node hostname (resolved via Tailscale/DNS).
+        hostname: Node hostname (resolved through DNS).
         command: Shell command string to execute remotely.
         stdin_data: If provided, piped to stdin (for docker login, etc.).
             When None, stdin is closed (-n flag equivalent).

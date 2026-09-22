@@ -1,20 +1,23 @@
-# Hybrid Docker Swarm Cluster
+# Docker Swarm Homelab
 
-Hybrid Docker Swarm cluster managed from a single Git repository.
-Nodes connect with each other and to the dev machine securely over Tailscale.
-All orchestration, secrets, and preprocessing run locally via mise tasks.
-Only the final `docker stack deploy` command executes over SSH.
+On-prem Docker Swarm cluster managed from a single Git repository, with a small
+relay VPS in front of it for public ingress. All orchestration, secrets, and
+preprocessing run locally via mise tasks. Only the final `docker stack deploy`
+(cluster) or `docker compose up` (relay) executes over SSH.
 
 ## Getting Started
 
 ### Prerequisites
 
 - [mise](https://mise.jdx.dev) installed locally
-- SSH access to all swarm nodes (DNS-resolvable hostnames)
-- Docker Engine on all nodes (tested with 29.x)
-- [Tailscale](https://tailscale.com) on all nodes for inter-node connectivity
-- At least one node with a public IP (e.g. a cloud VPS) for external ingress
+- SSH access to all swarm nodes and to the relay VPS (DNS-resolvable hostnames)
+- Docker Engine on all nodes and on the relay (tested with 29.x); the Docker CLI with the
+  Compose plugin (5.x) on the operator's machine, since the relay is deployed by the local
+  Compose client driving the remote daemon
 - Docker Swarm initialized with nodes [labeled for placement](#cluster-topology)
+- A relay VPS with a public IP, a WireGuard tunnel from the home router to it, and a
+  router DNAT for the relay's direct path (both managed in the infrastructure repos;
+  see [Public Ingress Relay](#public-ingress-relay))
 - Two domains (one for public ingress, one private) with DNS zones configured:
 
   | Zone | Provider | Record |
@@ -33,7 +36,8 @@ Only the final `docker stack deploy` command executes over SSH.
 
 2. **Configure environment:** Dev and prod each have their own config
    (`.mise/config.dev.toml`, `.mise/config.prod.toml`). Dev is the default profile.
-   You must set `SWARM_HOST` (SSH URL of a manager node, e.g. `ssh://root@swarm-vm`) and `SWARM_SSH_USER` (defaults to root).
+   You must set `SWARM_HOST` (SSH URL of a manager node, e.g. `ssh://root@swarm-vm`),
+   `SWARM_SSH_USER` (defaults to root) and one `COMPOSE_HOST_<HOST>` per relay host.
    See [`.mise/README.md`](.mise/README.md) for all variable sources.
 
 3. **Configure secrets:** Populate SOPS-encrypted secrets files by target:
@@ -44,9 +48,10 @@ Only the final `docker stack deploy` command executes over SSH.
 4. **Deploy:**
 
    ```bash
-   mise run site:deploy-infra   # Deploy infrastructure stacks in order
-   mise run site:registry       # Authenticate nodes for custom images
-   mise run site:deploy-apps    # Deploy all application stacks
+   mise run compose:deploy swarm-vps/haproxy   # Relay: owns public 443
+   mise run site:deploy-infra                  # Infrastructure stacks in order
+   mise run site:registry                      # Authenticate nodes for custom images
+   mise run site:deploy-apps                   # All application stacks
    ```
 
    First deploy may require `docker service update --force <service>` for services that start
@@ -56,25 +61,31 @@ Only the final `docker stack deploy` command executes over SSH.
 
 ### Cluster Topology
 
-Workload placement is driven by node labels.
-Placement anchors in `stacks/_shared/anchors.yml` map label constraints to reusable deploy blocks.
+Every node is a VM on one LAN segment. Three managers keep quorum; one of them is a
+small drained node that only votes and never runs workloads. Workload placement is
+driven by node labels. Placement anchors in `stacks/_shared/anchors.yml` map label
+constraints to reusable deploy blocks.
 
 | Label | Values | Purpose |
 |-------|--------|---------|
-| `location` | `onprem`, `cloud` | Physical/network location |
-| `ip` | `public`, `private` | Internet-routable or behind NAT |
-| `type` | `vm`, `vps` | Node type |
+| `location` | `onprem` | Physical/network location |
+| `ip` | `private` | Behind NAT |
+| `type` | `vm` | Node type |
 | `gpu` | `true` | GPU available |
+
+The relay VPS is not a Swarm node. It runs a standalone Compose project (see
+[Public Ingress Relay](#public-ingress-relay)).
 
 ### Networking
 
-Overlay traffic tunnels through the Tailnet: no public port exposure beyond HTTPS for ingress.
+All nodes share one LAN segment, so overlay traffic never leaves it and nothing on the
+cluster is exposed to the internet; public ingress arrives through the relay.
 Overlay networks partition traffic by function:
 
 | Network | Purpose |
 |---------|---------|
 | `infra_socket` | Docker API access (GET-only socket-proxy with a per-consumer allowlist) |
-| `infra_gw-internal` | Internal Traefik routing (LAN/Tailscale) |
+| `infra_gw-internal` | Internal Traefik routing (LAN) |
 | `infra_gw-external` | External Traefik routing (public internet) |
 | `infra_metrics` | Prometheus scraping |
 | `infra_postgres` | Central Postgres access |
@@ -82,25 +93,43 @@ Overlay networks partition traffic by function:
 
 Networks are discovered dynamically from compose files and pre-created before deployment.
 This breaks circular dependencies between stacks that need each other's networks.
-Overlay MTU is set at creation time via [`SWARM_OVERLAY_MTU`](.mise/tasks/swarm.toml#L54).
-Docker subtracts 50 bytes for VXLAN overhead from the configured value, yielding 1230 on the
-VXLAN interface, which produces 1280-byte UDP packets on the wire (exact Tailscale MTU fit).
-Docker's `daemon.json` `"mtu"` does not affect overlays.
+Overlay MTU is set at creation time via [`SWARM_OVERLAY_MTU`](.mise/tasks/swarm.toml#L50)
+(1500 on a plain LAN). Docker's `daemon.json` `"mtu"` does not affect overlays, and existing
+overlays keep their MTU.
 
-Each on-prem node runs tailscaled on a unique UDP port (managed in the infrastructure repo).
-Behind one NAT, nodes sharing the default port collide on the external port, advertise wrong
-endpoints, and fall back to relayed paths. Unique ports keep every mapping stable and connections direct.
+### Public Ingress Relay
+
+Public 443 terminates on a relay VPS, not on the cluster. HAProxy there
+(`compose/swarm-vps/haproxy`, a standalone Compose project deployed with `compose:deploy`)
+forwards every public client as its own TCP connection to the external gateway at home,
+carrying the real client address in a PROXY protocol v2 header. The client's TLS session
+runs end to end; the relay never terminates it and cannot read what it relays.
+
+Two paths reach home, HAProxy picks:
+
+- **direct**: over the WAN to the router, which DNATs port 8443 from the relay's address to
+  the gateway node. One TCP flow per client, so throughput is bounded by the home WAN
+  link, not by the VPS.
+- **tunnel**: a WireGuard tunnel the router originates to the VPS, used as backup, for
+  ssh and for metrics. VPS providers police UDP, so this path carries a fraction of the
+  direct path's throughput regardless of how many clients share it.
+
+A sidecar reads the home public address off the WireGuard peer (authenticated, roams on
+IP change) and sets it on HAProxy through the runtime API, so there is no DDNS. Nothing
+is copied to the VPS: the local Compose client drives the remote daemon over ssh and
+builds both images there.
 
 ### Dual Ingress Gateways
 
 Two separate Traefik instances serve different access patterns:
 
-- **External** (`*place-cloud`, `DOMAIN_PUBLIC`): CrowdSec + geoblock + security headers.
-  Only entry point from the public internet.
-- **Internal** (`*place-main`, `DOMAIN_PRIVATE`): Security headers only. Serves LAN and
-  Tailscale clients exclusively.
+- **External** (`*place-main`, host port 8443, `DOMAIN_PUBLIC`): CrowdSec + geoblock +
+  security headers. Reachable only through the relay; trusts the PROXY protocol header
+  from the relay's two source addresses and nothing else.
+- **Internal** (`*place-main`, host port 443, `DOMAIN_PRIVATE`): Security headers only.
+  Serves LAN clients exclusively.
 
-Both use host-mode ports and a unified `websecure` entrypoint on `:443`.
+Both use host-mode ports and a unified `websecure` entrypoint.
 Services opt in with scope labels (`traefik.scope.internal=true` / `traefik.scope.external=true`).
 Both gateways discover backend services via the socket-proxy on `infra_socket`.
 Both obtain wildcard certs via Let's Encrypt DNS-01 challenge.
@@ -165,8 +194,10 @@ Stacks are organized by namespace: A subdir of `SWARM_STACKS_DIR` is considered 
   All stateful services share one instance via dedicated roles provisioned by init-db sidecars.
 - **Backup:** Borgmatic with scheduled backups, deduplication, and encryption.
   Targets multiple database instances. Streams dumps directly to the repository.
-- **Dual Gateways:** Two Traefik instances: external (Coupled with CrowdSec WAF + geoblocking
-  for public internet), and internal (Internal services accessible only on LAN/Tailscale).
+- **Relay:** HAProxy on the VPS, the only thing facing the internet. A Compose project,
+  not a Swarm stack; deployed with `compose:deploy` over ssh.
+- **Dual Gateways:** Two Traefik instances: external (behind the relay, coupled with
+  CrowdSec WAF + geoblocking), and internal (services accessible only on the LAN).
   Both use host-mode ports and DNS-based routing.
 - **Observability:** Node Exporter and cAdvisor for host and per-container metrics.
   Prometheus scrapes these and all other compatible targets via dockerswarm_sd_configs and static_configs

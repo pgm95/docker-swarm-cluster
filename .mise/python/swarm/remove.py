@@ -4,10 +4,11 @@ import argparse
 import sys
 import time
 
+from core.cli import cli_main
+from core.output import error, info, set_prefix, warn
+
 from . import SwarmError, _docker
-from ._cli import cli_main
 from ._docker import stack_list
-from ._output import error, info, init_stack_prefix, warn
 from ._stack import resolve_stack_path, stack_name
 
 
@@ -23,7 +24,7 @@ def remove_stack(stack_ref: str, timeout: int = 60, interval: int = 3) -> int:
         return 1
 
     name = stack_name(path)
-    init_stack_prefix(name)
+    set_prefix(name)
 
     if name not in stack_list():
         info(f"Not deployed: {name}")
