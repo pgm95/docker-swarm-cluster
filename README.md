@@ -206,6 +206,7 @@ Stacks are organized by namespace: A subdir of `SWARM_STACKS_DIR` is considered 
 - **Registry:** private OCI registry for custom images. Nodes authenticate via `site:registry`.
   Stacks with `build/` directories trigger automatic builds during `swarm:deploy`.
 - **Authentication:** Authentik provides OIDC and WebFinger; Syncs with lldap as LDAP source.
+  Apps without native login sit behind forward auth through Authentik's embedded outpost.
   Group membership (`GLOBAL_ADMIN_GROUP`) maps to application-level admin roles.
 
 ## Nuances and Limitations

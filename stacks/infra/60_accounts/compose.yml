@@ -110,6 +110,8 @@ services:
       - GLOBAL_ADMIN_USER=${GLOBAL_ADMIN_USER}
       - GLOBAL_LDAP_BASE_DN=${GLOBAL_LDAP_BASE_DN}
       - GLOBAL_ADMIN_GROUP=${GLOBAL_ADMIN_GROUP}
+      - GLOBAL_USER_GROUP=${GLOBAL_USER_GROUP}
+      - OIDC_FIREFOX_USER=${OIDC_FIREFOX_USER}
       - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
       - DOMAIN_PRIVATE=${DOMAIN_PRIVATE}
       ## Bootstrap vars are only read on first startup.
@@ -128,6 +130,7 @@ services:
       - oidc_immich_client_secret
       - oidc_grafana_client_secret
       - oidc_tailscale_client_secret
+      - oidc_firefox_password
     configs:
       - source: accounts_authentik_blueprint_directory
         target: /blueprints/custom/10_directory.yaml
@@ -135,6 +138,8 @@ services:
         target: /blueprints/custom/20_scope-mappings.yaml
       - source: accounts_authentik_blueprint_providers
         target: /blueprints/custom/30_providers.yaml
+      - source: accounts_authentik_blueprint_proxy_providers
+        target: /blueprints/custom/35_proxy-providers.yaml
       - source: accounts_authentik_blueprint_ldap_source
         target: /blueprints/custom/25_ldap-source.yaml
       - source: accounts_authentik_blueprint_brand

@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<!--
+  Replaces the image's /defaults/labwc.xml, which the init script copies to
+  ~/.config/labwc/rc.xml. The image's HARDEN_KEYBINDS sed comments out a range
+  from each one-line keybind to the next </keybind>, which swallows the rest of
+  that template and leaves labwc without window rules. This template has none of
+  the lines those seds match, so hardening leaves it intact.
+
+  labwc loads its default key and mouse bindings (Alt+F4, drag to move and
+  resize, window menus) whenever a section defines none, so both sections keep
+  a binding of their own. Only a Left mousebind: DISABLE_MOUSE_BUTTONS deletes
+  from a Right or Middle mousebind line to the next closing tag, which for the
+  last binding in the file is the end of the file. Clicks inside the window
+  reach the client regardless; these bindings only drive compositor actions.
+-->
+<labwc_config>
+
+  <core>
+    <decoration>server</decoration>
+    <gap>0</gap>
+  </core>
+
+  <theme>
+    <name>Clearlooks</name>
+    <cornerRadius>0</cornerRadius>
+  </theme>
+
+  <keyboard>
+    <keybind key="W-F12"><action name="None" /></keybind>
+  </keyboard>
+
+  <mouse>
+    <context name="Client">
+      <mousebind button="Left" action="Press"><action name="Focus" /><action name="Raise" /></mousebind>
+    </context>
+  </mouse>
+
+  <!--
+    Every window: maximized, no titlebar or border, and deaf to its own move and
+    resize requests. forceSSD keeps GTK from drawing client side decorations
+    with their own window buttons.
+  -->
+  <windowRules>
+    <windowRule identifier="*" serverDecoration="yes" ignoreConfigureRequest="yes" fixedPosition="yes">
+      <action name="Maximize" />
+      <action name="SetDecorations" decorations="none" forceSSD="yes" />
+    </windowRule>
+  </windowRules>
+
+</labwc_config>

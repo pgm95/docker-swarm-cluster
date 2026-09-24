@@ -1,7 +1,7 @@
 # Accounts Stack
 
-Identity, authentication, and OIDC provider for the cluster. Authentik (server +
-worker) plus an embedded lldap directory it consumes as an LDAP Source. Init
+Identity, authentication, OIDC provider and forward auth for the cluster. Authentik
+(server + worker) plus an embedded lldap directory it consumes as an LDAP Source. Init
 sidecars provision the Postgres roles/databases and seed lldap service accounts.
 
 ## LDAP Source
@@ -64,7 +64,7 @@ then the next sync adopts cleanly. One-time per environment.
 
 `bind_authentik` is in `lldap_password_manager`. lldap's permission model
 rejects password modifications targeting users in `lldap_admin`. Authentik UI
-password changes for the directory admin (`pggm95`) therefore do not
+password changes for the directory admin (`GLOBAL_ADMIN_USER`) therefore do not
 propagate to lldap; family users are unaffected. Use the lldap admin UI
 directly for the admin's password.
 
@@ -114,10 +114,40 @@ to exist first.
 | `20_` | scope-mappings | none |
 | `25_` | ldap-source | none (uses built-in `system/sources-ldap.yaml` mappings via `!Find`) |
 | `30_` | providers | scope-mappings (custom scopes) |
+| `35_` | proxy-providers | synced LDAP groups (application policy bindings) |
 | `50_` | brand | providers (Tailscale app for WebFinger) |
 
 Authentik's `blueprints_find()` uses `rglob("**/*.yaml")`. Files with `.yml`
 extension are silently ignored.
+
+## Forward auth
+
+Apps without native OIDC support or weak auth sit behind the embedded outpost in single
+application mode. Each needs three pieces:
+
+- Proxy provider and application entries in `35_proxy-providers.yaml`, and the provider
+  added to the embedded outpost. That entry replaces the outpost's provider list on every
+  apply, so a provider assigned in the UI is dropped.
+- The `authentik@file` middleware on the app's router (defined by the external gateway).
+- A second router on the app's host for `PathPrefix(/outpost.goauthentik.io/)` pointing
+  at `authentik@swarm`, which serves the login callback.
+
+A backend that also wants HTTP basic auth gets it from the provider's basic auth
+option: the outpost sends an `Authorization` header built from two keys of
+`ak_proxy.user_attributes`, and the middleware forwards that header. The keys come
+from a scope mapping attached to that provider alone, with the password read from a
+pairing secret by `!File`. They are never set as group attributes: the synced groups
+carry `ldap_uniq`, and a blueprint write replaces the whole attribute dict, so the next
+sync would no longer match the group and would try to create a duplicate.
+
+Every forward auth provider needs a scope mapping of its own that blanks `avatar` (for
+a basic auth provider, the credentials mapping above). The default proxy mapping copies
+every user attribute into the tokens, and an inline lldap photo can run to hundreds of
+kilobytes. The outpost reads at most 1 MiB of the token response, so a large photo
+truncates it: the code redemption fails and the login loops between the app and
+Authentik. A backend behind nginx would also reject the resulting identity header (8 KB
+header limit). The provider's own mapping runs after the default one (scope name order)
+and its empty value wins.
 
 ## Brand entry
 
@@ -136,7 +166,7 @@ address the mounted file.
 | Python config loader (`file://`) | Select `AUTHENTIK_*` keys (secret key, Postgres password, SMTP password) | `KEY=file:///run/secrets/<name>` plus Docker secret mount |
 | lldap `_FILE` suffix | Every lldap credential (JWT secret, key seed, admin password, database URL, SMTP password) | `LLDAP_*_FILE=/run/secrets/<name>` plus Docker secret mount |
 | Plain env var | Go bootstrap (`AUTHENTIK_BOOTSTRAP_*`), commented out and unused on a seeded database | `KEY=${VAR}` with value from SOPS env |
-| Blueprint `!File` tag | Worker at blueprint apply time (OIDC client secrets, admin password, LDAP bind password) | Docker secret mount read at YAML parse time |
+| Blueprint `!File` tag | Worker at blueprint apply time (pairing secrets such as client secrets and bind passwords, the admin password) | Docker secret mount read at YAML parse time |
 
 `GLOBAL_ADMIN_PASSWORD` is the canonical shared-consumer example. It feeds:
 

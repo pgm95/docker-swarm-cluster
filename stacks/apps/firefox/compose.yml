@@ -1,0 +1,116 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
+
+include:
+  - include.yml
+
+services:
+  firefox:
+    image: linuxserver/firefox:1.2404.1
+    logging:
+      <<: *logging
+    stop_grace_period: 30s
+    environment:
+      - TZ=${GLOBAL_TZ_LOCAL}
+      - PUID=${GLOBAL_NONROOT_PUID}
+      - PGID=${GLOBAL_NONROOT_PGID}
+      # nginx basic auth for Authentik forward auth
+      - CUSTOM_USER=${OIDC_FIREFOX_USER}
+      - FILE__PASSWORD=/run/secrets/oidc_firefox_password
+      # Selkies settings
+      - GTK_THEME=Adwaita:dark
+      - NO_GAMEPAD=true
+      - HARDEN_DESKTOP=true
+      # Also sets RESTART_APP and locks rc.xml. Its keybind seds break the image's labwc template, so the template is replaced.
+      # NO_DECOR must stay unset: it flips serverDecoration to "no" and GTK then draws its own titlebar buttons again.
+      - HARDEN_OPENBOX=true
+      # Intel xe VA-API ignores the stride on widths that are not a multiple of 16 and the stream shears diagonally;
+      # pad to an aligned size instead (linuxserver/docker-baseimage-selkies#160)
+      - SELKIES_FORCE_ALIGNED_RESOLUTION=true|locked
+      - SELKIES_ENABLE_SHARING=false|locked
+      - SELKIES_UI_SHOW_SIDEBAR=false|locked
+      - SELKIES_GAMEPAD_ENABLED=false|locked
+      # Upload only: files dragged onto the stream land in ~/Desktop
+      # Set explicitly, HARDEN_DESKTOP clears it only when unset
+      - SELKIES_FILE_TRANSFERS=upload
+    secrets:
+      - oidc_firefox_password
+    configs:
+      # Enterprise policies, read on every start. The profile is on the anonymous volume
+      # and lost on redeploy, so policies are the only customization that sticks.
+      - source: firefox_policies
+        target: /usr/lib/firefox/distribution/policies.json
+      # Replaces the package's file, which creates bookmarks on every new profile
+      - source: firefox_distribution
+        target: /usr/lib/firefox/distribution/distribution.ini
+      # Compositor template, copied to rc.xml at start: one maximized, undecorated,
+      # unmovable window with no window controls
+      - source: firefox_labwc
+        target: /defaults/labwc.xml
+      # Autoconfig script for what policies cannot do: toolbar and new tab customization,
+      # about pages and local files
+      - source: firefox_autoconfig
+        target: /usr/lib/firefox/defaults/pref/autoconfig.js
+      - source: firefox_mozilla_cfg
+        target: /usr/lib/firefox/mozilla.cfg
+    volumes:
+      # /config (home, profile, cache) is on an anonymous volume, so nothing survives a redeploy.
+      - /dev/dri/renderD128:/dev/dri/renderD128
+      - /dev/dri/card0:/dev/dri/card0
+      - type: tmpfs
+        target: /dev/shm
+        tmpfs:
+          size: 1073741824
+      # Upload/download target dir: size cap is the only limit. Data is wiped on every restart.
+      - type: tmpfs
+        target: /config/Desktop
+        tmpfs:
+          size: 268435456
+    networks:
+      - infra_gw-external
+    healthcheck:
+      # nginx answers 401 without the basic auth header; thus 401 proves nginx is up and that auth is on
+      test: ["CMD-SHELL", "[ \"$$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/)\" = 401 ]"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    deploy:
+      <<: [*place-gpu, *deploy]
+      update_config:
+        order: start-first
+      labels:
+        - "traefik.enable=true"
+        - "traefik.scope.external=true"
+        - "traefik.http.services.firefox.loadbalancer.server.port=3000"
+        - "traefik.http.routers.firefox.rule=Host(`browser.${DOMAIN_PUBLIC}`)"
+        - "traefik.http.routers.firefox.entrypoints=websecure"
+        - "traefik.http.routers.firefox.service=firefox"
+        - "traefik.http.routers.firefox.middlewares=authentik@file"
+        # WebKit takes the client's worker video path, which starts a <video> element once and
+        # never retries when autoplay is refused. Thus, Safari's "Never Auto-Play" causes black screen.
+        # Send WebKit to the page canvas path instead; Chromium and Firefox keep the default.
+        - "traefik.http.routers.firefox-webkit.rule=Host(`browser.${DOMAIN_PUBLIC}`) && Path(`/`) && HeaderRegexp(`User-Agent`, `AppleWebKit`) && !HeaderRegexp(`User-Agent`, `Chrome/|Chromium/`) && !QueryRegexp(`offscreen_worker`, `.*`)"
+        - "traefik.http.routers.firefox-webkit.entrypoints=websecure"
+        - "traefik.http.routers.firefox-webkit.service=firefox"
+        - "traefik.http.routers.firefox-webkit.middlewares=firefox-webkit-canvas"
+        - "traefik.http.middlewares.firefox-webkit-canvas.redirectregex.regex=^(https?://[^/]+)/"
+        - "traefik.http.middlewares.firefox-webkit-canvas.redirectregex.replacement=$${1}/?offscreen_worker=false"
+        # Forward auth callback path on the app host, served by the embedded outpost
+        - "traefik.http.routers.firefox-outpost.rule=Host(`browser.${DOMAIN_PUBLIC}`) && PathPrefix(`/outpost.goauthentik.io/`)"
+        - "traefik.http.routers.firefox-outpost.entrypoints=websecure"
+        - "traefik.http.routers.firefox-outpost.service=authentik@swarm"
+        - "homepage.group=no-widget"
+        - "homepage.name=Firefox"
+        - "homepage.icon=firefox"
+        - "homepage.href=https://browser.${DOMAIN_PUBLIC}"
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 1024M
+
+networks:
+  infra_gw-external:
+    external: true

@@ -7,6 +7,9 @@ http:
       forwardAuth:
         address: '{{ env "AUTHENTIK_URL" }}'
         authResponseHeaders:
+          # Set by the outpost only for providers with basic auth enabled; listed here it is
+          # also stripped from client requests on every forward auth router
+          - Authorization
           - X-authentik-username
           - X-authentik-groups
           - X-authentik-email

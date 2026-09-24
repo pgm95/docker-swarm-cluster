@@ -1,0 +1,21 @@
+secrets:
+  oidc_firefox_password:
+    name: oidc_firefox_password_${DEPLOY_VERSION}
+    external: true
+
+configs:
+  firefox_policies:
+    name: firefox_policies_${DEPLOY_VERSION}
+    file: ./config/firefox/policies.json
+  firefox_distribution:
+    name: firefox_distribution_${DEPLOY_VERSION}
+    file: ./config/firefox/distribution.ini
+  firefox_labwc:
+    name: firefox_labwc_${DEPLOY_VERSION}
+    file: ./config/firefox/labwc.xml
+  firefox_autoconfig:
+    name: firefox_autoconfig_${DEPLOY_VERSION}
+    file: ./config/firefox/autoconfig.js
+  firefox_mozilla_cfg:
+    name: firefox_mozilla_cfg_${DEPLOY_VERSION}
+    file: ./config/firefox/mozilla.cfg

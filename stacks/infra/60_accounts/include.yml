@@ -62,6 +62,9 @@ secrets:
   oidc_tailscale_client_secret:
     name: oidc_tailscale_client_secret_${DEPLOY_VERSION}
     external: true
+  oidc_firefox_password:
+    name: oidc_firefox_password_${DEPLOY_VERSION}
+    external: true
 
 configs:
   accounts_authentik_blueprint_directory:
@@ -76,6 +79,9 @@ configs:
   accounts_authentik_blueprint_providers:
     name: accounts_authentik_blueprint_providers_${DEPLOY_VERSION}
     file: ./config/blueprints/30_providers.yaml
+  accounts_authentik_blueprint_proxy_providers:
+    name: accounts_authentik_blueprint_proxy_providers_${DEPLOY_VERSION}
+    file: ./config/blueprints/35_proxy-providers.yaml
   accounts_authentik_blueprint_brand:
     name: accounts_authentik_blueprint_brand_${DEPLOY_VERSION}
     file: ./config/blueprints/50_brand.yaml

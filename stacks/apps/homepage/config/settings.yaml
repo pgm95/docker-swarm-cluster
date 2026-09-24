@@ -31,7 +31,7 @@ layout:
   no-widget:
     header: false
     style: row
-    columns: 5
+    columns: 6
   Media:
     header: false
     style: row

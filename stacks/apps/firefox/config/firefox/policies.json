@@ -1,0 +1,210 @@
+{
+  "policies": {
+    "FirefoxHome": {
+      "Search": true,
+      "Weather": false,
+      "Widgets": {
+        "Enabled": false
+      },
+      "TopSites": false,
+      "SponsoredTopSites": false,
+      "Highlights": false,
+      "Pocket": false,
+      "Stories": false,
+      "SponsoredPocket": false,
+      "SponsoredStories": false,
+      "Snippets": false,
+      "Locked": true
+    },
+    "Homepage": {
+      "URL": "about:home",
+      "StartPage": "homepage-locked",
+      "Locked": true
+    },
+    "FirefoxSuggest": {
+      "WebSuggestions": false,
+      "SponsoredSuggestions": false,
+      "ImproveSuggest": false,
+      "Locked": true
+    },
+    "UserMessaging": {
+      "ExtensionRecommendations": false,
+      "FeatureRecommendations": false,
+      "UrlbarInterventions": false,
+      "SkipOnboarding": true,
+      "MoreFromMozilla": false,
+      "FirefoxLabs": false,
+      "Locked": true
+    },
+    "DisplayMenuBar": "never",
+    "NoDefaultBookmarks": true,
+    "OverrideFirstRunPage": "",
+    "OverridePostUpdatePage": "",
+    "SkipTermsOfUse": true,
+    "DontCheckDefaultBrowser": true,
+    "DefaultBrowserSettingEnabled": false,
+    "ExtensionSettings": {
+      "*": {
+        "installation_mode": "blocked",
+        "blocked_install_message": "Extensions are disabled in this browser."
+      }
+    },
+    "InstallAddonsPermission": {
+      "Default": false
+    },
+    "ExtensionUpdate": false,
+    "BlockAboutAddons": true,
+    "BlockAboutProfiles": true,
+    "DisableProfileImport": true,
+    "DisableProfileRefresh": true,
+    "DisableSafeMode": true,
+    "DisablePrivateBrowsing": true,
+    "PrivateBrowsingModeAvailability": 1,
+    "AIControls": {
+      "Default": {
+        "Value": "blocked",
+        "Locked": true
+      }
+    },
+    "GenerativeAI": {
+      "Enabled": false,
+      "Chatbot": false,
+      "SmartWindow": false,
+      "LinkPreviews": false,
+      "TabGroups": false,
+      "Locked": true
+    },
+    "BrowserDataBackup": {
+      "AllowBackup": false,
+      "AllowRestore": false
+    },
+    "DNSOverHTTPS": {
+      "Enabled": true,
+      "ProviderURL": "https://cloudflare-dns.com/dns-query",
+      "Fallback": false,
+      "ExcludedDomains": [],
+      "Locked": true
+    },
+    "DisablePocket": true,
+    "DisableFirefoxAccounts": true,
+    "PasswordManagerEnabled": false,
+    "OfferToSaveLogins": false,
+    "AutofillAddressEnabled": false,
+    "AutofillCreditCardEnabled": false,
+    "DisableFormHistory": true,
+    "DisableDeveloperTools": true,
+    "BlockAboutConfig": true,
+    "BlockAboutSupport": true,
+    "DisableTelemetry": true,
+    "DisableFirefoxStudies": true,
+    "DisableRemoteImprovements": true,
+    "DisableFeedbackCommands": true,
+    "DisableAppUpdate": true,
+    "DisableSetDesktopBackground": true,
+    "DisableFirefoxScreenshots": true,
+    "DownloadDirectory": "/config/Desktop",
+    "PromptForDownloadLocation": false,
+    "Preferences": {
+      "browser.uiCustomization.state": {
+        "Value": "{\"placements\":{\"widget-overflow-fixed-list\":[],\"unified-extensions-area\":[],\"nav-bar\":[\"back-button\",\"forward-button\",\"stop-reload-button\",\"vertical-spacer\",\"urlbar-container\",\"zoom-controls\",\"downloads-button\",\"fxa-toolbar-menu-button\",\"reset-pbm-toolbar-button\",\"unified-extensions-button\"]},\"seen\":[\"reset-pbm-toolbar-button\"],\"dirtyAreaCache\":[\"nav-bar\"],\"currentVersion\":26,\"newElementCount\":2}",
+        "Status": "default"
+      },
+      "extensions.unifiedExtensions.button.always_visible": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "extensions.unifiedExtensions.button.ignore_attention": {
+        "Value": true,
+        "Status": "locked"
+      },
+      "browser.toolbars.bookmarks.visibility": {
+        "Value": "never",
+        "Status": "locked"
+      },
+      "browser.startup.couldRestoreSession.count": {
+        "Value": -1,
+        "Status": "locked"
+      },
+      "browser.sessionstore.resume_from_crash": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "browser.tabs.closeWindowWithLastTab": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "browser.tabs.inTitlebar": {
+        "Value": 0,
+        "Status": "locked"
+      },
+      "browser.quitShortcut.disabled": {
+        "Value": true,
+        "Status": "locked"
+      },
+      "browser.profiles.enabled": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "browser.download.start_downloads_in_tmp_dir": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "browser.download.always_ask_before_handling_new_types": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "browser.newtabpage.activity-stream.newtabWallpapers.enabled": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "browser.newtabpage.activity-stream.newtabWallpapers.customColor.enabled": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "browser.newtabpage.activity-stream.newtabWallpapers.customWallpaper.enabled": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "browser.newtabpage.activity-stream.showWeather": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "browser.ml.enable": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "browser.crashReports.unsubmittedCheck.autoSubmit2": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "browser.discovery.enabled": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "places.history.enabled": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "general.smoothScroll": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "ui.systemUsesDarkTheme": {
+        "Value": 1,
+        "Status": "locked"
+      },
+      "layout.css.prefers-color-scheme.content-override": {
+        "Value": 0,
+        "Status": "locked"
+      },
+      "network.trr.allow-rfc1918": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "network.trr.builtin-excluded-domains": {
+        "Value": "",
+        "Status": "locked"
+      }
+    }
+  }
+}

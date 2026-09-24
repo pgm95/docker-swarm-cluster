@@ -1,0 +1,93 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+version: 1
+metadata:
+  name: Proxy Providers
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+
+entries:
+
+  # ===== Firefox =====
+  # Basic auth credentials for the container's nginx. Scoped to this provider rather than
+  # set as group attributes: the synced groups carry ldap_uniq, which a blueprint write
+  # to their attributes would drop. The outpost requests every scope of its provider and
+  # the claims are deep merged into ak_proxy.user_attributes, in scope name order, so
+  # this mapping merges after the default ak_proxy one.
+  # avatar is blanked: the default mapping copies every user attribute into the tokens,
+  # and the inline lldap photo (up to ~465 KB) pushes the token response past the
+  # outpost's 1 MiB read limit (failed to redeem code, redirect loop) and the
+  # X-authentik-jwt header past nginx's 8 KB header limit.
+  - model: authentik_providers_oauth2.scopemapping
+    id: scope-firefox-basic-auth
+    state: present
+    identifiers:
+      managed: custom/scope-firefox-basic-auth
+    attrs:
+      name: "Firefox Basic Auth"
+      scope_name: ak_proxy_firefox
+      description: "Basic auth credentials the outpost injects for Firefox"
+      expression: !Format
+        - |
+          return {
+              "ak_proxy": {
+                  "user_attributes": {
+                      "avatar": "",
+                      "firefox_basic_user": """%s""".strip(),
+                      "firefox_basic_password": """%s""".strip(),
+                  }
+              }
+          }
+        - !Env OIDC_FIREFOX_USER
+        - !File /run/secrets/oidc_firefox_password
+  - model: authentik_providers_proxy.proxyprovider
+    id: provider-firefox
+    state: present
+    identifiers:
+      name: Firefox
+    attrs:
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      mode: forward_single
+      external_host: !Format ["https://browser.%s", !Env DOMAIN_PUBLIC]
+      basic_auth_enabled: true
+      basic_auth_user_attribute: firefox_basic_user
+      basic_auth_password_attribute: firefox_basic_password
+      # The defaults are re-added on every save anyway; listed so the file is the whole truth
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-openid]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-entitlements]]
+        - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/proxy/scope-proxy]]
+        - !KeyOf scope-firefox-basic-auth
+  - model: authentik_core.application
+    id: app-firefox
+    state: present
+    identifiers:
+      slug: firefox
+    attrs:
+      name: Firefox
+      provider: !KeyOf provider-firefox
+      meta_launch_url: !Format ["https://browser.%s", !Env DOMAIN_PUBLIC]
+      policy_engine_mode: any
+  # Group comes from the LDAP source sync, so this file fails as a whole until the
+  # group exists in Authentik
+  - model: authentik_policies.policybinding
+    state: present
+    identifiers:
+      order: 0
+      target: !KeyOf app-firefox
+    attrs:
+      group: !Find [authentik_core.group, [name, !Env GLOBAL_USER_GROUP]]
+      enabled: true
+
+  # ===== Embedded outpost =====
+  # Replaces the outpost's provider list wholesale: every forward auth provider must be
+  # listed here, and one assigned in the UI is dropped on the next apply
+  - model: authentik_outposts.outpost
+    state: present
+    identifiers:
+      managed: goauthentik.io/outposts/embedded
+    attrs:
+      providers:
+        - !KeyOf provider-firefox
