@@ -5,7 +5,7 @@ include:
 
 services:
   immich-server:
-    image: ghcr.io/immich-app/immich-server:release
+    image: ghcr.io/immich-app/immich-server:v3.2.2
     entrypoint: ["/bin/sh", "/init.sh"]
     logging:
       <<: *logging
@@ -99,7 +99,7 @@ services:
           memory: 1024M
 
   immich-machine-learning:
-    image: ghcr.io/immich-app/immich-machine-learning:release-openvino
+    image: ghcr.io/immich-app/immich-machine-learning:v3.2.2-openvino
     logging:
       <<: *logging
     stop_grace_period: 30s
@@ -124,12 +124,12 @@ services:
           memory: 1024M
 
   valkey:
-    image: docker.io/valkey/valkey:9@sha256:3b55fbaa0cd93cf0d9d961f405e4dfcc70efe325e2d84da207a0a8e6d8fde4f9
+    image: docker.io/valkey/valkey:9@sha256:70739f85ad2ee01a726a965584a0f94895f01b0c60b3cc8b0aeef11eaa6888cf
     logging:
       <<: *logging
     stop_grace_period: 30s
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: redis-cli ping | grep -q PONG || exit 1
       interval: 10s
       timeout: 3s
       retries: 3
@@ -155,19 +155,17 @@ services:
       - POSTGRES_INITDB_ARGS=--data-checksums
     secrets:
       - immich_db_password
-    tmpfs:
-      - /dev/shm:size=134217728
     volumes:
       - database-data:/var/lib/postgresql/data
+      - type: tmpfs
+        target: /dev/shm
+        tmpfs:
+          size: 134217728
     networks:
       - default
       - infra_backup
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -d immich -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      disable: false
     deploy:
       <<: [*place-gpu, *deploy]
       update_config:

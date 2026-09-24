@@ -5,7 +5,7 @@ include:
 
 services:
   postgres:
-    image: postgres:17
+    image: postgres:17.11-trixie
     logging:
       <<: *logging
     stop_grace_period: 60s
@@ -18,10 +18,12 @@ services:
     configs:
       - source: postgres_init
         target: /docker-entrypoint-initdb.d/init.sh
-    tmpfs:
-      - /dev/shm:size=134217728  # 128MiB — Docker defaults to 64MiB, insufficient for PG shared memory
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - type: tmpfs
+        target: /dev/shm
+        tmpfs:
+          size: 134217728
     networks:
       - infra_postgres
     healthcheck:
@@ -37,7 +39,7 @@ services:
       mode: replicated
       replicas: 1
       resources:
-        <<: *resources-large
+        <<: *resources-huge
 
 volumes:
   postgres-data:

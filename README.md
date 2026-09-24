@@ -221,6 +221,12 @@ Stacks are organized by namespace: A subdir of `SWARM_STACKS_DIR` is considered 
 - Nodes that need to pull custom images must be able to resolve `DOMAIN_PRIVATE`
   to reach the private registry.
 
+### tmpfs Mounts
+
+- **Swarm drops the short `tmpfs:` list** without an error, and `shm_size` with it:
+  the task gets the default 64 MB `/dev/shm` and no other tmpfs. Declare tmpfs as a
+  long-form `type: tmpfs` entry under `volumes:` with `tmpfs.size`.
+
 ### Docker Configs
 
 - **Must be non-zero bytes.** Docker rejects empty config files.
