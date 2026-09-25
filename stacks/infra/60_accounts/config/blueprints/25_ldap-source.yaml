@@ -75,7 +75,8 @@ entries:
     attrs:
       name: lldap
       enabled: true
-      server_uri: ldap://lldap:389
+      # ldap, not lldap: that alias exists only on infra_ldap, so the traffic stays there
+      server_uri: ldap://ldap:389
       start_tls: false
       base_dn: !Env GLOBAL_LDAP_BASE_DN
       bind_cn: !Format ["uid=_bind_authentik,ou=people,%s", !Env GLOBAL_LDAP_BASE_DN]

@@ -16,7 +16,7 @@ Container starts as root via the `jellyfin_init` Docker Config (`entrypoint: /bi
 
 ## LDAP
 
-Jellyfin does not support OIDC. Authentication binds directly to the lldap service in the `accounts` stack, reachable cross-stack on the `infra_ldap` overlay. Install the LDAP Authentication plugin in Jellyfin admin, then configure via the plugin UI (settings live in Jellyfin's own DB, not in compose).
+Jellyfin does not support OIDC. Authentication binds directly to the lldap service in the `accounts` stack over the `infra_ldap` overlay. Install the LDAP Authentication plugin in Jellyfin admin, then configure via the plugin UI (settings live in the plugin's XML in the data volume, not in compose). The LDAP server is `ldap` on port 389: that alias exists only on `infra_ldap`, so the binds stay on that network (see the accounts README). The base DN is `ou=people,<GLOBAL_LDAP_BASE_DN>`.
 
 ## Activity Log Pruning
 

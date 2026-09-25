@@ -156,6 +156,7 @@ services:
     networks:
       - default
       - infra_postgres
+      - infra_ldap
     volumes:
       - authentik-data:/data
       - authentik-certs:/certs
@@ -205,8 +206,10 @@ services:
       infra_postgres: {}
       infra_gw-internal: {}
       infra_ldap:
+        # Exists only here, so LDAP consumers that connect to ldap:389 always take infra_ldap.
+        # The automatic lldap alias exists on every network lldap joins
         aliases:
-          - lldap # Authentik refuses hostnames with underscores (RFC 1035)
+          - ldap
     healthcheck:
       disable: false
     deploy:
@@ -215,6 +218,7 @@ services:
         order: start-first
       mode: replicated
       replicas: 1
+      endpoint_mode: dnsrr # no VIP: its IPVS load balancer drops connections idle for 900 s
       resources:
         <<: *resources-medium
       labels:

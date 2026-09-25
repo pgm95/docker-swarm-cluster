@@ -133,8 +133,8 @@ entries:
       name: FileBrowser Quantum
       provider: !KeyOf provider-quantum
       meta_icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/filebrowser-quantum.svg
-      # Starts the OIDC login directly instead of Quantum's login page
-      meta_launch_url: !Format ["https://files.%s/api/auth/oidc/login?redirect=%%2Ffiles%%2F", !Env DOMAIN_PRIVATE]
+      # Starts the OIDC login directly instead of Quantum's login page.
+      meta_launch_url: !Format ["https://files.%s/api/auth/oidc/login?redirect=/files/", !Env DOMAIN_PRIVATE]
       policy_engine_mode: any
   - model: authentik_policies.policybinding
     state: present

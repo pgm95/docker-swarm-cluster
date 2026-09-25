@@ -38,6 +38,7 @@ services:
         order: stop-first
       mode: replicated
       replicas: 1
+      endpoint_mode: dnsrr # no VIP: its IPVS load balancer drops connections idle for 900 s
       resources:
         <<: *resources-huge
 

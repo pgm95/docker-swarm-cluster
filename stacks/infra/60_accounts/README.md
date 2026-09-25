@@ -30,8 +30,8 @@ same blueprint because Authentik only sets a schedule's crontab when it first cr
 
 The bind identity is `uid=_bind_authentik,ou=people,${GLOBAL_LDAP_BASE_DN}`,
 seeded by `init-ldap` into `lldap_password_manager`. Authentik's worker reaches
-lldap intra-stack at `lldap:389` over the stack-default overlay; the alias on
-`infra_ldap` exists for cross-stack consumers (Jellyfin), not for Authentik.
+lldap at `ldap:389` over `infra_ldap`, like every other LDAP consumer (see
+[LDAP on infra_ldap](#ldap-on-infra_ldap)).
 
 Service accounts (the bind users and the Gatus test user) are members of the
 `lldap_service` group, and the source's user filter skips them, so they never become
@@ -62,7 +62,7 @@ Three paths exist; they interact subtly.
    `data:image/jpeg;base64,...` URL inline in JSON). lldap does not expose
    `userPassword` over LDAP, so sync never touches passwords.
 2. **Bind delegation on Authentik web login**: `LDAPBackend` opens a fresh
-   ldap3 bind to `lldap:389` as the user's DN with their candidate password.
+   ldap3 bind to `ldap:389` as the user's DN with their candidate password.
    On success, `password_login_update_internal_password=true` writes the
    hash into Authentik's local DB via `User.set_password()`.
 3. **Writeback on Authentik password change**: `password_changed` Django
@@ -317,11 +317,12 @@ Authentik is a full Django application. `*resources-medium` causes OOMKill;
 `*resources-large` is borderline. The server runs with a 2048M limit: at 1024M it peaked
 at the limit and was OOM-killed once.
 
-### lldap alias on infra_ldap
+### LDAP on infra_ldap
 
-Cross-stack consumers (Jellyfin) reach lldap via an `aliases: [lldap]` entry on
-the `infra_ldap` overlay attachment. Without the alias the natural
-fully-qualified name would be `accounts_lldap`, which Django's URL validator
-rejects per RFC 1035 (no underscores in hostnames). Authentik's own
-`LDAPSource.server_uri` does not need the alias because it reaches lldap
-intra-stack via `lldap:389` on the default network.
+LDAP consumers (Authentik's worker and Jellyfin) join `infra_ldap` and connect to
+`ldap:389`, an alias lldap carries on that network only, so their binds never cross the
+shared networks lldap also joins; the automatic `lldap` alias exists on all of them.
+lldap itself still listens on every network: Swarm has no per-network access control or
+static IPs, and a task cannot resolve its own alias while starting, so binding LDAP to
+`ldap` fails. Hostnames must not contain underscores, which Authentik's
+`server_uri` validation rejects.

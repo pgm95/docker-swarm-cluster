@@ -221,6 +221,13 @@ Stacks are organized by namespace: A subdir of `SWARM_STACKS_DIR` is considered 
 - Nodes that need to pull custom images must be able to resolve `DOMAIN_PRIVATE`
   to reach the private registry.
 
+### Service VIPs Drop Idle Connections
+
+- **Swarm's VIP load balancer (IPVS) forgets a TCP connection after 900 s without a
+  packet**, and neither end is told. Pooled connections to a database or cache then fail
+  on first use with a reset. Docker cannot change the timeout. Stateful single-replica
+  backends therefore use `endpoint_mode: dnsrr`, so clients connect to the task directly.
+
 ### tmpfs Mounts
 
 - **Swarm drops the short `tmpfs:` list** without an error, and `shm_size` with it:

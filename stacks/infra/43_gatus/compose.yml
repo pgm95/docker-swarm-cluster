@@ -89,5 +89,3 @@ networks:
     external: true
   infra_gw-internal:
     external: true
-  infra_ldap:
-    external: true
