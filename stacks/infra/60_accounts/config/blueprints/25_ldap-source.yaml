@@ -53,6 +53,7 @@ entries:
 
   # --- Group property mappings ---
 
+  # Membership of lldap_admin is what makes an Authentik superuser; every sync reapplies it
   - model: authentik_sources_ldap.ldapsourcepropertymapping
     id: lldap-group-name
     state: present
@@ -61,7 +62,8 @@ entries:
     attrs:
       name: lldap Group Name
       expression: |
-        return {"name": list_flatten(ldap.get("cn"))}
+        cn = list_flatten(ldap.get("cn"))
+        return {"name": cn, "is_superuser": cn == "lldap_admin"}
 
   # --- LDAP Source ---
 
@@ -82,7 +84,9 @@ entries:
       additional_user_dn: ou=people
       additional_group_dn: ou=groups
 
-      user_object_filter: (objectClass=person)
+      # Service accounts sit in lldap_service and never become Authentik users. lldap
+      # ignores substring filters such as (uid=_*), so the exclusion goes by group
+      user_object_filter: !Format ["(&(objectClass=person)(!(memberOf=cn=lldap_service,ou=groups,%s)))", !Env GLOBAL_LDAP_BASE_DN]
       group_object_filter: (objectClass=groupOfUniqueNames)
       user_membership_attribute: distinguishedName
       group_membership_field: member
@@ -107,3 +111,15 @@ entries:
         - !KeyOf lldap-user-avatar
       group_property_mappings:
         - !KeyOf lldap-group-name
+
+  # --- Sync schedule ---
+  # Authentik creates this schedule when the source is saved (every 2 hours) and never
+  # rewrites its crontab afterwards, so the interval is declared here. The entry must
+  # follow the source: on a fresh database the schedule only exists once it is saved
+  - model: authentik_tasks_schedules.schedule
+    state: present
+    identifiers:
+      actor_name: authentik.sources.ldap.tasks.ldap_sync
+      _uid: lldap
+    attrs:
+      crontab: "*/5 * * * *"

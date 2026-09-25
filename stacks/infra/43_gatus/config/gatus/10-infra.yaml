@@ -10,6 +10,23 @@ endpoints:
     alerts:
       - type: homeassistant
 
+  # Authentik reports a blueprint that failed to apply only in its UI; a failing blueprint
+  # leaves the declared configuration unapplied until someone notices
+  - name: Authentik Blueprints
+    group: infra
+    url: "https://auth.${DOMAIN_PUBLIC}/api/v3/managed/blueprints/?page_size=200"
+    interval: 10m
+    client:
+      proxy-url: "${GATUS_PROXY_URL}"
+    headers:
+      Authorization: "Bearer ${WIDGET_AUTHENTIK_GATUS_API_KEY}"
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].pagination.count > 0"
+      - '[BODY] != pat(*"status":"error"*)'
+    alerts:
+      - type: homeassistant
+
   - name: CrowdSec
     group: infra
     url: "http://crowdsec:8085/health"

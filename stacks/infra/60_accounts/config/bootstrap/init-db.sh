@@ -7,7 +7,8 @@ PGUSER="${GLOBAL_DB_PROVISIONER_USER}"
 PGDATABASE="postgres"
 PGPASSWORD="$(cat /run/secrets/global_db_provisioner_password)"
 AUTHENTIK_DB_PASSWORD="$(cat /run/secrets/accounts_authentik_db_password)"
-LLDAP_DB_PASSWORD="$(cat /run/secrets/accounts_lldap_db_password)"
+# The lldap role password is defined once, inside the database URL lldap reads
+LLDAP_DB_PASSWORD="$(sed -E 's#^[^:]+://[^:]+:([^@]+)@.*#\1#' /run/secrets/accounts_lldap_db_url)"
 export PGHOST PGPORT PGUSER PGDATABASE PGPASSWORD
 
 echo "Waiting for PostgreSQL..."

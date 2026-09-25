@@ -5,6 +5,13 @@ metadata:
   labels:
     blueprints.goauthentik.io/instantiate: "true"
 
+# Every provider sends the lldap username as sub: it survives a purge of the Authentik
+# database, where the default hashed user id would change for every user.
+# grant_types is required since 2026.8: a provider created without it allows no grant at
+# all (the upgrade migration only fills it in for providers that already existed).
+# Mealie is bound to the user group, every other application to the admin group. Both
+# groups come from the LDAP source sync, so this file fails as a whole until they exist.
+
 entries:
 
   # ===== Mealie =====
@@ -17,7 +24,7 @@ entries:
       authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
       invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
       client_type: confidential
-      client_id: mealie
+      client_id: !Env OIDC_MEALIE_CLIENT_ID
       client_secret: !File /run/secrets/oidc_mealie_client_secret
       redirect_uris:
         - url: !Format ["https://recipes.%s/login", !Env DOMAIN_PUBLIC]
@@ -27,16 +34,28 @@ entries:
         - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
         - !Find [authentik_providers_oauth2.scopemapping, [managed, custom/scope-mealie-profile]]
       signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      sub_mode: user_username
+      grant_types: [authorization_code, refresh_token]
       access_token_validity: hours=1
       refresh_token_validity: days=30
   - model: authentik_core.application
+    id: app-mealie
     state: present
     identifiers:
       slug: mealie
     attrs:
       name: Mealie
       provider: !KeyOf provider-mealie
+      meta_icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/mealie.svg
       policy_engine_mode: any
+  - model: authentik_policies.policybinding
+    state: present
+    identifiers:
+      order: 0
+      target: !KeyOf app-mealie
+    attrs:
+      group: !Find [authentik_core.group, [name, !Env GLOBAL_USER_GROUP]]
+      enabled: true
 
   # ===== Dawarich =====
   - model: authentik_providers_oauth2.oauth2provider
@@ -48,7 +67,7 @@ entries:
       authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
       invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
       client_type: confidential
-      client_id: dawarich
+      client_id: !Env OIDC_DAWARICH_CLIENT_ID
       client_secret: !File /run/secrets/oidc_dawarich_client_secret
       redirect_uris:
         - url: !Format ["https://maps.%s/users/auth/openid_connect/callback", !Env DOMAIN_PRIVATE]
@@ -58,16 +77,28 @@ entries:
         - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
         - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
       signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      sub_mode: user_username
+      grant_types: [authorization_code, refresh_token]
       access_token_validity: hours=1
       refresh_token_validity: days=30
   - model: authentik_core.application
+    id: app-dawarich
     state: present
     identifiers:
       slug: dawarich
     attrs:
       name: Dawarich
       provider: !KeyOf provider-dawarich
+      meta_icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/dawarich.svg
       policy_engine_mode: any
+  - model: authentik_policies.policybinding
+    state: present
+    identifiers:
+      order: 0
+      target: !KeyOf app-dawarich
+    attrs:
+      group: !Find [authentik_core.group, [name, !Env GLOBAL_ADMIN_GROUP]]
+      enabled: true
 
   # ===== FileBrowser Quantum =====
   - model: authentik_providers_oauth2.oauth2provider
@@ -79,7 +110,7 @@ entries:
       authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
       invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
       client_type: confidential
-      client_id: quantum
+      client_id: !Env OIDC_QUANTUM_CLIENT_ID
       client_secret: !File /run/secrets/oidc_quantum_client_secret
       redirect_uris:
         - url: !Format ["https://files.%s/api/auth/oidc/callback", !Env DOMAIN_PRIVATE]
@@ -89,16 +120,30 @@ entries:
         - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
         - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
       signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      sub_mode: user_username
+      grant_types: [authorization_code, refresh_token]
       access_token_validity: hours=1
       refresh_token_validity: days=30
   - model: authentik_core.application
+    id: app-quantum
     state: present
     identifiers:
       slug: quantum
     attrs:
       name: FileBrowser Quantum
       provider: !KeyOf provider-quantum
+      meta_icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/filebrowser-quantum.svg
+      # Starts the OIDC login directly instead of Quantum's login page
+      meta_launch_url: !Format ["https://files.%s/api/auth/oidc/login?redirect=%%2Ffiles%%2F", !Env DOMAIN_PRIVATE]
       policy_engine_mode: any
+  - model: authentik_policies.policybinding
+    state: present
+    identifiers:
+      order: 0
+      target: !KeyOf app-quantum
+    attrs:
+      group: !Find [authentik_core.group, [name, !Env GLOBAL_ADMIN_GROUP]]
+      enabled: true
 
   # ===== Immich =====
   - model: authentik_providers_oauth2.oauth2provider
@@ -124,16 +169,28 @@ entries:
         - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
         - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
       signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      sub_mode: user_username
+      grant_types: [authorization_code, refresh_token]
       access_token_validity: hours=1
       refresh_token_validity: days=30
   - model: authentik_core.application
+    id: app-immich
     state: present
     identifiers:
       slug: immich
     attrs:
       name: Immich
       provider: !KeyOf provider-immich
+      meta_icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/immich.svg
       policy_engine_mode: any
+  - model: authentik_policies.policybinding
+    state: present
+    identifiers:
+      order: 0
+      target: !KeyOf app-immich
+    attrs:
+      group: !Find [authentik_core.group, [name, !Env GLOBAL_ADMIN_GROUP]]
+      enabled: true
 
   # ===== Grafana =====
   - model: authentik_providers_oauth2.oauth2provider
@@ -145,7 +202,7 @@ entries:
       authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
       invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
       client_type: confidential
-      client_id: grafana
+      client_id: !Env OIDC_GRAFANA_CLIENT_ID
       client_secret: !File /run/secrets/oidc_grafana_client_secret
       redirect_uris:
         - url: !Format ["https://grafana.%s/login/generic_oauth", !Env DOMAIN_PRIVATE]
@@ -155,16 +212,28 @@ entries:
         - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
         - !Find [authentik_providers_oauth2.scopemapping, [managed, custom/scope-grafana-groups]]
       signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      sub_mode: user_username
+      grant_types: [authorization_code, refresh_token]
       access_token_validity: hours=1
       refresh_token_validity: days=30
   - model: authentik_core.application
+    id: app-grafana
     state: present
     identifiers:
       slug: grafana
     attrs:
       name: Grafana
       provider: !KeyOf provider-grafana
+      meta_icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/grafana.svg
       policy_engine_mode: any
+  - model: authentik_policies.policybinding
+    state: present
+    identifiers:
+      order: 0
+      target: !KeyOf app-grafana
+    attrs:
+      group: !Find [authentik_core.group, [name, !Env GLOBAL_ADMIN_GROUP]]
+      enabled: true
 
   # ===== Tailscale =====
   - model: authentik_providers_oauth2.oauth2provider
@@ -186,13 +255,25 @@ entries:
         - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-profile]]
         - !Find [authentik_providers_oauth2.scopemapping, [managed, goauthentik.io/providers/oauth2/scope-email]]
       signing_key: !Find [authentik_crypto.certificatekeypair, [name, authentik Self-signed Certificate]]
+      sub_mode: user_username
+      grant_types: [authorization_code, refresh_token]
       access_token_validity: hours=1
       refresh_token_validity: days=30
   - model: authentik_core.application
+    id: app-tailscale
     state: present
     identifiers:
       slug: tailscale
     attrs:
       name: Tailscale
       provider: !KeyOf provider-tailscale
+      meta_icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/tailscale-light.svg
       policy_engine_mode: any
+  - model: authentik_policies.policybinding
+    state: present
+    identifiers:
+      order: 0
+      target: !KeyOf app-tailscale
+    attrs:
+      group: !Find [authentik_core.group, [name, !Env GLOBAL_ADMIN_GROUP]]
+      enabled: true

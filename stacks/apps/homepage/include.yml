@@ -11,9 +11,6 @@ secrets:
   homepage_seerr_api_key:
     name: homepage_seerr_api_key_${DEPLOY_VERSION}
     external: true
-  homepage_authentik_api_key:
-    name: homepage_authentik_api_key_${DEPLOY_VERSION}
-    external: true
   homepage_pve_nuc_password:
     name: homepage_pve_nuc_password_${DEPLOY_VERSION}
     external: true
@@ -40,6 +37,9 @@ secrets:
     external: true
   widget_crowdsec_password:
     name: widget_crowdsec_password_${DEPLOY_VERSION}
+    external: true
+  widget_authentik_api_key:
+    name: widget_authentik_api_key_${DEPLOY_VERSION}
     external: true
 
 configs:

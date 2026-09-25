@@ -36,9 +36,9 @@ Per-instance `init-backup` sidecars (in their owning stacks) create a dedicated 
 
 ### Backup behavior
 
-Each target is its own borgmatic config file in `/etc/borgmatic.d/`, sharing options via `<<: !include shared/common.yaml`. The cron entry invokes `borgmatic` without `--config`, so it iterates every config and processes them independently — a failure in one target's create action doesn't affect the others. Per-target retention is scoped via `match_archives: "sh:swarm-cluster-{target}-*"`.
+Each target is its own borgmatic config file in `/etc/borgmatic.d/`, sharing options via `<<: !include shared/common.yaml`. The cron entry invokes `borgmatic` without `--config`, so it iterates every config and processes them independently; a failure in one target's create action doesn't affect the others. Per-target retention is scoped via `match_archives: "sh:swarm-cluster-{target}-*"`.
 
-`name: all` auto-discovers non-template databases per target and dumps each individually — pg_dump in `--format=custom`. Dumps stream directly to borg via named pipe — no intermediate disk usage. pg_dump compression is disabled (`compression: none`); borg handles compression with `zstd,3`. `no_owner: true` is set so dumps restore portably without requiring the original owner role on the target.
+`name: all` auto-discovers non-template databases per target and dumps each individually: pg_dump in `--format=custom`. Dumps stream directly to borg via named pipe with no intermediate disk usage. pg_dump compression is disabled (`compression: none`); borg handles compression with `zstd,3`. `no_owner: true` is set so dumps restore portably without requiring the original owner role on the target.
 
 ### Prometheus metrics
 
@@ -64,37 +64,54 @@ The init script (`config/borgmatic/init.sh`) wraps the stock entrypoint: waits f
 
 ## Restore Procedures
 
-The `backup` role is read-only and insufficient for restores. `pg_restore --clean` (and `mariadb-dump` restores) issue DDL which requires object ownership or superuser.
-Restores use the local superuser of the target instance via borgmatic's `--username`/`--password` CLI flags.
-No superuser credentials are stored in the backup stack.
+The `backup` role is read-only and cannot restore: `pg_restore --clean` issues DDL, which needs object ownership or superuser. No restore credentials are stored in the backup stack; they are passed to borgmatic's `--username`/`--password` flags at restore time.
 
-### Per-host restore syntax
+**Restore as the role the application connects as.** Dumps are taken with `no_owner: true`, so every restored object belongs to the role that runs the restore. Restore a central Postgres database as its owning role (the role its stack's init-db creates, which the application logs in as). Restoring it as the superuser leaves the tables owned by `postgres`, and the application can no longer read them. The standalone instances (Immich, Dawarich) connect as their own superuser, so their superuser is the right role there.
 
-Borgmatic identifies dumps by the `hostname` set in the per-target config at backup time.
-To restore from a specific target, pass `--hostname` (or `--config /etc/borgmatic.d/pg-<target>.yaml` to scope to one config).
+**The database must exist.** Individual `pg_dump` dumps contain no `CREATE DATABASE`. Create the empty database owned by the application role, the same statement the stack's init-db runs.
+
+### Runbook: restore one database
+
+1. Stop the consumer so nothing writes to or reconnects to the database: `swarm:remove <stack>`.
+2. Drop the damaged database if it still exists: `DROP DATABASE <db> WITH (FORCE);`
+3. Create it empty, owned by the application role: `CREATE DATABASE <db> OWNER <role>;`
+4. Restore it as that role. Pass the password on stdin so it is kept out of shell history and the docker exec command:
+
+   ```sh
+   printf '%s\n' "$ROLE_PASSWORD" | docker exec -i <borgmatic> sh -c '
+     read -r P
+     borgmatic restore --config /etc/borgmatic.d/pg-<target>.yaml --archive latest \
+       --hostname <target-host> --data-source <db> --original-port 5432 \
+       --username <role> --password "$P"'
+   ```
+
+   `--archive latest` with `--config` resolves to the newest archive of that target; list them with `borgmatic --config /etc/borgmatic.d/pg-<target>.yaml repo-list` to pick an older one. Warnings of the form `permission denied to analyze "pg_..."` come from borgmatic's post-restore `ANALYZE` of shared catalogs and are expected for a non-superuser.
+5. Check ownership and content: `SELECT DISTINCT tableowner FROM pg_tables WHERE schemaname = 'public';` returns only the application role, and a known row is present.
+6. Redeploy the consumer: `swarm:deploy <stack>`. Its init-db leaves the existing database alone.
+
+Consumer specifics:
+
+- **lldap** only starts if `ACCOUNTS_LLDAP_KEY_SEED` is the seed that produced the dump's password hashes. Authentik keeps matching users and groups by the restored `entryUUID`; if Authentik's database is lost as well, rebuild it with the purge runbook in the accounts stack README.
+
+### Restoring several databases or a whole target
+
+Borgmatic identifies dumps by the `hostname` set in the per-target config at backup time. Pass `--hostname` or `--config /etc/borgmatic.d/pg-<target>.yaml` to scope a restore; without `--data-source` it restores every database of that target, all as the one role given, so it only suits targets whose databases share an owner.
 
 ```sh
-# Restore everything in the archive (all targets, all databases):
-docker exec <borgmatic> borgmatic restore --archive latest
-
-# Restore only the central Postgres:
-docker exec <borgmatic> borgmatic restore --archive latest --hostname postgres \
-  --username postgres --password <central-superuser-password>
-
-# Restore only the Immich database:
-docker exec <borgmatic> borgmatic restore --archive latest --hostname immich_database \
+# Every database of the Immich instance (its application connects as the superuser):
+docker exec -i <borgmatic> borgmatic restore --archive latest --hostname immich_database \
   --username postgres --password <immich-superuser-password>
-
-# Restore a single database from a specific target:
-# `--original-port 5432` is required here
-docker exec <borgmatic> borgmatic restore --archive latest \
-  --hostname dawarich_database \
-  --data-source dawarich_development \
-  --original-port 5432 \
-  --username postgres --password <dawarich-superuser-password>
 ```
 
-**Databases must exist before restore.** Individual `pg_dump` dumps don't include `CREATE DATABASE` statements. The targets' init-db sidecars create the empty databases that borgmatic restores into.
+### Running the scheduled backup by hand
+
+Run exactly what cron runs, so a manual run behaves like the scheduled one:
+
+```sh
+docker exec <borgmatic> sh -c 'PATH=$PATH:/usr/local/bin /usr/local/bin/borgmatic --verbosity 1 2>&1'
+```
+
+It processes every target in turn. A target whose host cannot be reached is retried three times with 30, 60 and 90 second pauses, so an unreachable target stretches the run by several minutes. An archive is complete once borgmatic renames it from `<name>.checkpoint`; stopping the run after that point keeps it. borgmatic ignores `SIGTERM` from its hooks and `pkill -f` does not match its interpreter-wrapped processes, so stop a run by PID (`ps -eo pid,args` inside the container, then `kill -9`).
 
 ## Known Limitations
 
@@ -112,7 +129,11 @@ The `pg_read_all_data WITH ADMIN OPTION` grant in `postgres/init.sh` only runs o
 GRANT pg_read_all_data TO <provisioner> WITH ADMIN OPTION;
 ```
 
+### Exporter lookups wait on the repository lock
+
+After a failed create action, the exporter hook's `borgmatic info` waits on the repository lock that the still running parent job holds, until its 120 second timeout. Every failed target therefore adds about two minutes to the run, and its metrics for that run are incomplete.
+
 ## Future Expansion
 
-- **Offsite borg repository** — borgmatic supports multiple repositories natively. Add a second entry in `shared/common.yaml` for SSH/SFTP or NAS. S3/B2 requires rclone until the image adopts Borg 2.x.
-- **Volume backup service** — for non-DB Docker named volumes (SQLite, BoltDB, file state).
+- **Offsite borg repository** borgmatic supports multiple repositories natively. Add a second entry in `shared/common.yaml` for SSH/SFTP or NAS. S3/B2 requires rclone until the image adopts Borg 2.x.
+- **Volume backup service** for non-DB Docker named volumes (SQLite, BoltDB, file state).

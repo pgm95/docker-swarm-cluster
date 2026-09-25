@@ -31,14 +31,13 @@ services:
       - HOMEPAGE_FILE_WIDGET_SONARR_API_KEY=/run/secrets/widget_sonarr_api_key
       - HOMEPAGE_FILE_WIDGET_PROWLARR_API_KEY=/run/secrets/widget_prowlarr_api_key
       - HOMEPAGE_FILE_WIDGET_CROWDSEC_PASSWORD=/run/secrets/widget_crowdsec_password
+      - HOMEPAGE_FILE_WIDGET_AUTHENTIK_API_KEY=/run/secrets/widget_authentik_api_key
       - HOMEPAGE_VAR_GLUETUN_API_KEY=${HOMEPAGE_GLUETUN_API_KEY}
-      - HOMEPAGE_FILE_AUTHENTIK_API_KEY=/run/secrets/homepage_authentik_api_key
     secrets:
       - homepage_jellyfin_api_key
       - homepage_mealie_api_key
       - homepage_immich_api_key
       - homepage_seerr_api_key
-      - homepage_authentik_api_key
       - homepage_pve_nuc_password
       - homepage_pve_nas_password
       - homepage_hass_token
@@ -48,6 +47,7 @@ services:
       - widget_sonarr_api_key
       - widget_prowlarr_api_key
       - widget_crowdsec_password
+      - widget_authentik_api_key
     configs:
       - source: homepage_settings
         target: /app/config/settings.yaml

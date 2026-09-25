@@ -5,7 +5,7 @@ include:
 
 services:
   authentik-server:
-    image: ghcr.io/goauthentik/server:2026.2.1
+    image: ghcr.io/goauthentik/server:2026.8.3
     command: server
     logging:
       <<: *logging
@@ -27,12 +27,12 @@ services:
       - AUTHENTIK_DISABLE_STARTUP_ANALYTICS=true
       - AUTHENTIK_ERROR_REPORTING__ENABLED=false
       - AUTHENTIK_LOG_LEVEL=info
-      - AUTHENTIK_LISTEN__TRUSTED_PROXY_CIDRS=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10
       - AUTHENTIK_AVATARS=attributes.avatar,initials
-      ## Bootstrap vars are only read on first startup.
-      # - AUTHENTIK_BOOTSTRAP_PASSWORD=${GLOBAL_ADMIN_PASSWORD}
-      # - AUTHENTIK_BOOTSTRAP_TOKEN=${ACCOUNTS_AUTHENTIK_BOOTSTRAP_TOKEN}
-      # - AUTHENTIK_BOOTSTRAP_EMAIL=${GLOBAL_ADMIN_USER}@${DOMAIN_PUBLIC}
+      - AUTHENTIK_LISTEN__TRUSTED_PROXY_CIDRS=10.0.0.0/16 # Swarm vip overlay pool; Traefik external is the only proxy
+      - AUTHENTIK_WEB__BASE_URL=https://auth.${DOMAIN_PUBLIC}
+      # Marks a fresh database as set up, otherwise every visit is sent to the initial setup flow.
+      # The hash belongs to a discarded random password: unusable. Ignored in subsequent runs.
+      - AUTHENTIK_BOOTSTRAP_PASSWORD_HASH=pbkdf2_sha256$$1000000$$rjopfYU6HayZO-d4C3_Zjw$$wqcOy3SRcjoFmxZo2F4P4S0+enggOzJI+7ZgJ21xGTM=
     secrets:
       - accounts_authentik_secret_key
       - accounts_authentik_db_password
@@ -56,7 +56,10 @@ services:
       mode: replicated
       replicas: 1
       resources:
-        <<: *resources-huge
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M
       labels:
         - "traefik.enable=true"
         - "traefik.scope.external=true"
@@ -78,12 +81,12 @@ services:
         - "homepage.href=https://auth.${DOMAIN_PUBLIC}"
         - "homepage.widget.type=authentik"
         - "homepage.widget.version=2"
-        - "homepage.widget.key={{HOMEPAGE_FILE_AUTHENTIK_API_KEY}}"
+        - "homepage.widget.key={{HOMEPAGE_FILE_WIDGET_AUTHENTIK_API_KEY}}"
         - "homepage.widget.url=https://auth.${DOMAIN_PUBLIC}"
         - 'homepage.widget.fields=["users", "loginsLast24H", "failedLoginsLast24H"]'
 
   authentik-worker:
-    image: ghcr.io/goauthentik/server:2026.2.1
+    image: ghcr.io/goauthentik/server:2026.8.3
     command: worker
     logging:
       <<: *logging
@@ -106,23 +109,25 @@ services:
       - AUTHENTIK_ERROR_REPORTING__ENABLED=false
       - AUTHENTIK_LOG_LEVEL=info
       - AUTHENTIK_AVATARS=attributes.avatar,initials
+      - AUTHENTIK_WEB__BASE_URL=https://auth.${DOMAIN_PUBLIC}
       # Env vars consumed by blueprints via !Env
-      - GLOBAL_ADMIN_USER=${GLOBAL_ADMIN_USER}
       - GLOBAL_LDAP_BASE_DN=${GLOBAL_LDAP_BASE_DN}
       - GLOBAL_ADMIN_GROUP=${GLOBAL_ADMIN_GROUP}
       - GLOBAL_USER_GROUP=${GLOBAL_USER_GROUP}
       - OIDC_FIREFOX_USER=${OIDC_FIREFOX_USER}
+      - OIDC_MEALIE_CLIENT_ID=${OIDC_MEALIE_CLIENT_ID}
+      - OIDC_DAWARICH_CLIENT_ID=${OIDC_DAWARICH_CLIENT_ID}
+      - OIDC_QUANTUM_CLIENT_ID=${OIDC_QUANTUM_CLIENT_ID}
+      - OIDC_GRAFANA_CLIENT_ID=${OIDC_GRAFANA_CLIENT_ID}
       - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
       - DOMAIN_PRIVATE=${DOMAIN_PRIVATE}
-      ## Bootstrap vars are only read on first startup.
-      # - AUTHENTIK_BOOTSTRAP_PASSWORD=${GLOBAL_ADMIN_PASSWORD}
-      # - AUTHENTIK_BOOTSTRAP_TOKEN=${ACCOUNTS_AUTHENTIK_BOOTSTRAP_TOKEN}
-      # - AUTHENTIK_BOOTSTRAP_EMAIL=${GLOBAL_ADMIN_USER}@${DOMAIN_PUBLIC}
+      # Marks a fresh database as set up, otherwise every visit is sent to the initial setup flow.
+      # The hash belongs to a discarded random password: unusable. Ignored in subsequent runs.
+      - AUTHENTIK_BOOTSTRAP_PASSWORD_HASH=pbkdf2_sha256$$1000000$$rjopfYU6HayZO-d4C3_Zjw$$wqcOy3SRcjoFmxZo2F4P4S0+enggOzJI+7ZgJ21xGTM=
     secrets:
       - accounts_authentik_secret_key
       - accounts_authentik_db_password
       - global_smtp_password
-      - global_admin_password
       - ldap_authentik_bind_password
       - oidc_mealie_client_secret
       - oidc_dawarich_client_secret
@@ -131,6 +136,8 @@ services:
       - oidc_grafana_client_secret
       - oidc_tailscale_client_secret
       - oidc_firefox_password
+      - widget_authentik_api_key
+      - widget_authentik_gatus_api_key
     configs:
       - source: accounts_authentik_blueprint_directory
         target: /blueprints/custom/10_directory.yaml
@@ -142,6 +149,8 @@ services:
         target: /blueprints/custom/35_proxy-providers.yaml
       - source: accounts_authentik_blueprint_ldap_source
         target: /blueprints/custom/25_ldap-source.yaml
+      - source: accounts_authentik_blueprint_service_accounts
+        target: /blueprints/custom/40_service-accounts.yaml
       - source: accounts_authentik_blueprint_brand
         target: /blueprints/custom/50_brand.yaml
     networks:
@@ -174,7 +183,6 @@ services:
       - LLDAP_JWT_SECRET_FILE=/run/secrets/accounts_lldap_jwt_secret_key
       - LLDAP_KEY_SEED_FILE=/run/secrets/accounts_lldap_key_seed
       - LLDAP_LDAP_USER_DN=${GLOBAL_ADMIN_USER}
-      - LLDAP_LDAP_USER_EMAIL=${GLOBAL_ADMIN_USER}@${DOMAIN_PUBLIC}
       - LLDAP_LDAP_USER_PASS_FILE=/run/secrets/global_admin_password
       - LLDAP_LDAP_BASE_DN=${GLOBAL_LDAP_BASE_DN}
       - LLDAP_HTTP_URL=https://lldap.${DOMAIN_PRIVATE}
@@ -231,7 +239,7 @@ services:
     secrets:
       - global_db_provisioner_password
       - accounts_authentik_db_password
-      - accounts_lldap_db_password
+      - accounts_lldap_db_url
     configs:
       - source: accounts_init_db
         target: /init-db-entrypoint.sh
@@ -247,7 +255,7 @@ services:
         <<: *resources-tiny
 
   init-ldap:
-    image: lldap/lldap:2026-03-04-debian-rootless
+    image: lldap/lldap:v0.6.3-debian-rootless
     entrypoint: ["/bin/sh", "/init-ldap-entrypoint.sh"]
     logging:
       <<: *logging
@@ -255,6 +263,7 @@ services:
     environment:
       - LLDAP_URL=http://lldap:17170
       - LLDAP_ADMIN_USERNAME=${GLOBAL_ADMIN_USER}
+      - LLDAP_ADMIN_EMAIL=${GLOBAL_ADMIN_USER}@${DOMAIN_PUBLIC}
       - LLDAP_ADMIN_PASSWORD_FILE=/run/secrets/global_admin_password
       - GLOBAL_ADMIN_GROUP=${GLOBAL_ADMIN_GROUP}
       - GLOBAL_USER_GROUP=${GLOBAL_USER_GROUP}

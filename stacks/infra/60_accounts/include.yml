@@ -5,9 +5,6 @@ secrets:
   global_db_provisioner_password:
     name: global_db_provisioner_password_${DEPLOY_VERSION}
     external: true
-  accounts_lldap_db_password:
-    name: accounts_lldap_db_password_${DEPLOY_VERSION}
-    external: true
   # Core Authentik (versioned)
   accounts_authentik_secret_key:
     name: accounts_authentik_secret_key_${DEPLOY_VERSION}
@@ -66,6 +63,15 @@ secrets:
     name: oidc_firefox_password_${DEPLOY_VERSION}
     external: true
 
+  # Homepage widget API token, written by the service accounts blueprint (versioned)
+  widget_authentik_api_key:
+    name: widget_authentik_api_key_${DEPLOY_VERSION}
+    external: true
+  # Gatus blueprint check API token, written by the service accounts blueprint (versioned)
+  widget_authentik_gatus_api_key:
+    name: widget_authentik_gatus_api_key_${DEPLOY_VERSION}
+    external: true
+
 configs:
   accounts_authentik_blueprint_directory:
     name: accounts_authentik_blueprint_directory_${DEPLOY_VERSION}
@@ -82,6 +88,9 @@ configs:
   accounts_authentik_blueprint_proxy_providers:
     name: accounts_authentik_blueprint_proxy_providers_${DEPLOY_VERSION}
     file: ./config/blueprints/35_proxy-providers.yaml
+  accounts_authentik_blueprint_service_accounts:
+    name: accounts_authentik_blueprint_service_accounts_${DEPLOY_VERSION}
+    file: ./config/blueprints/40_service-accounts.yaml
   accounts_authentik_blueprint_brand:
     name: accounts_authentik_blueprint_brand_${DEPLOY_VERSION}
     file: ./config/blueprints/50_brand.yaml

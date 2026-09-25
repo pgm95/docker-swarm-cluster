@@ -6,29 +6,13 @@ metadata:
     blueprints.goauthentik.io/instantiate: "true"
 
 entries:
-  - model: authentik_core.group
-    id: admin-group
-    state: created
-    identifiers:
-      name: !Env GLOBAL_ADMIN_GROUP
-    attrs:
-      is_superuser: false
-  - model: authentik_core.user
-    id: primary-admin
-    state: present
-    identifiers:
-      username: !Env GLOBAL_ADMIN_USER
-    attrs:
-      name: !Env GLOBAL_ADMIN_USER
-      email: !Format ["%s@%s", !Env GLOBAL_ADMIN_USER, !Env DOMAIN_PUBLIC]
-      password: !File /run/secrets/global_admin_password
-      is_active: true
-      groups:
-        - !Find [authentik_core.group, [name, authentik Admins]]
-        - !KeyOf admin-group
+  # Admins come from lldap: members of lldap_admin are superusers through the group
+  # mapping in 25_ldap-source.yaml. The default bootstrap admin is kept disabled.
+  # name is required when this entry runs before the system bootstrap creates the user
   - model: authentik_core.user
     state: present
     identifiers:
       username: akadmin
     attrs:
+      name: authentik Default Admin
       is_active: false

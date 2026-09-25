@@ -69,6 +69,7 @@ entries:
       name: Firefox
       provider: !KeyOf provider-firefox
       meta_launch_url: !Format ["https://browser.%s", !Env DOMAIN_PUBLIC]
+      meta_icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/firefox.svg
       policy_engine_mode: any
   # Group comes from the LDAP source sync, so this file fails as a whole until the
   # group exists in Authentik
@@ -83,7 +84,8 @@ entries:
 
   # ===== Embedded outpost =====
   # Replaces the outpost's provider list wholesale: every forward auth provider must be
-  # listed here, and one assigned in the UI is dropped on the next apply
+  # listed here, and one assigned in the UI is dropped on the next apply. config is
+  # replaced wholesale too; keys left out fall back to the outpost defaults
   - model: authentik_outposts.outpost
     state: present
     identifiers:
@@ -91,3 +93,5 @@ entries:
     attrs:
       providers:
         - !KeyOf provider-firefox
+      config:
+        authentik_host: !Format ["https://auth.%s", !Env DOMAIN_PUBLIC]
