@@ -5,7 +5,7 @@ include:
 
 services:
   jellyfin:
-    image: jellyfin/jellyfin:10.11.8
+    image: jellyfin/jellyfin:12.1
     entrypoint: ["/bin/sh", "/init.sh"]
     logging:
       <<: *logging
