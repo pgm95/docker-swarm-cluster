@@ -59,6 +59,9 @@ secrets:
   oidc_tailscale_client_secret:
     name: oidc_tailscale_client_secret_${DEPLOY_VERSION}
     external: true
+  oidc_stirling_client_secret:
+    name: oidc_stirling_client_secret_${DEPLOY_VERSION}
+    external: true
   oidc_firefox_password:
     name: oidc_firefox_password_${DEPLOY_VERSION}
     external: true
@@ -94,6 +97,9 @@ configs:
   accounts_authentik_blueprint_brand:
     name: accounts_authentik_blueprint_brand_${DEPLOY_VERSION}
     file: ./config/blueprints/50_brand.yaml
+  accounts_authentik_blueprint_links:
+    name: accounts_authentik_blueprint_links_${DEPLOY_VERSION}
+    file: ./config/blueprints/45_links.yaml
   accounts_lldap_config:
     name: accounts_lldap_config_${DEPLOY_VERSION}
     file: ./config/lldap/lldap_config.toml

@@ -1,0 +1,70 @@
+#:schema https://mise.jdx.dev/schema/mise-task.json
+
+["accounts:discover"]
+description = "Trigger Authentik blueprint discovery and report blueprints that are not applied"
+# A blueprint is re-applied only when discovery finds its file hash changed. The worker
+# updates start-first, so the discovery a new worker queues at startup can be taken by the
+# outgoing one, which still mounts the old files; the change then waits for the hourly run.
+# This waits until one worker is left, triggers discovery there, and reports what is pending.
+run = '''
+{% raw %}
+#!/usr/bin/env bash
+# accounts:discover
+set -euo pipefail
+service=accounts_authentik-worker
+ssh_opts=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR)
+
+replicas=""
+for _ in $(seq 1 60); do
+    replicas=$(DOCKER_HOST="${SWARM_HOST}" docker service ls --filter "name=${service}" --format '{{.Replicas}}')
+    [[ "${replicas}" == "1/1" ]] && break
+    sleep 2
+done
+[[ "${replicas}" == "1/1" ]] || { echo "Error: ${service} did not settle on one task (replicas ${replicas:-none})" >&2; exit 1; }
+
+read -r node container < <(DOCKER_HOST="${SWARM_HOST}" docker service ps "${service}" \
+    --filter desired-state=running --no-trunc --format '{{.Node}} {{.Name}}.{{.ID}}')
+worker_shell() { ssh "${ssh_opts[@]}" "${SWARM_SSH_USER}@${node}" "docker exec -i ${container} ak shell" 2>&1; }
+
+worker_shell >/dev/null <<'PY'
+from authentik.blueprints.v1.tasks import blueprints_discovery
+blueprints_discovery.send()
+PY
+echo "Discovery triggered on ${node}" >&2
+
+result=$(worker_shell <<'PY' | grep '^BLUEPRINTS ' || true
+import hashlib
+import time
+from authentik.blueprints.models import BlueprintInstance
+
+def pending():
+    left = []
+    for bp in BlueprintInstance.objects.filter(enabled=True).order_by("path"):
+        try:
+            stale = hashlib.sha512(bp.retrieve().encode()).hexdigest() != bp.last_applied_hash
+        except Exception as exc:
+            left.append(f"{bp.path} (unreadable: {exc})")
+            continue
+        if bp.status != "successful" or stale:
+            left.append(f"{bp.path} ({bp.status}{', not applied yet' if stale else ''})")
+    return left
+
+for _ in range(30):
+    left = pending()
+    if not left:
+        break
+    time.sleep(2)
+print("BLUEPRINTS " + ("; ".join(left) if left else "ok"))
+PY
+)
+if [[ -z "${result}" ]]; then
+    echo "Error: could not read blueprint status from ${container} on ${node}" >&2
+    exit 1
+elif [[ "${result}" == "BLUEPRINTS ok" ]]; then
+    echo "All blueprints applied" >&2
+else
+    echo "Blueprints pending: ${result#BLUEPRINTS }" >&2
+    exit 1
+fi
+{% endraw %}
+'''

@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+version: 1
+metadata:
+  name: Links
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+
+# Applications without a provider: dashboard entries that only open the app's own login.
+
+entries:
+
+  # ===== Jellyfin =====
+  # Authenticates against lldap itself; bound to the group its LDAP filter admits
+  - model: authentik_core.application
+    id: app-jellyfin
+    state: present
+    identifiers:
+      slug: jellyfin
+    attrs:
+      name: Jellyfin
+      meta_launch_url: !Format ["https://stream.%s", !Env DOMAIN_PUBLIC]
+      meta_icon: https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/jellyfin.svg
+      policy_engine_mode: any
+  - model: authentik_policies.policybinding
+    state: present
+    identifiers:
+      order: 0
+      target: !KeyOf app-jellyfin
+    attrs:
+      group: !Find [authentik_core.group, [name, !Env GLOBAL_USER_GROUP]]
+      enabled: true

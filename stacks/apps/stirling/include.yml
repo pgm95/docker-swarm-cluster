@@ -1,0 +1,12 @@
+secrets:
+  oidc_stirling_client_secret:
+    name: oidc_stirling_client_secret_${DEPLOY_VERSION}
+    external: true
+  global_admin_password:
+    name: global_admin_password_${DEPLOY_VERSION}
+    external: true
+
+configs:
+  stirling_init:
+    name: stirling_init_${DEPLOY_VERSION}
+    file: ./config/init.sh

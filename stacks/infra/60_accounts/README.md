@@ -180,6 +180,7 @@ to exist first.
 | `30_` | providers | scope-mappings (custom scopes), synced user and admin groups (application policy bindings) |
 | `35_` | proxy-providers | synced user group (application policy bindings) |
 | `40_` | service-accounts | none |
+| `45_` | links (applications without a provider, library entries only) | synced user group (application policy bindings) |
 | `50_` | brand | providers (Tailscale app for WebFinger) |
 
 Authentik's `blueprints_find()` uses `rglob("**/*.yaml")`. Files with `.yml`
@@ -191,6 +192,13 @@ bindings look up, or two blueprints applying at once hit a Postgres deadlock. A 
 apply is not retried; the hourly discovery picks them up again because their hash was
 never recorded. To converge at once, trigger discovery after the first sync (see
 [Purge Runbook](#purge-runbook)).
+
+A deploy does not reliably apply a changed blueprint either. The worker updates
+`start-first`, and the discovery the new worker queues at startup can be taken by the
+outgoing one, which still mounts the old files and finds nothing to apply; the change then
+waits for the hourly run. After deploying a blueprint change, run `mise run
+accounts:discover`: it waits until one worker is left, triggers discovery there and
+fails listing every blueprint that is not applied.
 
 The deadlock can also hit a blueprint that has already applied, when a second apply of it
 runs concurrently (seen on Authentik's own `default/flow-oobe.yaml`). Its hash is then
@@ -261,8 +269,7 @@ signing key and every MFA device are lost; users log in again and re-enroll MFA.
 4. Redeploy the stack (`swarm:deploy accounts`). `init-db` recreates the database.
 5. Once the first LDAP sync has run (the admin appears under Directory, Users), trigger
    blueprint discovery so the blueprints that failed on the first pass apply now instead
-   of within the hour:
-   `docker exec -i <authentik-worker> ak shell -c "from authentik.blueprints.v1.tasks import blueprints_discovery; blueprints_discovery.send()"`
+   of within the hour: `mise run accounts:discover`. It lists what is still pending.
 6. Reapply every blueprint still in error, Authentik's default blueprints included.
    Discovery only reapplies a blueprint whose hash was never recorded; one that applied
    and then lost a deadlock in a second, concurrent apply stays in error for good:
@@ -319,7 +326,8 @@ at the limit and was OOM-killed once.
 
 ### LDAP on infra_ldap
 
-LDAP consumers (Authentik's worker and Jellyfin) join `infra_ldap` and connect to
+LDAP consumers (Authentik's server for password logins and writeback, its worker for
+the sync, and Jellyfin) join `infra_ldap` and connect to
 `ldap:389`, an alias lldap carries on that network only, so their binds never cross the
 shared networks lldap also joins; the automatic `lldap` alias exists on all of them.
 lldap itself still listens on every network: Swarm has no per-network access control or

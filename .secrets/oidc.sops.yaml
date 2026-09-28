@@ -10,6 +10,8 @@ OIDC_QUANTUM_CLIENT_ID: ENC[AES256_GCM,data:heiIOUKbLA==,iv:AJBq//PNra0Bwjog9B69
 OIDC_GRAFANA_CLIENT_ID: ENC[AES256_GCM,data:cDYSt8ETGQ==,iv:xVnWHWR7El1vUSQsGXxSqAcyJdRYtwsDXys9TmkQ5V8=,tag:PMGqWBizVSRvoeNFyz0luw==,type:str]
 OIDC_FIREFOX_USER: ENC[AES256_GCM,data:QRZLKQ37sg==,iv:IWFAC5s0A6SBG0V+8pqglIWDVAPkm83CsAYR1EYlEkI=,tag:V8P3p6XPNwPaFzwMFRX1SQ==,type:str]
 OIDC_FIREFOX_PASSWORD: ENC[AES256_GCM,data:1SD9GSSNJvwQ7o5vmxcikeMZkqO/QqYP4NxXl2nRJQY47pIUEysMwC4kNAYLsEvP/FsMs2WnkEV3uTxx1i11XA==,iv:m2VxTBW+r4Fd2vcmpR+8TGyZ/dEqwkzIzFiiMshyr14=,tag:CXclU8VOtuBD7wUZZhCj0A==,type:str]
+OIDC_STIRLING_CLIENT_ID: ENC[AES256_GCM,data:UAXYTpfL8Fk=,iv:kGrwQSJd8a8NQD2pjydFwr1Lq6Yn+o1ShKtXwZg9iP8=,tag:vnYzJZ/hgnawSu8wMbwqDA==,type:str]
+OIDC_STIRLING_CLIENT_SECRET: ENC[AES256_GCM,data:jpLaVSY9vRbVs44Hp6IpnH4pfwI33j3t9ltgXzCm0kJ3bguz7FvANlchSXjhqqJ8kFWt9V99Ue3YEu3jhs0qfA==,iv:ju54KsIaMqogJfExOt/YRPb8fReh31ZufKkOE31ub4Q=,tag:e4JESIbYx/c6azYHSJYVsg==,type:str]
 sops:
   age:
     - enc: |
@@ -21,7 +23,7 @@ sops:
         cFAjsh4P8v511adaPnZqs1FqQpt3B5wkCRbEScRpt0yfu7mu1Df+vQ==
         -----END AGE ENCRYPTED FILE-----
       recipient: age1xcnm9hkeyrrjxz33tvufpxwfwc8ydkwt3dax6kqsklpvggatj5usna7r2l
-  lastmodified: "2026-09-22T21:41:18Z"
-  mac: ENC[AES256_GCM,data:2TZjeo7G8o2YD9rvcA+yzVSRteCCg9rglTSzE/sLq5bQ+zc/NOO1VzfH1FYoYpDX+mimrLGXPEymmLmpPyzfPKpd+4+hVXyJrWUrOsHKtGBDgi97R8gU38DVhNBfN8OvWL57wQ3oufFKWbVq7LFGo5NKtBC7iQ8I46Nvx+2s75Q=,iv:x+1pco058vphlSUpbjuyYghmSvnPPF4ARvvGWMmM+Yk=,tag:ypy63fmKS4jKVO4OlT0GLw==,type:str]
+  lastmodified: "2026-09-28T05:03:32Z"
+  mac: ENC[AES256_GCM,data:kVMP33JsKLQ2z9d6kNgPw9mpWSuQwPQVWyap3QhsCCE0V64ZPwMO6dEtLXTx/7NMz1LL9aCxoTTxDA/+SYFvwZPH3GUt1nio8Qv+Vq9g+w57X2dXhVo6iJbP94x0uSn/KFT/2FhjBoogxhLPI2jrGBnOmJTUTa4wYcNLRRMgwHs=,iv:8zOsawSonYROyhWR2Sbqgb9u2/Yn67NfHVlzCQXPwJY=,tag:StAiLj+8DMrSFhU9UXT+Fw==,type:str]
   unencrypted_suffix: _unencrypted
   version: 3.13.3

@@ -14,6 +14,7 @@ Task orchestration, deployment pipeline, and development tooling for swarm-clust
     site.toml             #   Cluster-wide: deploy-infra, deploy-apps, drain, registry
     sops.toml             #   Secrets: init, edit, encrypt (targets: global, dev, prod, a topic, or stack name)
     validate.toml         #   Validation: all (pre-commit), pytest, ruff, stack, compose, secrets
+    accounts.toml         #   Accounts stack: Authentik blueprint discovery
   python/                 # Self-contained Python project
     pyproject.toml        #   Pytest and ruff config
     core/                 #   Shared by both packages: exceptions, docker CLI engine, SOPS, output, cli wrapper

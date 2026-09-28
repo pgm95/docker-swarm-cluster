@@ -1,8 +1,12 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json
 
+include:
+  - include.yml
+
 services:
   stirling-pdf:
-    image: stirlingtools/stirling-pdf:latest-fat
+    image: stirlingtools/stirling-pdf:3.0.0-fat
+    entrypoint: ["/bin/sh", "/init.sh"]
     logging:
       <<: *logging
     stop_grace_period: 30s
@@ -10,45 +14,70 @@ services:
       - PUID=${GLOBAL_NONROOT_PUID}
       - PGID=${GLOBAL_NONROOT_PGID}
       - SHOW_SURVEY=false
-      - DISABLE_ADDITIONAL_FEATURES=false
+      - AIENGINE_ENABLED=false
+      - METRICS_ENABLED=false
+      - STORAGE_ENABLED=false
+      - FORMDETECTION_ENABLED=false
+      - STORAGE_SIGNING_ENABLED=false
+      - STIRLING_BILLING_ACCOUNTLINK_ENABLED=false
+
+      - ENDPOINTS_GROUPSTOREMOVE=Automation,DeveloperTools,DeveloperDocs
+      - ENDPOINTS_TOREMOVE=add-watermark,add-stamp,cert-sign
 
       - SYSTEM_ENABLEANALYTICS=false
       - SYSTEM_DEFAULTLOCALE=en-US
       - SYSTEM_FRONTENDURL=https://pdf.${DOMAIN_PRIVATE}
+      - SYSTEM_BACKENDURL=https://pdf.${DOMAIN_PRIVATE}
       - SYSTEM_CORSALLOWEDORIGINS=https://pdf.${DOMAIN_PRIVATE}
-      - SYSTEM_SERVERCERTIFICATE_ORGANIZATIONNAME=${DOMAIN_PUBLIC}
+      - SYSTEM_SERVERCERTIFICATE_ENABLED=false
       - SYSTEM_GOOGLEVISIBILITY=false
       - SYSTEM_SHOWUPDATE=true
       - SYSTEM_SHOWUPDATEONLYADMIN=true
-      - SYSTEM_MAXFILESIZE=2000
+      - SYSTEM_FILEUPLOADLIMIT=100MB
       - SYSTEM_ENABLEURLTOPDF=true
       - SYSTEM_ENABLEMOBILESCANNER=true
       - SYSTEM_ENABLEDESKTOPINSTALLSLIDE=false
-      - SYSTEM_ENABLEALPHAFUNCTIONALITY=true
+      - SYSTEM_ENABLEALPHAFUNCTIONALITY=false
       - SYSTEM_SHOWSETTINGSWHENNOLOGIN=false
+      - SYSTEM_ENABLEEASTEREGGS=false
 
-      - UI_APPNAME=Stirling PDF
-      - UI_APPNAMENAVBAR=Stirling PDF
-      - UI_HOMEDESCRIPTION=PDF Editing
-      - UI_LOGOSTYLE=modern
       - UI_LANGUAGES=en_US
+      - UI_APPNAMENAVBAR=Stirling PDF
       - UI_DEFAULTHIDEUNAVAILABLETOOLS=true
       - UI_DEFAULTHIDEUNAVAILABLECONVERSIONS=true
-      - UI_HIDE_DISABLED_TOOLS_GOOGLEDRIVE=true
-      - UI_HIDE_DISABLED_TOOLS_MOBILEQRSCANNER=true
+      - UI_HIDEDISABLEDTOOLS_GOOGLEDRIVE=true
+      - UI_HIDEDISABLEDTOOLS_MOBILEQRSCANNER=true
 
-      - SECURITY_ENABLELOGIN=false
-      - SECURITY_INITIALLOGIN_USERNAME=${GLOBAL_ADMIN_USER}
-      - SECURITY_INITIALLOGIN_PASSWORD=${GLOBAL_ADMIN_PASSWORD}
+      - SPRINGDOC_APIDOCS_ENABLED=false
+      - SPRINGDOC_SWAGGERUI_ENABLED=false
 
-      - LEGAL_TERMSANDCONDITIONS=""
-      - LEGAL_PRIVACYPOLICY=""
-      - LEGAL_ACCESSIBILITYSTATEMENT=""
-      - LEGAL_COOKIEPOLICY=""
-      - LEGAL_IMPRESSUM=""
+      # SSO users are created as plain users and promoted by the local admin
+      # SECURITY_LOGINMETHOD can move to oauth2 once an SSO account is admin
+      - SECURITY_ENABLELOGIN=true
+      - SECURITY_LOGINMETHOD=oauth2
+      - SECURITY_SSOAUTOLOGIN=true
+      - SECURITY_INITIALLOGIN_USERNAME=root
+      - SECURITY_OAUTH2_ENABLED=true
+      - SECURITY_OAUTH2_PROVIDER=authentik
+      - SECURITY_OAUTH2_ISSUER=https://auth.${DOMAIN_PUBLIC}/application/o/stirling/
+      - SECURITY_OAUTH2_CLIENTID=${OIDC_STIRLING_CLIENT_ID}
+      - SECURITY_OAUTH2_SCOPES=openid, profile, email
+      - SECURITY_OAUTH2_USEASUSERNAME=preferred_username
+      - SECURITY_OAUTH2_AUTOCREATEUSER=true
+      - SECURITY_OAUTH2_BLOCKREGISTRATION=false
 
-      - METRICS_ENABLED=false
-      - STORAGE_ENABLED=false
+      # Empty disables the link; list-form env keeps quotes as part of the value
+      - LEGAL_TERMSANDCONDITIONS=
+      - LEGAL_PRIVACYPOLICY=
+      - LEGAL_ACCESSIBILITYSTATEMENT=
+      - LEGAL_COOKIEPOLICY=
+      - LEGAL_IMPRESSUM=
+    secrets:
+      - oidc_stirling_client_secret
+      - global_admin_password
+    configs:
+      - source: stirling_init
+        target: /init.sh
     networks:
       - infra_gw-internal
     volumes:

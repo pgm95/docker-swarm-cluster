@@ -41,6 +41,7 @@ services:
       - default
       - infra_postgres
       - infra_gw-external
+      - infra_ldap
     volumes:
       - authentik-data:/data
     healthcheck:
@@ -119,6 +120,7 @@ services:
       - OIDC_DAWARICH_CLIENT_ID=${OIDC_DAWARICH_CLIENT_ID}
       - OIDC_QUANTUM_CLIENT_ID=${OIDC_QUANTUM_CLIENT_ID}
       - OIDC_GRAFANA_CLIENT_ID=${OIDC_GRAFANA_CLIENT_ID}
+      - OIDC_STIRLING_CLIENT_ID=${OIDC_STIRLING_CLIENT_ID}
       - DOMAIN_PUBLIC=${DOMAIN_PUBLIC}
       - DOMAIN_PRIVATE=${DOMAIN_PRIVATE}
       # Marks a fresh database as set up, otherwise every visit is sent to the initial setup flow.
@@ -135,6 +137,7 @@ services:
       - oidc_immich_client_secret
       - oidc_grafana_client_secret
       - oidc_tailscale_client_secret
+      - oidc_stirling_client_secret
       - oidc_firefox_password
       - widget_authentik_api_key
       - widget_authentik_gatus_api_key
@@ -151,6 +154,8 @@ services:
         target: /blueprints/custom/25_ldap-source.yaml
       - source: accounts_authentik_blueprint_service_accounts
         target: /blueprints/custom/40_service-accounts.yaml
+      - source: accounts_authentik_blueprint_links
+        target: /blueprints/custom/45_links.yaml
       - source: accounts_authentik_blueprint_brand
         target: /blueprints/custom/50_brand.yaml
     networks:
