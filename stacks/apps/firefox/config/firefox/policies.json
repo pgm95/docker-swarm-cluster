@@ -85,6 +85,12 @@
       "ExcludedDomains": [],
       "Locked": true
     },
+    "IPProtectionAvailable": false,
+    "SearchEngines": {
+      "Default": "Google",
+      "PreventInstalls": true,
+      "Remove": []
+    },
     "DisablePocket": true,
     "DisableFirefoxAccounts": true,
     "PasswordManagerEnabled": false,
@@ -115,6 +121,30 @@
       },
       "extensions.unifiedExtensions.button.ignore_attention": {
         "Value": true,
+        "Status": "locked"
+      },
+      "sidebar.revamp": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "sidebar.verticalTabs": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "sidebar.main.tools": {
+        "Value": "",
+        "Status": "locked"
+      },
+      "browser.search.region": {
+        "Value": "US",
+        "Status": "locked"
+      },
+      "browser.urlbar.suggest.quickactions": {
+        "Value": false,
+        "Status": "locked"
+      },
+      "browser.urlbar.suggest.trending": {
+        "Value": false,
         "Status": "locked"
       },
       "browser.toolbars.bookmarks.visibility": {

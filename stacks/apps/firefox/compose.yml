@@ -6,6 +6,8 @@ include:
 services:
   firefox:
     image: linuxserver/firefox:1.2404.1
+    # Sets the mode of the Desktop tmpfs, then hands over to the image's s6 init
+    entrypoint: ["/bin/sh", "/init.sh"]
     logging:
       <<: *logging
     stop_grace_period: 30s
@@ -35,6 +37,8 @@ services:
     secrets:
       - oidc_firefox_password
     configs:
+      - source: firefox_init
+        target: /init.sh
       # Enterprise policies, read on every start. The profile is on the anonymous volume
       # and lost on redeploy, so policies are the only customization that sticks.
       - source: firefox_policies
@@ -61,6 +65,7 @@ services:
         tmpfs:
           size: 1073741824
       # Upload/download target dir: size cap is the only limit. Data is wiped on every restart.
+      # Mounted root:root 0755 on a restarted container; init.sh makes it writable.
       - type: tmpfs
         target: /config/Desktop
         tmpfs:

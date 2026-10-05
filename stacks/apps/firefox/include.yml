@@ -4,6 +4,9 @@ secrets:
     external: true
 
 configs:
+  firefox_init:
+    name: firefox_init_${DEPLOY_VERSION}
+    file: ./config/init.sh
   firefox_policies:
     name: firefox_policies_${DEPLOY_VERSION}
     file: ./config/firefox/policies.json
