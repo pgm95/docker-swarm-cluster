@@ -176,7 +176,7 @@ services:
       endpoint_mode: dnsrr # no VIP: its IPVS load balancer drops connections idle for 900 s
       resources:
         limits:
-          memory: 1024M
+          memory: 2048M
         reservations:
           memory: 512M
 

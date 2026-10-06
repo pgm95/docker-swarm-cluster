@@ -236,8 +236,13 @@ services:
         order: start-first
       mode: replicated
       replicas: 1
+      # Chromium maps about 1 GB of its own image on top of its heap. File pages count
+      # against the limit, so at 1024M it evicted and re-read itself on every challenge.
       resources:
-        <<: *resources-huge
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 512M
 
   init-db:
     image: postgres:17-alpine

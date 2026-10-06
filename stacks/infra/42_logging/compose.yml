@@ -78,7 +78,7 @@ services:
         order: start-first
       mode: global
       resources:
-        <<: *resources-medium
+        <<: *resources-large
 
 volumes:
   loki-data:

@@ -58,8 +58,14 @@ services:
         - 'homepage.widget.fields=["connected", "synced", "errors", "storage"]'
       mode: replicated
       replicas: 1
+      # The limit has to hold the index database as page cache next to the heap: file
+      # pages count against it, and below that every hourly rescan re-reads the index
+      # from disk (measured at about 1 TB a day with 512M).
       resources:
-        <<: *resources-large
+        limits:
+          memory: 1536M
+        reservations:
+          memory: 256M
 
 volumes:
   syncthing-data:
